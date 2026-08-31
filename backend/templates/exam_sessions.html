@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="listView">
+    <div class="module-header">
+        <h2>Exam Sessions / Batches</h2>
+        <a href="{{ url_for('exams_dashboard.dashboard') }}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    </div>
+    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:24px;border-radius:16px;">
+        <form method="GET" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+            <select name="branch_id" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+                <option value="">All Branches</option>
+                {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id|string %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+            </select>
+            <select name="exam_type_id" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+                <option value="">All Exams</option>
+                {% for e in exam_types %}<option value="{{ e.id }}" {% if exam_type_id == e.id|string %}selected{% endif %}>{{ e.name }}</option>{% endfor %}
+            </select>
+            <select name="language" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+                <option value="">All Languages</option>
+                {% for lang in languages %}<option value="{{ lang }}" {% if lang == language %}selected{% endif %}>{{ lang }}</option>{% endfor %}
+            </select>
+            <input type="date" name="exam_date" value="{{ exam_date }}" style="padding:9px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+            <select name="status" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+                <option value="">All Status</option>
+                {% for st in ['Scheduled','Completed','Rescheduled','Cancelled'] %}
+                <option value="{{ st }}" {% if status == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" style="padding:10px 22px;border-radius:30px;background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;">Filter</button>
+            <button type="button" onclick="showForm()" style="padding:10px 24px;border-radius:30px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.85rem;box-shadow:0 4px 10px rgba(124,58,237,0.25);"><i class="fas fa-plus"></i> New Session</button>
+        </form>
+        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Exam</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Date</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Time</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Fee</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Seats</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Status</th>
+                        <th style="padding:14px 16px;text-align:center;color:#7c3aed;font-weight:700;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sessions %}
+                    <tr style="border-top:1px solid #f1f5f9;">
+                        <td style="padding:14px 16px;color:#374151;font-weight:700;">{{ s.exam_type.name if s.exam_type else '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ s.branch.name if s.branch else '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ s.exam_date.strftime('%d-%b-%Y') if s.exam_date else '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ s.start_time }} - {{ s.end_time }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ '%.2f'|format(s.fee or 0) }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ s.seats_taken }} / {{ s.seat_capacity }}</td>
+                        <td style="padding:14px 16px;">{% include 'partials/session_status_pill.html' %}</td>
+                        <td style="padding:14px 16px;text-align:center;white-space:nowrap;">
+                            <a href="{{ url_for('sessions.session_detail', session_id=s.id) }}" style="padding:6px 14px;border-radius:12px;background:#eef2ff;color:#4338ca;font-weight:600;text-decoration:none;margin-right:6px;">View / Manage</a>
+                            {% if s.status != 'Cancelled' %}
+                            <a href="javascript:void(0)" onclick='editSession({{ {"id": s.id, "branch_exam_id": s.branch_exam_id, "exam_date": s.exam_date.strftime("%Y-%m-%d") if s.exam_date else "", "start_time": s.start_time, "end_time": s.end_time, "fee": s.fee, "seat_capacity": s.seat_capacity}|tojson }})' style="padding:6px 14px;border-radius:12px;background:#fef9c3;color:#854d0e;font-weight:600;text-decoration:none;">Edit</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="muted" style="padding:20px;text-align:center;">No exam sessions match the current filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="sessionForm" class="panel hidden-view">
+    <div class="module-header"><h2 id="sessionFormTitle">Create Exam Session</h2></div>
+    <form action="{{ url_for('sessions.save_session') }}" method="POST" class="form-grid">
+        <input type="hidden" name="id" id="sess_id">
+        <div class="form-row"><label>Exam (Branch Mapping)</label>
+            <select name="branch_exam_id" id="sess_branch_exam_id" required>
+                <option value="">Select Exam @ Branch</option>
+                {% for be in branch_exams %}<option value="{{ be.id }}">{{ be.exam_type.name }} — {{ be.branch.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-row"><label>Exam Date</label><input type="date" name="exam_date" id="sess_exam_date" required></div>
+        <div class="form-row"><label>Start Time</label><input type="time" name="start_time" id="sess_start_time" required></div>
+        <div class="form-row"><label>End Time</label><input type="time" name="end_time" id="sess_end_time" required></div>
+        <div class="form-row"><label>Seat Capacity</label><input type="number" min="1" name="seat_capacity" id="sess_seat_capacity" required></div>
+        <div class="button-row">
+            <button type="submit" class="btn-primary" id="sessionFormSubmit"><i class="fas fa-save"></i> Create Session</button>
+            <button type="button" class="btn-secondary" onclick="showList()">Cancel</button>
+        </div>
+    </form>
+    {% if not branch_exams %}<p class="muted" style="margin-top:10px;">No active branch-exam mappings found — <a href="{{ url_for('branch_exams.list_branch_exams') }}">create one first</a>.</p>{% endif %}
+</div>
+
+<script>
+function resetSessionForm(){
+    document.getElementById('sessionFormTitle').textContent = 'Create Exam Session';
+    document.getElementById('sessionFormSubmit').innerHTML = '<i class="fas fa-save"></i> Create Session';
+    document.getElementById('sess_id').value = '';
+    document.getElementById('sess_branch_exam_id').value = '';
+    document.getElementById('sess_exam_date').value = '';
+    document.getElementById('sess_start_time').value = '';
+    document.getElementById('sess_end_time').value = '';
+    document.getElementById('sess_seat_capacity').value = '';
+}
+function showForm(){
+    resetSessionForm();
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('sessionForm').style.display = 'block';
+}
+function editSession(data){
+    resetSessionForm();
+    document.getElementById('sessionFormTitle').textContent = 'Edit Exam Session';
+    document.getElementById('sessionFormSubmit').innerHTML = '<i class="fas fa-save"></i> Save Changes';
+    document.getElementById('sess_id').value = data.id;
+    document.getElementById('sess_branch_exam_id').value = data.branch_exam_id;
+    document.getElementById('sess_exam_date').value = data.exam_date;
+    document.getElementById('sess_start_time').value = data.start_time;
+    document.getElementById('sess_end_time').value = data.end_time;
+    document.getElementById('sess_seat_capacity').value = data.seat_capacity;
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('sessionForm').style.display = 'block';
+}
+function showList(){
+    document.getElementById('sessionForm').style.display = 'none';
+    document.getElementById('listView').style.display = 'block';
+}
+</script>
+{% endblock %}

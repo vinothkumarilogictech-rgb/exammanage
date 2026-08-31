@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% block content %}
+<div class="module-header"><h2>Exam Voucher Management</h2><div class="module-actions"><a class="btn-primary" href="{{ url_for('vouchers.purchase') }}">+ Bulk Purchase</a><a class="btn-secondary" href="{{ url_for('vouchers.assign') }}">Assign Voucher</a></div></div>
+<div class="premium-stats-grid voucher-grid">
+{% for key,label,cls,url,val,sub in [
+('available','Available Vouchers','bg-green',url_for('vouchers.stock',status='Available'),stats.available,'Current stock'),
+('issued','Issued / Sold','bg-blue',url_for('vouchers.issued'),stats.issued,'Given to students'),
+('used','Used Vouchers','bg-purple',url_for('vouchers.stock',status='Used'),stats.used,'Exam usage completed'),
+('purchased','Total Purchased','bg-rose',url_for('vouchers.stock',status='Available'),stats.purchased,'All purchase batches') ] %}
+<div class="luxury-card {{ cls }}" onclick="location.href='{{ url }}'"><span class="card-title">{{ label }}</span><div class="card-value">{{ val }}</div><span class="card-sub">{{ sub }}</span></div>
+{% endfor %}
+</div>
+<div class="module-grid">
+<div class="panel"><h3>Voucher Financial Summary</h3><div class="summary-list">
+<div><span>Total Purchase Cost</span><strong>₹ {{ '%.2f'|format(stats.purchase_cost) }}</strong></div>
+<div><span>Sales Revenue</span><strong>₹ {{ '%.2f'|format(stats.sales) }}</strong></div>
+<div><span>Realized Profit</span><strong>₹ {{ '%.2f'|format(stats.profit) }}</strong></div>
+<div><span>Available Stock Value</span><strong>₹ {{ '%.2f'|format(stats.stock_value) }}</strong></div>
+</div></div>
+<div class="panel"><h3>Quick Actions</h3><div class="quick-links"><a href="{{ url_for('vouchers.stock',status='Available') }}">Available Stock →</a><a href="{{ url_for('vouchers.issued') }}">Who received vouchers →</a><a href="{{ url_for('vouchers.students') }}">Student-wise history →</a><a href="{{ url_for('vouchers.purchases') }}">Purchase batches →</a></div></div></div>
+{% endblock %}

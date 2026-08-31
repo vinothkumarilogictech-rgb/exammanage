@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block content %}
+<div id="listView">
+    <div class="module-header">
+        <h2>Branch Management</h2>
+    </div>
+    <p class="muted" style="margin-bottom:18px;">Manage and monitor all office branches.</p>
+
+    <div class="summary-grid" style="margin-bottom:24px;">
+        <div class="card">
+            <h3>Total Branches</h3>
+            <div class="value">{{ stats.total }}</div>
+        </div>
+        <div class="card">
+            <h3>Active Branches</h3>
+            <div class="value">{{ stats.active }}</div>
+        </div>
+        <div class="card accent">
+            <h3>Inactive Branches</h3>
+            <div class="value">{{ stats.inactive }}</div>
+        </div>
+    </div>
+
+    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:24px;border-radius:16px;">
+        <form method="GET" action="{{ url_for('branches.branch_list') }}" style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+            <input type="text" name="q" value="{{ search_term }}" placeholder="Search Branch / Region / Contact" style="padding:10px 20px; border-radius:30px; border:1.5px solid #cbd5e1; font-size:0.88rem; width:280px; outline:none; background:#fff; color:#374151;">
+            <select name="status" style="padding:10px 16px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.88rem;background:#fff;color:#374151;">
+                <option value="All" {% if status == 'All' %}selected{% endif %}>All</option>
+                <option value="Active" {% if status == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Inactive" {% if status == 'Inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+            <button type="submit" style="padding:10px 24px; border-radius:30px; background:#fff; color:#1e293b; border:1.5px solid #cbd5e1; font-weight:700; cursor:pointer; font-size:0.88rem;">Search</button>
+            <a href="{{ url_for('branches.branch_compare') }}" style="padding:10px 20px;border-radius:30px;border:1.5px solid #c4b5fd;background:#fff;color:#5b21b6;font-weight:700;cursor:pointer;font-size:0.88rem;text-decoration:none;"><i class="fas fa-balance-scale"></i> Compare Branches</a>
+            <a href="{{ url_for('branches.branch_add') }}" style="padding:10px 26px; border-radius:30px; background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; border:none; font-weight:700; cursor:pointer; font-size:0.88rem; box-shadow:0 4px 10px rgba(124,58,237,0.25); text-decoration:none; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Add Branch</a>
+        </form>
+
+        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch Name</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Region</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Contact</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Status</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Created</th>
+                        <th style="padding:14px 16px;text-align:center;color:#7c3aed;font-weight:700;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for branch in branches %}
+                    <tr style="border-top:1px solid #f1f5f9;">
+                        <td style="padding:14px 16px;color:#374151;font-weight:600;"><a href="{{ url_for('branches.branch_detail', branch_id=branch.id) }}" style="color:#5b21b6;text-decoration:none;">{{ branch.branch_name }}</a></td>
+                        <td style="padding:14px 16px;color:#374151;">{{ branch.region or '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ branch.contact_info or '-' }}</td>
+                        <td style="padding:14px 16px;">
+                            <span class="status-pill" style="{% if branch.status == 'Inactive' %}background:#fee2e2;color:#dc2626;{% endif %}">{{ branch.status }}</span>
+                        </td>
+                        <td style="padding:14px 16px;color:#374151;">{{ branch.created_at.strftime('%d/%m/%Y') if branch.created_at else '-' }}</td>
+                        <td style="padding:14px 16px;text-align:center;white-space:nowrap;">
+                            <a href="{{ url_for('branches.branch_edit', branch_id=branch.id) }}" style="padding:6px 12px;border-radius:12px;background:#eef2ff;color:#4338ca;font-weight:600;text-decoration:none;font-size:0.82rem;">Edit</a>
+                            {% if branch.status == 'Active' %}
+                            <form action="{{ url_for('branches.branch_deactivate', branch_id=branch.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to deactivate this branch?');">
+                                <button type="submit" style="margin-left:6px;padding:6px 12px;border-radius:12px;background:#fee2e2;color:#dc2626;font-weight:600;border:none;cursor:pointer;font-size:0.82rem;">Deactivate</button>
+                            </form>
+                            {% else %}
+                            <form action="{{ url_for('branches.branch_activate', branch_id=branch.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Activate this branch again?');">
+                                <button type="submit" style="margin-left:6px;padding:6px 12px;border-radius:12px;background:#dcfce7;color:#16a34a;font-weight:600;border:none;cursor:pointer;font-size:0.82rem;">Activate</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="muted" style="padding:20px;text-align:center;">No branches found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="muted" style="margin-top:14px;">Total Records : {{ branches|length }}</p>
+    </div>
+</div>
+{% if msg %}
+<script>window.addEventListener('DOMContentLoaded', function(){ alert({{ msg|tojson }}); });</script>
+{% endif %}
+{% endblock %}

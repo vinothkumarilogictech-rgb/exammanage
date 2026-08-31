@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .status-registered { background: #f1f5f9; color: #475569; }
+    .status-scheduled { background: #dbeafe; color: #1e40af; }
+    .status-completed { background: #dcfce7; color: #166534; }
+    .status-noshow { background: #ffedd5; color: #9a3412; }
+    .status-rescheduled { background: #fef3c7; color: #92400e; }
+    .status-cancelled { background: #fee2e2; color: #7f1d1d; }
+    .result-pill { font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 14px; }
+    .result-pass { background: #dcfce7; color: #166534; }
+    .result-fail { background: #fee2e2; color: #991b1b; }
+    .result-pending { background: #f1f5f9; color: #64748b; }
+    .cand-action-link {
+        padding: 5px 12px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-decoration: none;
+        font-size: 0.8rem;
+        margin: 2px;
+        display: inline-block;
+        border: none;
+        cursor: pointer;
+    }
+</style>
+<div id="listView">
+    <div class="module-header">
+        <h2>Candidates &amp; Exam Attempts</h2>
+        <a href="{{ url_for('exams_dashboard.dashboard') }}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    </div>
+    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:24px;border-radius:16px;">
+        <form method="GET" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+            <input type="text" name="q" value="{{ search }}" placeholder="Search name / register no." style="padding:10px 18px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;width:200px;outline:none;background:#fff;color:#374151;">
+            <select name="status" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+                <option value="">All Statuses</option>
+                {% for s in statuses %}
+                <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <select name="result" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+                <option value="">All Results</option>
+                {% for r in results %}
+                <option value="{{ r }}" {% if result_filter == r %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+            </select>
+            <select name="test_type" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+                <option value="">All Exam Types</option>
+                {% for t in test_types %}
+                <option value="{{ t }}" {% if test_type_filter == t %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
+            <select name="branch_id" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+                <option value="">All Branches</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}" {% if branch_filter == b.id|string %}selected{% endif %}>{{ b.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="date" name="exam_date" value="{{ exam_date_filter }}" style="padding:9px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+            <input type="number" min="1" name="attempt" value="{{ attempt_filter }}" placeholder="Attempt #" style="padding:9px 14px;width:100px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+            <button type="submit" style="padding:10px 22px;border-radius:30px;background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;">Filter</button>
+            {% if search or status_filter or result_filter or test_type_filter or branch_filter or exam_date_filter or attempt_filter %}
+            <a href="{{ url_for('candidates.list_candidates') }}" style="padding:10px 22px;border-radius:30px;background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;text-decoration:none;">Clear</a>
+            {% endif %}
+            <button type="button" onclick="showForm()" style="padding:10px 24px;border-radius:30px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.85rem;box-shadow:0 4px 10px rgba(124,58,237,0.25);"><i class="fas fa-plus"></i> Add Candidate</button>
+        </form>
+        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Name</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Register No.</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Exam Type</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Session</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Attempt</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Scheduled</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Actual</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Status</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Result</th>
+                        <th style="padding:14px 16px;text-align:center;color:#7c3aed;font-weight:700;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in attempts %}
+                    {% set adata = {
+                        "attempt_id": a.id,
+                        "candidate_id": a.candidate_id,
+                        "name": a.candidate.name if a.candidate else "",
+                        "status": a.status,
+                        "was_rescheduled": a.was_rescheduled
+                    } %}
+                    <tr style="border-top:1px solid #f1f5f9;">
+                        <td style="padding:14px 16px;color:#374151;font-weight:700;">{{ a.candidate.name if a.candidate else '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ a.candidate.register_number if a.candidate else '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ a.branch.name if a.branch else '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ a.exam_type.name if a.exam_type else '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;font-size:0.85rem;">
+                            {% if a.session %}
+                            {{ a.session.exam_date.strftime('%d-%b-%Y') if a.session.exam_date else '-' }}<br>
+                            <span style="color:#64748b;">{{ a.session.start_time }} - {{ a.session.end_time }}</span>
+                            {% else %}
+                            <span class="muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:14px 16px;color:#374151;">Attempt {{ a.attempt_number }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ a.scheduled_date or '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ a.actual_exam_date or '-' }}</td>
+                        <td style="padding:14px 16px;">
+                            {% if a.was_rescheduled and a.status == 'Scheduled' %}
+                            <span class="status-badge status-rescheduled" title="Originally {{ a.original_scheduled_date }}">Rescheduled &rarr; {{ a.scheduled_date }}</span>
+                            {% else %}
+                            <span class="status-badge status-{{ a.status|lower|replace(' ', '') }}">{{ a.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:14px 16px;">
+                            <span class="result-pill result-{{ a.result|lower }}">{{ a.result }}</span>
+                        </td>
+                        <td style="padding:14px 16px;text-align:center;white-space:nowrap;">
+                            <a href="{{ url_for('candidates.candidate_detail', candidate_id=a.candidate_id) }}" class="cand-action-link" style="background:#f1f5f9;color:#334155;">History</a>
+                            <a href="javascript:void(0)" onclick='showStatusForm({{ adata|tojson }})' class="cand-action-link" style="background:#ede9fe;color:#5b21b6;">Status</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="11" class="muted" style="padding:20px;text-align:center;">No exam attempts yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="candidateForm" class="panel hidden-view">
+    <div class="module-header"><h2>Add Candidate</h2></div>
+    <form action="{{ url_for('candidates.save_candidate') }}" method="POST" class="form-grid">
+        <input type="hidden" name="id" id="c_id">
+        <input type="hidden" name="next" value="{{ url_for('candidates.list_candidates') }}">
+        <div class="form-row"><label>Name</label><input type="text" name="name" id="c_name" required></div>
+        <div class="form-row"><label>Register Number</label><input type="text" name="register_number" id="c_register_number" required></div>
+        <div class="form-row">
+            <label>Branch / Exam Center</label>
+            <select name="branch_id" id="c_branch_id" onchange="refreshExamTypeOptions(); refreshSessionOptions();" required>
+                <option value="">Select Branch</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}">{{ b.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Exam Type</label>
+            <select name="exam_type_id" id="c_exam_type_id" onchange="refreshSessionOptions()" required>
+                <option value="">Select Branch first</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Session</label>
+            <select name="session_id" id="c_session_id" onchange="toggleExamDateField()">
+                <option value="">Select Branch and Exam Type first</option>
+            </select>
+        </div>
+        <div class="form-row"><label>Exam Date</label><input type="date" name="exam_date" id="c_exam_date" required></div>
+        <div class="button-row">
+            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Candidate</button>
+            <button type="button" class="btn-secondary" onclick="showList()">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<div id="statusForm" class="panel hidden-view">
+    <div class="module-header"><h2>Update Exam Attempt Status</h2></div>
+    <form action="" method="POST" class="form-grid" id="statusFormEl">
+        <input type="hidden" name="next" value="{{ url_for('candidates.list_candidates') }}">
+        <div class="form-row"><label>Candidate</label><input type="text" id="st_name" disabled></div>
+        <div class="form-row">
+            <label>Status</label>
+            <select name="status" id="st_status" onchange="toggleStatusFields()" required>
+                {% for s in statuses %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row" id="st_new_date_row" style="display:none;">
+            <label>New Exam Date</label>
+            <input type="date" name="new_exam_date" id="st_new_date">
+        </div>
+        <div class="form-row" id="st_actual_date_row" style="display:none;">
+            <label>Actual Exam Date</label>
+            <input type="date" name="actual_exam_date" id="st_actual_date">
+        </div>
+        <div class="form-row" id="st_result_row" style="display:none;">
+            <label>Result</label>
+            <select name="result" id="st_result">
+                {% for r in results %}
+                <option value="{{ r }}">{{ r }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row" id="st_reason_row">
+            <label id="st_reason_label">Reason / Note (optional)</label>
+            <textarea name="reason_note" id="st_note" rows="3"></textarea>
+        </div>
+        <div class="button-row">
+            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Status</button>
+            <button type="button" class="btn-secondary" onclick="showList()">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<script id="examTypesData" type="application/json">{{ exam_type_options|tojson }}</script>
+<script id="branchExamMapData" type="application/json">{{ branch_exam_map|tojson }}</script>
+<script id="sessionsData" type="application/json">{{ session_options|tojson }}</script>
+<script>
+var ATTEMPT_STATUS_URL_BASE = "{{ url_for('candidates.update_attempt_status', attempt_id=0) }}".replace(/0$/, '');
+var EXAM_TYPES = JSON.parse(document.getElementById('examTypesData').textContent || '[]'); // [{id, name}, ...]
+var BRANCH_EXAM_MAP = JSON.parse(document.getElementById('branchExamMapData').textContent || '[]'); // [{branch_id, exam_type_id}, ...]
+var SESSIONS = JSON.parse(document.getElementById('sessionsData').textContent || '[]'); // [{id, branch_id, exam_type_id, exam_date, label}, ...]
+
+function hideAllPanels(){
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('candidateForm').style.display = 'none';
+    document.getElementById('statusForm').style.display = 'none';
+}
+
+// Rebuilds the Exam Type dropdown to only the exam types mapped (Branch <->
+// Exam Mapping) to whichever branch is currently selected.
+function refreshExamTypeOptions(selectedExamTypeId){
+    var branchId = document.getElementById('c_branch_id').value;
+    var select = document.getElementById('c_exam_type_id');
+    select.innerHTML = '';
+
+    if (!branchId){
+        select.innerHTML = '<option value="">Select Branch first</option>';
+        return;
+    }
+
+    var allowedIds = BRANCH_EXAM_MAP.filter(function(m){
+        return String(m.branch_id) === String(branchId);
+    }).map(function(m){ return String(m.exam_type_id); });
+
+    var available = EXAM_TYPES.filter(function(t){ return allowedIds.indexOf(String(t.id)) !== -1; });
+
+    if (!available.length){
+        select.innerHTML = '<option value="">No exam types mapped to this branch</option>';
+        return;
+    }
+
+    select.innerHTML = '<option value="">Select Exam Type</option>';
+    available.forEach(function(t){
+        var opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        if (selectedExamTypeId && String(selectedExamTypeId) === String(t.id)) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+// Rebuilds the Session dropdown to only sessions matching the currently
+// selected Branch + Exam Type. Picking "No specific session" leaves the
+// Exam Date field free for manual entry (previous behaviour); picking an
+// actual session locks Exam Date to that session's date.
+function refreshSessionOptions(selectedSessionId){
+    var branchId = document.getElementById('c_branch_id').value;
+    var examTypeId = document.getElementById('c_exam_type_id').value;
+    var select = document.getElementById('c_session_id');
+    select.innerHTML = '';
+
+    if (!branchId || !examTypeId){
+        select.innerHTML = '<option value="">Select Branch and Exam Type first</option>';
+        toggleExamDateField();
+        return;
+    }
+
+    var matching = SESSIONS.filter(function(s){
+        return String(s.branch_id) === String(branchId) && String(s.exam_type_id) === String(examTypeId);
+    });
+
+    select.innerHTML = '<option value="">No specific session (enter date manually)</option>';
+    matching.forEach(function(s){
+        var opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.label;
+        if (selectedSessionId && String(selectedSessionId) === String(s.id)) opt.selected = true;
+        select.appendChild(opt);
+    });
+    toggleExamDateField();
+}
+
+// Keeps Exam Date in sync with whichever session is picked (locked/read-only
+// while a real session is selected), or frees it up for manual entry.
+function toggleExamDateField(){
+    var sessionId = document.getElementById('c_session_id').value;
+    var dateInput = document.getElementById('c_exam_date');
+    var selected = SESSIONS.filter(function(s){ return String(s.id) === String(sessionId); })[0];
+    if (selected){
+        dateInput.value = selected.exam_date;
+        dateInput.readOnly = true;
+    } else {
+        dateInput.readOnly = false;
+    }
+}
+
+function showForm(){
+    document.getElementById('c_id').value = '';
+    document.getElementById('c_name').value = '';
+    document.getElementById('c_register_number').value = '';
+    document.getElementById('c_branch_id').value = '';
+    document.getElementById('c_exam_date').value = '';
+    document.getElementById('c_exam_date').readOnly = false;
+    refreshExamTypeOptions();
+    refreshSessionOptions();
+    hideAllPanels();
+    document.getElementById('candidateForm').style.display = 'block';
+}
+function showList(){
+    hideAllPanels();
+    document.getElementById('listView').style.display = 'block';
+}
+
+function toggleStatusFields(){
+    var status = document.getElementById('st_status').value;
+    document.getElementById('st_new_date_row').style.display = (status === 'Rescheduled') ? 'block' : 'none';
+    document.getElementById('st_actual_date_row').style.display = (status === 'Completed') ? 'block' : 'none';
+    document.getElementById('st_result_row').style.display = (status === 'Completed') ? 'block' : 'none';
+    var label = document.getElementById('st_reason_label');
+    if (status === 'Cancelled') label.textContent = 'Cancellation Reason';
+    else if (status === 'Rescheduled') label.textContent = 'Reschedule Reason';
+    else if (status === 'No Show') label.textContent = 'Remarks (optional)';
+    else label.textContent = 'Reason / Note (optional)';
+}
+
+function showStatusForm(data){
+    document.getElementById('statusFormEl').action = ATTEMPT_STATUS_URL_BASE + data.attempt_id;
+    document.getElementById('st_name').value = data.name;
+    document.getElementById('st_status').value = data.status || 'Scheduled';
+    document.getElementById('st_new_date').value = '';
+    document.getElementById('st_actual_date').value = '';
+    document.getElementById('st_note').value = '';
+    toggleStatusFields();
+    hideAllPanels();
+    document.getElementById('statusForm').style.display = 'block';
+}
+</script>
+{% endblock %}

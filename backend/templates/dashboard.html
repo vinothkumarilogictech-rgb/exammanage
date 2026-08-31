@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    .premium-stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:22px; margin-bottom:30px; }
+    @media (max-width:1200px){.premium-stats-grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:640px){.premium-stats-grid{grid-template-columns:1fr}}
+    .luxury-card { position:relative; overflow:hidden; border-radius:20px; padding:24px; min-height:165px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 10px 25px rgba(0,0,0,.04); transition:transform .2s ease,box-shadow .2s ease; border:1px solid rgba(255,255,255,.2); cursor:pointer; }
+    .luxury-card:hover { transform:translateY(-4px); box-shadow:0 14px 30px rgba(123,47,247,.15); }
+    .card-title{font-size:.95rem;font-weight:700;color:#1e293b}
+    .card-value{font-size:2rem;font-weight:800;color:#0f172a;text-align:center;margin:10px 0}
+    .glass-icon-wrapper{position:absolute;top:20px;right:20px;width:44px;height:44px;background:rgba(255,255,255,.4);backdrop-filter:blur(8px);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+    .bg-purple{background:linear-gradient(135deg,#e0e0ff,#ccd0ff)} .bg-green{background:linear-gradient(135deg,#dcfce7,#bbf7d0)}
+    .bg-blue{background:linear-gradient(135deg,#e0f2fe,#bae6fd)} .bg-rose{background:linear-gradient(135deg,#fce7f3,#fbcfe8)}
+</style>
+<h2 style="margin-bottom:1.8rem;color:var(--dark-purple);font-weight:700;letter-spacing:-.5px;">Operational Overview</h2>
+<div class="premium-stats-grid">
+    <div class="luxury-card bg-purple" onclick="location.href='/branches'">
+        <span class="card-title">Total Branches</span><div class="glass-icon-wrapper">🏢</div>
+        <div class="card-value">{{ stats.total_branches }}</div>
+        <span style="font-size:.75rem;opacity:.7;text-align:center;font-weight:600;color:#475569;">{{ stats.active_branches }} active branches</span>
+    </div>
+    <div class="luxury-card bg-green" onclick="location.href='/exams/'">
+        <span class="card-title">Scheduled Exams</span><div class="glass-icon-wrapper">🎓</div>
+        <div class="card-value">{{ stats.scheduled_exams }}</div>
+        <span style="font-size:.75rem;opacity:.7;text-align:center;font-weight:600;color:#475569;">Upcoming exam attempts</span>
+    </div>
+    <div class="luxury-card bg-blue" onclick="location.href='/exams/'">
+        <span class="card-title">Completed Exams</span><div class="glass-icon-wrapper">✅</div>
+        <div class="card-value">{{ stats.completed_exams }}</div>
+        <span style="font-size:.75rem;opacity:.7;text-align:center;font-weight:600;color:#475569;">Completed exam attempts</span>
+    </div>
+    <div class="luxury-card bg-rose" onclick="location.href='/expense-management'">
+        <span class="card-title">Total Expenses</span><div class="glass-icon-wrapper">🧾</div>
+        <div class="card-value"><span class="currency-label">SGD</span> <span class="converted-amount" data-base-val="{{ stats.expense_total }}">{{ '%.2f'|format(stats.expense_total) }}</span></div>
+        <span style="font-size:.75rem;opacity:.7;text-align:center;font-weight:600;color:#475569;">Recorded operating expenses</span>
+    </div>
+</div>
+<div class="premium-stats-grid" style="margin-top:10px;">
+    <div class="luxury-card bg-green" onclick="location.href='/vouchers/stock?status=Available'"><span class="card-title">Available Vouchers</span><div class="card-value">{{ stats.vouchers_available }}</div><span style="font-size:.75rem;opacity:.7;text-align:center;font-weight:600;color:#475569;">Current voucher stock</span></div>
+    <div class="luxury-card bg-blue" onclick="location.href='/vouchers/issued'"><span class="card-title">Issued Vouchers</span><div class="card-value">{{ stats.vouchers_issued }}</div><span style="font-size:.75rem;opacity:.7;text-align:center;font-weight:600;color:#475569;">Given to students</span></div>
+    <div class="luxury-card bg-purple" onclick="location.href='/vouchers/students'"><span class="card-title">Voucher Sales</span><div class="card-value">₹{{ '%.0f'|format(stats.voucher_sales) }}</div><span style="font-size:.75rem;opacity:.7;text-align:center;font-weight:600;color:#475569;">Student voucher amount</span></div>
+    <div class="luxury-card bg-rose" onclick="location.href='/vouchers/'"><span class="card-title">Voucher Profit</span><div class="card-value">₹{{ '%.0f'|format(stats.voucher_profit) }}</div><span style="font-size:.75rem;opacity:.7;text-align:center;font-weight:600;color:#475569;">Realized profit</span></div>
+</div>
+<div style="background:white;padding:2rem;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.03);border:1px solid #f1f5f9;">
+    <h3 style="color:var(--primary-purple);margin-bottom:1.2rem;font-weight:700;font-size:1.1rem;">Workspace</h3>
+    <p style="color:#6B7280;font-size:.9rem;margin:0;">Use the sidebar to manage branches, exams and expenses. The dashboard shows only the modules currently enabled for this workspace.</p>
+</div>
+{% endblock %}

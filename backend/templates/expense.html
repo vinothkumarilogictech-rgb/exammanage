@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block content %}
+<div id="listView">
+    <div class="module-header">
+        <h2>Expense Management</h2>
+    </div>
+    <div class="module-actions" style="margin-bottom:18px;">
+        <a href="{{ url_for('expense_management') }}" class="tab-button active">Expenses</a>
+        <a href="{{ url_for('expenses.expense_categories') }}" class="tab-button">Categories</a>
+        <a href="{{ url_for('expenses.expense_budgets') }}" class="tab-button">Budgets</a>
+        <a href="{{ url_for('expenses.expense_summary') }}" class="tab-button">Summary</a>
+    </div>
+    <p class="muted" style="margin-bottom:18px;">Manage and track branch-wise expenses.</p>
+
+    <div class="summary-grid" style="margin-bottom:24px;">
+        <div class="card">
+            <h3>Total Expenses</h3>
+            <div class="value">{{ '%.2f'|format(stats.total) }}</div>
+        </div>
+        <div class="card">
+            <h3>This Month</h3>
+            <div class="value">{{ '%.2f'|format(stats.this_month) }}</div>
+        </div>
+        <div class="card">
+            <h3>This Quarter</h3>
+            <div class="value">{{ '%.2f'|format(stats.this_quarter) }}</div>
+        </div>
+        <div class="card accent">
+            <h3>This Year</h3>
+            <div class="value">{{ '%.2f'|format(stats.this_year) }}</div>
+        </div>
+    </div>
+
+    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:24px;border-radius:16px;">
+        <form method="GET" action="{{ url_for('expense_management') }}" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+            <input type="text" name="q" value="{{ search_term }}" placeholder="Search category / note / payment mode" style="padding:10px 18px; border-radius:30px; border:1.5px solid #cbd5e1; font-size:0.85rem; width:230px; outline:none; background:#fff; color:#374151;">
+            <select name="branch_id" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;background:#fff;color:#374151;">
+                <option value="">All Branches</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}" {% if branch_id|string == b.id|string %}selected{% endif %}>{{ b.branch_name }}</option>
+                {% endfor %}
+            </select>
+            <select name="category_id" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;background:#fff;color:#374151;">
+                <option value="">All Categories</option>
+                {% for c in categories %}
+                <option value="{{ c.id }}" {% if category_id|string == c.id|string %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="payment_mode" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;background:#fff;color:#374151;">
+                <option value="">All Payment Modes</option>
+                {% for pm in payment_modes %}
+                <option value="{{ pm }}" {% if payment_mode == pm %}selected{% endif %}>{{ pm }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;background:#fff;color:#374151;">
+                <option value="All" {% if status == 'All' %}selected{% endif %}>All Status</option>
+                <option value="Active" {% if status == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Cancelled" {% if status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+            <input type="date" name="date_from" value="{{ date_from }}" style="padding:9px 12px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;">
+            <input type="date" name="date_to" value="{{ date_to }}" style="padding:9px 12px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;">
+            <button type="submit" style="padding:10px 20px; border-radius:30px; background:#fff; color:#1e293b; border:1.5px solid #cbd5e1; font-weight:700; cursor:pointer; font-size:0.85rem;">Filter</button>
+        </form>
+
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <a href="{{ url_for('expenses.expense_export_pdf', **request.args) }}" style="padding:9px 18px;border-radius:30px;border:1.5px solid #c4b5fd;background:#fff;color:#5b21b6;font-weight:700;cursor:pointer;font-size:0.85rem;text-decoration:none;"><i class="fas fa-file-pdf"></i> Export PDF</a>
+            <a href="{{ url_for('expenses.expense_export_excel', **request.args) }}" style="padding:9px 18px;border-radius:30px;border:1.5px solid #c4b5fd;background:#fff;color:#5b21b6;font-weight:700;cursor:pointer;font-size:0.85rem;text-decoration:none;"><i class="fas fa-file-excel"></i> Export Excel</a>
+            <a href="{{ url_for('expenses.expense_add_page') }}" style="padding:10px 26px; border-radius:30px; background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; border:none; font-weight:700; cursor:pointer; font-size:0.88rem; box-shadow:0 4px 10px rgba(124,58,237,0.25); text-decoration:none; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Add Expense</a>
+        </div>
+
+        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Date</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Category</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Amount</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Payment Mode</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Status</th>
+                        <th style="padding:14px 16px;text-align:center;color:#7c3aed;font-weight:700;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in expenses %}
+                    <tr style="border-top:1px solid #f1f5f9;{% if e.status == 'Cancelled' %}opacity:0.6;{% endif %}">
+                        <td style="padding:14px 16px;color:#374151;">{{ e.date_incurred.strftime('%d-%b-%Y') if e.date_incurred else '-' }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ e.branch.branch_name if e.branch else '-' }}</td>
+                        <td style="padding:14px 16px;"><span style="background:#ede9fe;color:#5b21b6;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">{{ e.expense_category.name if e.expense_category else e.category }}</span></td>
+                        <td style="padding:14px 16px;color:#374151;font-weight:600;">{{ '%.2f'|format(e.amount or 0) }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ e.payment_mode or '-' }}</td>
+                        <td style="padding:14px 16px;">
+                            <span class="status-pill" style="{% if e.status == 'Cancelled' %}background:#fee2e2;color:#dc2626;{% endif %}">{{ e.status or 'Active' }}</span>
+                        </td>
+                        <td style="padding:14px 16px;text-align:center;white-space:nowrap;">
+                            <a href="{{ url_for('expenses.expense_detail', expense_id=e.id) }}" style="padding:6px 12px;border-radius:12px;background:#ede9fe;color:#5b21b6;font-weight:600;text-decoration:none;font-size:0.82rem;">View</a>
+                            <a href="{{ url_for('expense_edit', expense_id=e.id) }}" style="margin-left:6px;padding:6px 12px;border-radius:12px;background:#eef2ff;color:#4338ca;font-weight:600;text-decoration:none;font-size:0.82rem;">Edit</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="muted" style="padding:20px;text-align:center;">No expenses found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="muted" style="margin-top:14px;">Total Records : {{ expenses|length }}</p>
+    </div>
+</div>
+{% if msg %}
+<script>window.addEventListener('DOMContentLoaded', function(){ alert({{ msg|tojson }}); });</script>
+{% endif %}
+{% endblock %}

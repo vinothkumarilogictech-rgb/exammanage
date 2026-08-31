@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+{% set fd = form_data if form_data is defined else None %}
+<div class="module-header"><h2>Expense Management</h2></div>
+<div class="panel" style="max-width:560px;">
+    <h3>Add Budget</h3>
+
+    {% if error %}
+    <p style="color:#DC2626;font-weight:600;margin-bottom:14px;">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('expenses.expense_budget_add') }}" class="form-grid">
+        <div class="form-row">
+            <label>Branch (leave blank for all branches)</label>
+            <select name="branch_id">
+                <option value="">All Branches</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}" {% if fd and fd.branch_id|string == b.id|string %}selected{% endif %}>{{ b.branch_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Category *</label>
+            <select name="category_id" required>
+                <option value="">Select Category</option>
+                {% for c in categories %}
+                <option value="{{ c.id }}" {% if fd and fd.category_id|string == c.id|string %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Year *</label>
+            <input type="number" name="period_year" required value="{{ fd.period_year if fd else '' }}">
+        </div>
+        <div class="form-row">
+            <label>Month (1-12, leave blank for a full-year budget)</label>
+            <input type="number" name="period_month" min="1" max="12" value="{{ fd.period_month if fd else '' }}">
+        </div>
+        <div class="form-row">
+            <label>Budget Amount *</label>
+            <input type="number" step="0.01" min="0.01" name="budget_amount" required value="{{ fd.budget_amount if fd else '' }}">
+        </div>
+
+        <div class="button-row">
+            <button class="btn-primary" type="submit"><i class="fas fa-save"></i> Save Budget</button>
+            <a class="btn-secondary" href="{{ url_for('expenses.expense_budgets') }}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

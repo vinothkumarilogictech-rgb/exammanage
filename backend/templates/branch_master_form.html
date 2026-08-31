@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+{% set fd = form_data if form_data is defined else None %}
+<div class="module-header"><h2>Branch Management</h2></div>
+<div class="panel">
+    <h3>{% if branch is defined %}Edit Branch{% else %}Add Branch{% endif %}</h3>
+
+    {% if error %}
+    <p style="color:#DC2626;font-weight:600;margin-bottom:14px;">{{ error }}</p>
+    {% endif %}
+
+    <form action="{{ url_for('branches.branch_edit', branch_id=branch.id) if branch is defined else url_for('branches.branch_add') }}" method="POST" class="form-grid">
+        <div class="form-row">
+            <label>Branch Name *</label>
+            <input type="text" name="branch_name" required
+                value="{{ fd.branch_name if fd else (branch.branch_name if branch is defined else '') }}">
+        </div>
+        <div class="form-row">
+            <label>Address</label>
+            <input type="text" name="address"
+                value="{{ fd.address if fd else (branch.address if branch is defined and branch.address else '') }}">
+        </div>
+        <div class="form-row">
+            <label>Contact Info</label>
+            <input type="text" name="contact_info"
+                value="{{ fd.contact_info if fd else (branch.contact_info if branch is defined and branch.contact_info else '') }}">
+        </div>
+        <div class="form-row">
+            <label>Region</label>
+            <input type="text" name="region"
+                value="{{ fd.region if fd else (branch.region if branch is defined and branch.region else '') }}">
+        </div>
+        <div class="form-row">
+            <label>Status</label>
+            {% set current_status = fd.status if fd else (branch.status if branch is defined else 'Active') %}
+            <select name="status">
+                <option value="Active" {% if current_status == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Inactive" {% if current_status == 'Inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+
+        <div class="button-row">
+            <button class="btn-primary" type="submit"><i class="fas fa-save"></i> Save Branch</button>
+            <a class="btn-secondary" href="{{ url_for('branches.branch_list') }}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

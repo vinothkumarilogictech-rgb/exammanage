@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+{% set fd = form_data if form_data is defined else None %}
+<div class="module-header"><h2>Expense Management</h2></div>
+<div class="panel" style="max-width:640px;">
+    <h3>{% if expense is defined %}Edit Expense{% else %}Add Expense{% endif %}</h3>
+
+    {% if error %}
+    <p style="color:#DC2626;font-weight:600;margin-bottom:14px;">{{ error }}</p>
+    {% endif %}
+
+    <form id="expenseForm" method="POST" enctype="multipart/form-data" class="form-grid"
+          action="{{ url_for('expense_edit', expense_id=expense.id) if expense is defined else url_for('expense_save') }}"
+          onsubmit="return handleExpenseSubmit(this);">
+        {% if expense is defined %}
+        <input type="hidden" name="expense_id" value="{{ expense.id }}">
+        {% else %}
+        <input type="hidden" name="form_token" value="{{ form_token }}">
+        {% endif %}
+
+        <div class="form-row">
+            <label>Branch *</label>
+            {% set current_branch_id = fd.branch_id if fd else (expense.branch_id if expense is defined else '') %}
+            <select name="branch_id" required>
+                <option value="">Select Branch</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}" {% if current_branch_id|string == b.id|string %}selected{% endif %}>{{ b.branch_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Category *</label>
+            {% set current_category_id = fd.category_id if fd else (expense.category_id if expense is defined else '') %}
+            <select name="category_id" required>
+                <option value="">Select Category</option>
+                {% for c in categories %}
+                <option value="{{ c.id }}" {% if current_category_id|string == c.id|string %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Amount *</label>
+            <input type="number" step="0.01" min="0.01" name="amount" required
+                value="{{ fd.amount if fd else (expense.amount if expense is defined else '') }}">
+        </div>
+        <div class="form-row">
+            <label>Expense Date *</label>
+            <input type="date" name="date_incurred" required
+                value="{{ fd.date_incurred if fd else (expense.date_incurred.strftime('%Y-%m-%d') if expense is defined and expense.date_incurred else '') }}">
+        </div>
+        <div class="form-row">
+            <label>Payment Mode *</label>
+            {% set current_payment_mode = fd.payment_mode if fd else (expense.payment_mode if expense is defined else '') %}
+            <select name="payment_mode" required>
+                <option value="">Select Payment Mode</option>
+                {% for pm in payment_modes %}
+                <option value="{{ pm }}" {% if current_payment_mode == pm %}selected{% endif %}>{{ pm }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Note</label>
+            <textarea name="note">{{ fd.note if fd else (expense.description if expense is defined and expense.description else '') }}</textarea>
+        </div>
+        <div class="form-row">
+            <label>Receipt (PDF, JPG, PNG, DOC, DOCX)</label>
+            <input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+            {% if expense is defined and expense.receipt_file %}
+            <p class="muted" style="margin-top:6px;font-size:0.82rem;">Current: <a href="{{ url_for('static', filename=expense.receipt_file) }}" target="_blank">view existing receipt</a></p>
+            {% endif %}
+        </div>
+
+        <div class="button-row">
+            <button class="btn-primary" type="submit" id="expenseSaveBtn"><i class="fas fa-save"></i> Save Expense</button>
+            <a class="btn-secondary" href="{{ url_for('expense_management') }}">Cancel</a>
+        </div>
+    </form>
+</div>
+<script>
+// Frontend duplicate-submit guard: disable the button immediately so a
+// double-click / repeated Enter can't fire two submissions. The backend
+// also enforces this independently (see form_token + ExpenseSubmissionToken).
+function handleExpenseSubmit(form) {
+    var btn = document.getElementById('expenseSaveBtn');
+    if (btn.dataset.submitted === '1') { return false; }
+    btn.dataset.submitted = '1';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    return true;
+}
+</script>
+{% endblock %}

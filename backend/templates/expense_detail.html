@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="module-header">
+    <h2>Expense Details</h2>
+    <a href="{{ url_for('expense_management') }}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back to Expense List</a>
+</div>
+<div class="panel" style="max-width:640px;">
+    <h3>EXP-{{ '%03d'|format(expense.id) }}
+        <span class="status-pill" style="margin-left:10px;{% if expense.status == 'Cancelled' %}background:#fee2e2;color:#dc2626;{% endif %}">{{ expense.status or 'Active' }}</span>
+    </h3>
+
+    <div class="form-grid" style="margin-top:10px;">
+        <div class="form-row"><label>Branch</label><div style="color:#374151;font-size:0.95rem;">{{ expense.branch.branch_name if expense.branch else '-' }}</div></div>
+        <div class="form-row"><label>Category</label><div style="color:#374151;font-size:0.95rem;">{{ expense.expense_category.name if expense.expense_category else expense.category }}</div></div>
+        <div class="form-row"><label>Amount</label><div style="color:#374151;font-size:0.95rem;font-weight:700;">{{ '%.2f'|format(expense.amount or 0) }}</div></div>
+        <div class="form-row"><label>Expense Date</label><div style="color:#374151;font-size:0.95rem;">{{ expense.date_incurred.strftime('%d/%m/%Y') if expense.date_incurred else '-' }}</div></div>
+        <div class="form-row"><label>Payment Mode</label><div style="color:#374151;font-size:0.95rem;">{{ expense.payment_mode or '-' }}</div></div>
+        <div class="form-row"><label>Note</label><div style="color:#374151;font-size:0.95rem;">{{ expense.description or '-' }}</div></div>
+        <div class="form-row">
+            <label>Receipt</label>
+            <div style="color:#374151;font-size:0.95rem;">
+                {% if expense.receipt_file %}
+                <a href="{{ url_for('static', filename=expense.receipt_file) }}" target="_blank" style="color:#5b21b6;font-weight:600;">View Receipt</a>
+                {% else %}-{% endif %}
+            </div>
+        </div>
+        <div class="form-row"><label>Created Date</label><div style="color:#374151;font-size:0.95rem;">{{ expense.created_at.strftime('%d/%m/%Y %H:%M') if expense.created_at else '-' }}</div></div>
+        <div class="form-row"><label>Updated Date</label><div style="color:#374151;font-size:0.95rem;">{{ expense.updated_at.strftime('%d/%m/%Y %H:%M') if expense.updated_at else '-' }}</div></div>
+    </div>
+
+    <div class="button-row">
+        <a class="btn-primary" href="{{ url_for('expense_edit', expense_id=expense.id) }}"><i class="fas fa-edit"></i> Edit</a>
+        {% if expense.status != 'Cancelled' %}
+        <form action="{{ url_for('expenses.expense_cancel', expense_id=expense.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this expense?');">
+            <button type="submit" class="btn-danger"><i class="fas fa-ban"></i> Cancel Expense</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% if msg %}
+<script>window.addEventListener('DOMContentLoaded', function(){ alert({{ msg|tojson }}); });</script>
+{% endif %}
+{% endblock %}

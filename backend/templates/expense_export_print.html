@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Expense Report</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; padding: 30px; }
+        h1 { color: #7c3aed; margin-bottom: 4px; }
+        .meta { color: #6b7280; font-size: 0.9rem; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; font-size: 0.85rem; }
+        th { background: #f3e8ff; color: #7c3aed; }
+        tfoot td { font-weight: 700; background: #f9fafb; }
+        .print-bar { margin-bottom: 20px; }
+        .print-bar button {
+            padding: 10px 20px; border-radius: 8px; background: #7c3aed; color: #fff;
+            border: none; font-weight: 700; cursor: pointer; font-size: 0.9rem;
+        }
+        @media print {
+            .print-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-bar">
+        <button onclick="window.print()">Print / Save as PDF</button>
+    </div>
+    <h1>Expense Report</h1>
+    <div class="meta">
+        Branch: {{ filters.branch }} &nbsp;|&nbsp; Status: {{ filters.status }} &nbsp;|&nbsp;
+        From: {{ filters.date_from }} &nbsp;To:&nbsp; {{ filters.date_to }} &nbsp;|&nbsp;
+        Generated: {{ generated_at }}
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Branch</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Payment Mode</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in expenses %}
+            <tr>
+                <td>{{ e.date_incurred.strftime('%d-%b-%Y') if e.date_incurred else '-' }}</td>
+                <td>{{ e.branch.branch_name if e.branch else '-' }}</td>
+                <td>{{ e.expense_category.name if e.expense_category else e.category }}</td>
+                <td>{{ '%.2f'|format(e.amount or 0) }}</td>
+                <td>{{ e.payment_mode or '-' }}</td>
+                <td>{{ e.status or 'Active' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;color:#6b7280;">No expenses match the selected filters.</td></tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">Total</td>
+                <td colspan="3">{{ '%.2f'|format(total) }}</td>
+            </tr>
+        </tfoot>
+    </table>
+    <p style="margin-top:24px;color:#9ca3af;font-size:0.78rem;">
+        This is a print-friendly fallback view because the optional <code>reportlab</code> package is not installed.
+        Run <code>pip install reportlab</code> to enable direct PDF file downloads, or use "Print / Save as PDF" above.
+    </p>
+</body>
+</html>

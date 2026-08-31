@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="listView">
+    <div class="module-header">
+        <h2>Branch ↔ Exam Mapping</h2>
+        <a href="{{ url_for('branch_exams.list_branches') }}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-building"></i> Manage Branches</a>
+    </div>
+    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:24px;border-radius:16px;">
+        <form method="GET" style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+            <select name="branch_id" style="padding:10px 16px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.88rem;">
+                <option value="">All Branches</option>
+                {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id|string %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+            </select>
+            <select name="exam_type_id" style="padding:10px 16px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.88rem;">
+                <option value="">All Exams</option>
+                {% for e in exam_types %}<option value="{{ e.id }}" {% if exam_type_id == e.id|string %}selected{% endif %}>{{ e.name }}</option>{% endfor %}
+            </select>
+            <select name="status" style="padding:10px 16px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.88rem;">
+                <option value="">All Status</option>
+                <option value="Active" {% if status == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Inactive" {% if status == 'Inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+            <button type="submit" style="padding:10px 24px;border-radius:30px;background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.88rem;">Filter</button>
+            <button type="button" onclick="showForm()" style="padding:10px 26px;border-radius:30px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.88rem;box-shadow:0 4px 10px rgba(124,58,237,0.25);"><i class="fas fa-plus"></i> Add Mapping</button>
+        </form>
+        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Exam</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Language</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Status</th>
+                        <th style="padding:14px 16px;text-align:center;color:#7c3aed;font-weight:700;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in mappings %}
+                    <tr style="border-top:1px solid #f1f5f9;">
+                        <td style="padding:14px 16px;color:#374151;font-weight:700;">{{ m.branch.name }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ m.exam_type.name }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ m.exam_type.language }}</td>
+                        <td style="padding:14px 16px;">
+                            {% if m.status == 'Active' %}
+                            <span style="background:#dcfce7;color:#166534;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">Active</span>
+                            {% else %}
+                            <span style="background:#fee2e2;color:#991b1b;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:14px 16px;text-align:center;">
+                            <form action="{{ url_for('branch_exams.toggle_mapping_status', mapping_id=m.id) }}" method="POST" style="display:inline;">
+                                <button type="submit" style="padding:6px 14px;border-radius:12px;background:{{ '#fee2e2' if m.status=='Active' else '#dcfce7' }};color:{{ '#991b1b' if m.status=='Active' else '#166534' }};font-weight:600;border:none;cursor:pointer;">{{ 'Remove' if m.status == 'Active' else 'Reactivate' }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="muted" style="padding:20px;text-align:center;">No branch-exam mappings yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="mappingForm" class="panel hidden-view">
+    <div class="module-header"><h2>Add Branch ↔ Exam Mapping</h2></div>
+    <form action="{{ url_for('branch_exams.save_mapping') }}" method="POST" class="form-grid">
+        <div class="form-row"><label>Branch</label>
+            <select name="branch_id" required>
+                <option value="">Select Branch</option>
+                {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-row"><label>Exam</label>
+            <select name="exam_type_id" required>
+                <option value="">Select Exam</option>
+                {% for e in exam_types %}<option value="{{ e.id }}">{{ e.name }} ({{ e.language }})</option>{% endfor %}
+            </select>
+        </div>
+        <div class="button-row">
+            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Create Mapping</button>
+            <button type="button" class="btn-secondary" onclick="showList()">Cancel</button>
+        </div>
+    </form>
+    {% if not branches %}<p class="muted" style="margin-top:10px;">No branches found — <a href="{{ url_for('branch_exams.list_branches') }}">add a branch first</a>.</p>{% endif %}
+    {% if not exam_types %}<p class="muted" style="margin-top:10px;">No active exam types found — <a href="{{ url_for('exam_types.list_exam_types') }}">add an exam type first</a>.</p>{% endif %}
+</div>
+
+<script>
+function showForm(){
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('mappingForm').style.display = 'block';
+}
+function showList(){
+    document.getElementById('mappingForm').style.display = 'none';
+    document.getElementById('listView').style.display = 'block';
+}
+</script>
+{% endblock %}

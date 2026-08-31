@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}<div class="module-header"><h2>Bulk Voucher Purchase</h2></div><div class="panel"><form method="POST" class="form-grid">
+<div class="form-row"><label>Supplier</label><input name="supplier" value="{{ form_data.get('supplier','') }}" placeholder="Voucher provider"></div>
+<div class="form-row"><label>Purchase Date *</label><input type="date" name="purchase_date" required value="{{ form_data.get('purchase_date','') }}"></div>
+<div class="form-row"><label>Branch</label><select name="branch_id"><option value="">Select branch</option>{% for b in branches %}<option value="{{ b.id }}">{{ b.branch_name }}</option>{% endfor %}</select></div>
+<div class="form-row"><label>Quantity *</label><input type="number" min="1" name="quantity" required value="{{ form_data.get('quantity','') }}"></div>
+<div class="form-row"><label>Purchase Cost / Voucher *</label><input type="number" step="0.01" min="0.01" name="cost_per_voucher" required value="{{ form_data.get('cost_per_voucher','') }}"></div>
+<div class="form-row"><label>Default Selling Price / Voucher</label><input type="number" step="0.01" min="0" name="selling_price" value="{{ form_data.get('selling_price','') }}"></div>
+<div class="form-row"><label>Payment Mode</label><select name="payment_mode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Card</option><option>Other</option></select></div>
+<div class="form-row full"><label>Voucher Codes (one per line)</label><textarea name="voucher_codes" rows="8" placeholder="Paste the 500 actual voucher codes here, one per line. If left blank, unique codes will be generated."></textarea></div>
+<div class="form-row"><label>Auto Code Prefix (only if codes are blank)</label><input name="code_prefix" value="VCH"></div><div class="form-row full"><label>Notes</label><textarea name="notes" rows="3"></textarea></div>
+<div class="button-row"><button class="btn-primary" type="submit">Save Purchase & Record Expense</button><a class="btn-secondary" href="{{ url_for('vouchers.dashboard') }}">Cancel</a></div></form></div>{% endblock %}
