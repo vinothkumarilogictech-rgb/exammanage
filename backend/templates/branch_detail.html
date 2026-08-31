@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="module-header">
+    <h2>Branch Details</h2>
+    <a href="{{ url_for('branches.branch_list') }}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back to Branch List</a>
+</div>
+<div class="panel" style="max-width:640px;">
+    <h3>{{ branch.branch_name }}
+        <span class="status-pill" style="margin-left:10px;{% if branch.status == 'Inactive' %}background:#fee2e2;color:#dc2626;{% endif %}">{{ branch.status }}</span>
+    </h3>
+
+    <div class="form-grid" style="margin-top:10px;">
+        <div class="form-row">
+            <label>Branch Name</label>
+            <div class="muted" style="color:#374151;font-size:0.95rem;">{{ branch.branch_name }}</div>
+        </div>
+        <div class="form-row">
+            <label>Address</label>
+            <div class="muted" style="color:#374151;font-size:0.95rem;">{{ branch.address or '-' }}</div>
+        </div>
+        <div class="form-row">
+            <label>Contact Info</label>
+            <div class="muted" style="color:#374151;font-size:0.95rem;">{{ branch.contact_info or '-' }}</div>
+        </div>
+        <div class="form-row">
+            <label>Region</label>
+            <div class="muted" style="color:#374151;font-size:0.95rem;">{{ branch.region or '-' }}</div>
+        </div>
+        <div class="form-row">
+            <label>Status</label>
+            <div class="muted" style="color:#374151;font-size:0.95rem;">{{ branch.status }}</div>
+        </div>
+        <div class="form-row">
+            <label>Created Date</label>
+            <div class="muted" style="color:#374151;font-size:0.95rem;">{{ branch.created_at.strftime('%d/%m/%Y %H:%M') if branch.created_at else '-' }}</div>
+        </div>
+        <div class="form-row">
+            <label>Updated Date</label>
+            <div class="muted" style="color:#374151;font-size:0.95rem;">{{ branch.updated_at.strftime('%d/%m/%Y %H:%M') if branch.updated_at else '-' }}</div>
+        </div>
+    </div>
+
+    <div class="button-row">
+        <a class="btn-primary" href="{{ url_for('branches.branch_edit', branch_id=branch.id) }}"><i class="fas fa-edit"></i> Edit</a>
+        {% if branch.status == 'Active' %}
+        <form action="{{ url_for('branches.branch_deactivate', branch_id=branch.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to deactivate this branch?');">
+            <button type="submit" class="btn-danger"><i class="fas fa-ban"></i> Deactivate</button>
+        </form>
+        {% else %}
+        <form action="{{ url_for('branches.branch_activate', branch_id=branch.id) }}" method="POST" onsubmit="return confirm('Activate this branch again?');">
+            <button type="submit" class="btn-secondary"><i class="fas fa-check"></i> Activate</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

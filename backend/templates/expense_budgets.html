@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="module-header"><h2>Expense Management</h2></div>
+<div class="module-actions" style="margin-bottom:18px;">
+    <a href="{{ url_for('expense_management') }}" class="tab-button">Expenses</a>
+    <a href="{{ url_for('expenses.expense_categories') }}" class="tab-button">Categories</a>
+    <a href="{{ url_for('expenses.expense_budgets') }}" class="tab-button active">Budgets</a>
+    <a href="{{ url_for('expenses.expense_summary') }}" class="tab-button">Summary</a>
+</div>
+
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+    <a href="{{ url_for('expenses.expense_budget_add') }}" style="padding:10px 26px; border-radius:30px; background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; border:none; font-weight:700; cursor:pointer; font-size:0.88rem; text-decoration:none; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Add Budget</a>
+</div>
+
+<div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;">
+        <thead>
+            <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
+                <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch</th>
+                <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Category</th>
+                <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Period</th>
+                <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Budget</th>
+                <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Used</th>
+                <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Remaining</th>
+                <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Alert</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            {% set b = row.budget %}
+            <tr style="border-top:1px solid #f1f5f9;">
+                <td style="padding:14px 16px;color:#374151;">{{ b.branch.branch_name if b.branch else 'All Branches' }}</td>
+                <td style="padding:14px 16px;color:#374151;">{{ b.category.name if b.category else '-' }}</td>
+                <td style="padding:14px 16px;color:#374151;">{% if b.period_month %}{{ '%02d'|format(b.period_month) }}/{{ b.period_year }}{% else %}{{ b.period_year }} (Full Year){% endif %}</td>
+                <td style="padding:14px 16px;color:#374151;">{{ '%.2f'|format(b.budget_amount or 0) }}</td>
+                <td style="padding:14px 16px;color:#374151;">{{ '%.2f'|format(row.used) }}</td>
+                <td style="padding:14px 16px;color:#374151;font-weight:600;">{{ '%.2f'|format(row.remaining) }}</td>
+                <td style="padding:14px 16px;">
+                    {% if row.alert_level == 'exceeded' %}
+                    <span style="background:#fee2e2;color:#dc2626;padding:5px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">{{ row.alert_message }}</span>
+                    {% elif row.alert_level == 'warning' %}
+                    <span style="background:#fef3c7;color:#92400e;padding:5px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">{{ row.alert_message }}</span>
+                    {% else %}
+                    <span class="muted">On track</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="muted" style="padding:20px;text-align:center;">No budgets set yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

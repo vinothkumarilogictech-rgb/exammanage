@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="listView">
+    <div class="module-header">
+        <h2>Branches</h2>
+        <a href="{{ url_for('branch_exams.list_branch_exams') }}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Branch ↔ Exam Mapping</a>
+    </div>
+    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:24px;border-radius:16px;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+            <button type="button" onclick="showForm()" style="padding:10px 26px;border-radius:30px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.88rem;box-shadow:0 4px 10px rgba(124,58,237,0.25);"><i class="fas fa-plus"></i> Add Branch</button>
+        </div>
+        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch Name</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Location</th>
+                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Status</th>
+                        <th style="padding:14px 16px;text-align:center;color:#7c3aed;font-weight:700;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in branches %}
+                    <tr style="border-top:1px solid #f1f5f9;">
+                        <td style="padding:14px 16px;color:#374151;font-weight:700;">{{ b.name }}</td>
+                        <td style="padding:14px 16px;color:#374151;">{{ b.location or '-' }}</td>
+                        <td style="padding:14px 16px;">
+                            {% if b.status == 'Active' %}
+                            <span style="background:#dcfce7;color:#166534;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">Active</span>
+                            {% else %}
+                            <span style="background:#fee2e2;color:#991b1b;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:14px 16px;text-align:center;">
+                            <a href="javascript:void(0)" onclick='editBranch({{ {"id": b.id, "name": b.name, "location": b.location or "", "status": b.status}|tojson }})' style="padding:6px 14px;border-radius:12px;background:#eef2ff;color:#4338ca;font-weight:600;text-decoration:none;margin-right:8px;">Edit</a>
+                            <form action="{{ url_for('branch_exams.toggle_branch_status', branch_id=b.id) }}" method="POST" style="display:inline;">
+                                <button type="submit" style="padding:6px 14px;border-radius:12px;background:{{ '#fee2e2' if b.status=='Active' else '#dcfce7' }};color:{{ '#991b1b' if b.status=='Active' else '#166534' }};font-weight:600;border:none;cursor:pointer;">{{ 'Deactivate' if b.status == 'Active' else 'Activate' }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="muted" style="padding:20px;text-align:center;">No branches yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="branchForm" class="panel hidden-view">
+    <div class="module-header"><h2 id="formTitle">Add Branch</h2></div>
+    <form action="{{ url_for('branch_exams.save_branch') }}" method="POST" class="form-grid">
+        <input type="hidden" name="id" id="b_id">
+        <div class="form-row"><label>Branch Name</label><input type="text" name="name" id="b_name" required placeholder="e.g. Madurai Branch"></div>
+        <div class="form-row"><label>Location</label><input type="text" name="location" id="b_location" placeholder="e.g. Madurai, Tamil Nadu"></div>
+        <div class="form-row"><label>Status</label>
+            <select name="status" id="b_status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+        </div>
+        <div class="button-row">
+            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Branch</button>
+            <button type="button" class="btn-secondary" onclick="showList()">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function showForm(){
+    document.getElementById('formTitle').textContent = 'Add Branch';
+    document.getElementById('b_id').value = '';
+    document.getElementById('b_name').value = '';
+    document.getElementById('b_location').value = '';
+    document.getElementById('b_status').value = 'Active';
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('branchForm').style.display = 'block';
+}
+function editBranch(data){
+    document.getElementById('formTitle').textContent = 'Edit Branch';
+    document.getElementById('b_id').value = data.id;
+    document.getElementById('b_name').value = data.name;
+    document.getElementById('b_location').value = data.location;
+    document.getElementById('b_status').value = data.status;
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('branchForm').style.display = 'block';
+}
+function showList(){
+    document.getElementById('branchForm').style.display = 'none';
+    document.getElementById('listView').style.display = 'block';
+}
+</script>
+{% endblock %}

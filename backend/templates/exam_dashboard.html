@@ -1,0 +1,607 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    .exam-dash-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .exam-links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 26px;
+    }
+    .exam-link-btn {
+        padding: 9px 18px;
+        border-radius: 30px;
+        background: #fff;
+        color: #4a154b;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 0.86rem;
+        border: 1.5px solid #e9d5ff;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(124, 58, 237, 0.06);
+    }
+    .exam-link-btn:hover {
+        background: linear-gradient(135deg, #7c3aed, #9333ea);
+        color: #fff;
+        border-color: transparent;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(124, 58, 237, 0.25);
+    }
+    .exam-link-btn.active-link {
+        background: linear-gradient(135deg, #7c3aed, #a855f7);
+        color: #fff;
+        border-color: transparent;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+
+    /* Luxury Stats Grid */
+    .exam-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+        margin-bottom: 28px;
+    }
+    @media (max-width: 1200px) { .exam-stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .exam-stats-grid { grid-template-columns: 1fr; } }
+
+    .luxury-stat-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .luxury-stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -4px rgba(124, 58, 237, 0.12);
+        border-color: #ddd6fe;
+    }
+    .stat-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .stat-card-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+    }
+    .stat-icon-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    .stat-card-value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 6px;
+        color: #1e293b;
+    }
+    .stat-card-subtext {
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: #94a3b8;
+    }
+
+    /* Theme Variations */
+    .theme-purple .stat-icon-badge { background: #f3e8ff; color: #7c3aed; }
+    .theme-purple .stat-card-value { color: #6b21a8; }
+    .theme-blue .stat-icon-badge { background: #dbeafe; color: #2563eb; }
+    .theme-blue .stat-card-value { color: #1d4ed8; }
+    .theme-green .stat-icon-badge { background: #dcfce7; color: #16a34a; }
+    .theme-green .stat-card-value { color: #15803d; }
+    .theme-amber .stat-icon-badge { background: #fef3c7; color: #d97706; }
+    .theme-amber .stat-card-value { color: #b45309; }
+    .theme-red .stat-icon-badge { background: #fee2e2; color: #dc2626; }
+    .theme-red .stat-card-value { color: #dc2626; }
+    .theme-teal .stat-icon-badge { background: #ccfbf1; color: #0d9488; }
+    .theme-teal .stat-card-value { color: #0f766e; }
+
+    /* Dashboard Panels */
+    .dash-section-panel {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 28px;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    }
+    .section-title-wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #4a154b;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .section-badge-count {
+        background: #ede9fe;
+        color: #6b21a8;
+        font-size: 0.78rem;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-weight: 700;
+    }
+
+    /* Candidate Mini Summary Bar */
+    .cand-status-pills-bar {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #edf2f7;
+    }
+    .cand-pill-stat {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #475569;
+        padding: 4px 12px;
+        background: #fff;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+    .cand-pill-stat b { font-weight: 800; }
+
+    /* Custom Status Badges */
+    .cbadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+    .cbadge-scheduled { background: #dbeafe; color: #1e40af; }
+    .cbadge-completed { background: #dcfce7; color: #166534; }
+    .cbadge-rescheduled { background: #fef3c7; color: #92400e; }
+    .cbadge-cancelled { background: #fee2e2; color: #991b1b; }
+    .cbadge-unassigned { background: #f1f5f9; color: #475569; }
+    .cbadge-active { background: #ede9fe; color: #6b21a8; }
+    .cbadge-registered { background: #ccfbf1; color: #0f766e; }
+    .cbadge-absent { background: #ffedd5; color: #9a3412; }
+    .cbadge-noshow { background: #ffedd5; color: #9a3412; }
+
+    /* Exam Activity Calendar - compact per-status day badges */
+    .examcal-chip {
+        display: inline-block;
+        font-size: 0.62rem;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 8px;
+        margin: 1px 1px 0 0;
+        line-height: 1.5;
+    }
+    .examcal-chip-scheduled { background: #dbeafe; color: #1e40af; }
+    .examcal-chip-completed { background: #dcfce7; color: #166534; }
+    .examcal-chip-cancelled { background: #fee2e2; color: #991b1b; }
+    .examcal-chip-rescheduled { background: #fef3c7; color: #92400e; }
+    .examcal-chip-noshow { background: #ffedd5; color: #9a3412; }
+    .examcal-summary-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        text-align: center;
+        min-width: 90px;
+    }
+    .examcal-summary-card .n { font-size: 1.3rem; font-weight: 800; }
+    .examcal-summary-card .l { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+    /* Exam calendar day-cell badges */
+    .examcal-badge {
+        margin-top: 6px;
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 10px;
+    }
+    .examcal-badge-active { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; }
+    .examcal-badge-cancelled { background: linear-gradient(135deg,#ef4444,#f87171); color: #fff; }
+
+    .cand-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7c3aed, #a855f7);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+
+    .search-input-pill {
+        padding: 8px 16px;
+        border-radius: 30px;
+        border: 1.5px solid #cbd5e1;
+        font-size: 0.85rem;
+        width: 220px;
+        outline: none;
+        transition: border-color 0.2s ease;
+    }
+    .search-input-pill:focus {
+        border-color: #7c3aed;
+    }
+</style>
+
+<div class="exam-dash-header">
+    <div>
+        <h2 style="color:var(--dark-purple);font-size:1.75rem;font-weight:800;letter-spacing:-0.5px;">Exam Management Dashboard</h2>
+        <p class="muted" style="margin-top:2px;">Overview of exams, upcoming sessions, candidate enrollments, and branch allocations.</p>
+    </div>
+</div>
+
+<!-- Navigation Quick Links -->
+<div class="exam-links">
+    <a class="exam-link-btn" href="{{ url_for('exam_types.list_exam_types') }}"><i class="fas fa-book"></i> Exam Types</a>
+    <a class="exam-link-btn" href="{{ url_for('branch_exams.list_branch_exams') }}"><i class="fas fa-code-branch"></i> Branch ↔ Exam Mapping</a>
+    <a class="exam-link-btn" href="{{ url_for('sessions.list_sessions') }}"><i class="fas fa-calendar-alt"></i> Exam Sessions</a>
+    <a class="exam-link-btn" href="{{ url_for('candidates.list_candidates') }}"><i class="fas fa-user-graduate"></i> Candidates</a>
+    <a class="exam-link-btn" href="{{ url_for('exams_dashboard.reports') }}"><i class="fas fa-chart-pie"></i> Reports</a>
+    <a class="exam-link-btn" href="{{ url_for('audit_logs.list_audit_logs') }}"><i class="fas fa-clipboard-check"></i> Audit Logs</a>
+</div>
+
+<!-- Key Performance Metrics Grid -->
+<div class="exam-stats-grid">
+    <div class="luxury-stat-card theme-purple">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Total Exams</span>
+            <div class="stat-icon-badge"><i class="fas fa-book-open"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.total_exams }}</div>
+        <div class="stat-card-subtext">Active exam catalog</div>
+    </div>
+
+    <div class="luxury-stat-card theme-blue">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Scheduled</span>
+            <div class="stat-icon-badge"><i class="fas fa-calendar-check"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.scheduled }}</div>
+        <div class="stat-card-subtext">Upcoming exam sessions</div>
+    </div>
+
+    <div class="luxury-stat-card theme-green">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Completed</span>
+            <div class="stat-icon-badge"><i class="fas fa-check-circle"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.completed }}</div>
+        <div class="stat-card-subtext">Conducted exam sessions</div>
+    </div>
+
+    <div class="luxury-stat-card theme-amber">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Rescheduled</span>
+            <div class="stat-icon-badge"><i class="fas fa-sync-alt"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.rescheduled }}</div>
+        <div class="stat-card-subtext">Schedule revised sessions</div>
+    </div>
+
+    <div class="luxury-stat-card theme-red">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Cancelled</span>
+            <div class="stat-icon-badge"><i class="fas fa-ban"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.cancelled }}</div>
+        <div class="stat-card-subtext">Called off sessions</div>
+    </div>
+
+    <div class="luxury-stat-card theme-purple">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Total Sessions</span>
+            <div class="stat-icon-badge"><i class="fas fa-layer-group"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.total_sessions }}</div>
+        <div class="stat-card-subtext">Across active branches</div>
+    </div>
+
+    <div class="luxury-stat-card theme-teal">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Total Candidates</span>
+            <div class="stat-icon-badge"><i class="fas fa-user-friends"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.total_candidates }}</div>
+        <div class="stat-card-subtext">Registered candidates</div>
+    </div>
+
+    <div class="luxury-stat-card theme-green">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Available Seats</span>
+            <div class="stat-icon-badge"><i class="fas fa-chair"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.available_seats }}</div>
+        <div class="stat-card-subtext">Open seats in active sessions</div>
+    </div>
+
+    <div class="luxury-stat-card theme-teal">
+        <div class="stat-card-header">
+            <span class="stat-card-title">Completed Candidates</span>
+            <div class="stat-icon-badge"><i class="fas fa-user-check"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.completed_candidates }}</div>
+        <div class="stat-card-subtext">Candidates with Completed status</div>
+    </div>
+
+    <div class="luxury-stat-card theme-amber">
+        <div class="stat-card-header">
+            <span class="stat-card-title">No Show</span>
+            <div class="stat-icon-badge"><i class="fas fa-user-clock"></i></div>
+        </div>
+        <div class="stat-card-value">{{ stats.no_show }}</div>
+        <div class="stat-card-subtext">Scheduled but did not attend</div>
+    </div>
+
+
+</div>
+
+<!-- Candidate Management Access -->
+<div class="dash-section-panel" style="text-align:center;">
+    <a href="{{ url_for('candidates.list_candidates') }}" class="btn-primary" style="padding:10px 24px;border-radius:30px;font-size:0.9rem;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+        <i class="fas fa-user-graduate"></i> Manage Candidates
+    </a>
+</div>
+
+<!-- Exam Activity Calendar (permanent history of every exam attempt - past, present and future) -->
+<div class="dash-section-panel">
+    <div class="section-title-wrap">
+        <div class="section-title">
+            <i class="fas fa-calendar-alt" style="color:#7c3aed;"></i> Exam Activity Calendar
+        </div>
+    </div>
+
+    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:20px;border-radius:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <button type="button" id="examCalPrev" style="padding:8px 16px;border-radius:30px;background:#fff;color:#7c3aed;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;"><i class="fas fa-chevron-left"></i> Prev</button>
+            <div id="examCalTitle" style="font-weight:800;font-size:1.15rem;color:#4c1d95;"></div>
+            <button type="button" id="examCalNext" style="padding:8px 16px;border-radius:30px;background:#fff;color:#7c3aed;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;">Next <i class="fas fa-chevron-right"></i></button>
+        </div>
+
+        <div id="examCalGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;"></div>
+    </div>
+
+    <div id="examCalDetails" style="background:#fff;border-radius:12px;border:1px solid #f1f5f9;margin-top:16px;padding:18px;">
+        <p class="muted" style="text-align:center;padding:8px;">Select a date on the calendar to view candidate details.</p>
+    </div>
+</div>
+
+<script id="examCalData" type="application/json">{{ calendar_attempts|tojson }}</script>
+<script>
+(function(){
+    // Every exam attempt (past, present and future - never just "upcoming")
+    // is bucketed onto the calendar day(s) it is actually relevant to:
+    //   - Scheduled/Cancelled/No Show attempts -> their scheduled_date
+    //   - Completed attempts                   -> their actual_exam_date
+    //   - Any attempt that has ever been rescheduled also keeps a
+    //     permanent "Rescheduled" marker on its ORIGINAL date, so that
+    //     history is never lost even after the attempt moves forward.
+    var rawData = JSON.parse(document.getElementById('examCalData').textContent || '[]');
+    var byDate = {}; // dateStr -> { Scheduled:[...], Completed:[...], Cancelled:[...], Rescheduled:[...], 'No Show':[...] }
+
+    function bucket(dateStr, kind, attempt){
+        if (!dateStr) return;
+        if (!byDate[dateStr]) byDate[dateStr] = { Scheduled: [], Completed: [], Cancelled: [], Rescheduled: [], 'No Show': [] };
+        byDate[dateStr][kind].push(attempt);
+    }
+
+    rawData.forEach(function(a){
+        if (a.status === 'Completed'){
+            bucket(a.actual_exam_date || a.scheduled_date, 'Completed', a);
+        } else if (a.status === 'Cancelled'){
+            bucket(a.scheduled_date, 'Cancelled', a);
+        } else if (a.status === 'No Show'){
+            bucket(a.scheduled_date, 'No Show', a);
+        } else {
+            bucket(a.scheduled_date, 'Scheduled', a);
+        }
+        if (a.was_rescheduled){
+            bucket(a.original_scheduled_date, 'Rescheduled', a);
+        }
+    });
+
+    var KIND_CHIP_CLASS = {
+        'Scheduled': 'examcal-chip-scheduled',
+        'Completed': 'examcal-chip-completed',
+        'Cancelled': 'examcal-chip-cancelled',
+        'Rescheduled': 'examcal-chip-rescheduled',
+        'No Show': 'examcal-chip-noshow'
+    };
+    var STATUS_BADGE_CLASS = {
+        'Scheduled': 'cbadge-scheduled',
+        'Completed': 'cbadge-completed',
+        'Cancelled': 'cbadge-cancelled',
+        'Rescheduled': 'cbadge-rescheduled',
+        'No Show': 'cbadge-noshow'
+    };
+
+    var today = new Date();
+    var viewYear = today.getFullYear();
+    var viewMonth = today.getMonth();
+
+    var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    var grid = document.getElementById('examCalGrid');
+    var title = document.getElementById('examCalTitle');
+    var details = document.getElementById('examCalDetails');
+
+    function pad(n){ return n < 10 ? '0' + n : '' + n; }
+
+    function escapeHtml(str){
+        return String(str).replace(/[&<>"']/g, function(ch){
+            return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+        });
+    }
+
+    function renderCalendar(){
+        grid.innerHTML = '';
+        title.textContent = monthNames[viewMonth] + ' ' + viewYear;
+
+        dayNames.forEach(function(d){
+            var head = document.createElement('div');
+            head.textContent = d;
+            head.style.cssText = 'text-align:center;font-weight:700;color:#7c3aed;padding:6px 0;font-size:0.82rem;';
+            grid.appendChild(head);
+        });
+
+        var firstDay = new Date(viewYear, viewMonth, 1).getDay();
+        var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+        for (var i = 0; i < firstDay; i++){
+            grid.appendChild(document.createElement('div'));
+        }
+
+        for (var day = 1; day <= daysInMonth; day++){
+            var dateStr = viewYear + '-' + pad(viewMonth + 1) + '-' + pad(day);
+            var isToday = (viewYear === today.getFullYear() && viewMonth === today.getMonth() && day === today.getDate());
+            var dayData = byDate[dateStr] || { Scheduled: [], Completed: [], Cancelled: [], Rescheduled: [], 'No Show': [] };
+
+            var cell = document.createElement('div');
+            cell.style.cssText = 'background:#fff;border-radius:10px;padding:8px 6px;min-height:74px;text-align:center;border:1.5px solid ' + (isToday ? '#7c3aed' : '#f1f5f9') + ';cursor:pointer;transition:box-shadow .15s;';
+
+            var num = document.createElement('div');
+            num.textContent = day;
+            num.style.cssText = 'font-weight:700;color:' + (isToday ? '#7c3aed' : '#334155') + ';font-size:0.9rem;';
+            cell.appendChild(num);
+
+            ['Scheduled', 'Completed', 'Cancelled', 'Rescheduled', 'No Show'].forEach(function(kind){
+                var n = dayData[kind].length;
+                if (!n) return;
+                var chip = document.createElement('div');
+                chip.textContent = n + ' ' + kind;
+                chip.className = 'examcal-chip ' + KIND_CHIP_CLASS[kind];
+                cell.appendChild(chip);
+            });
+
+            cell.addEventListener('click', (function(dStr, dData){
+                return function(){ showDetails(dStr, dData); };
+            })(dateStr, dayData));
+
+            grid.appendChild(cell);
+        }
+    }
+
+    function showDetails(dateStr, dayData){
+        var parts = dateStr.split('-');
+        var label = monthNames[parseInt(parts[1], 10) - 1] + ' ' + parseInt(parts[2], 10) + ', ' + parts[0];
+
+        var total = dayData.Scheduled.length + dayData.Completed.length + dayData.Cancelled.length +
+            dayData.Rescheduled.length + dayData['No Show'].length;
+
+        if (!total){
+            details.innerHTML = '<div style="font-weight:700;color:#1e293b;margin-bottom:10px;">' + label + '</div>' +
+                '<p class="muted" style="text-align:center;padding:16px;">No exam activity on this date.</p>';
+            return;
+        }
+
+        var html = '<div style="font-weight:700;color:#1e293b;font-size:1.05rem;margin-bottom:12px;">EXAM ACTIVITY &mdash; ' + label.toUpperCase() + '</div>';
+
+        html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">';
+        ['Scheduled', 'Completed', 'Cancelled', 'Rescheduled', 'No Show'].forEach(function(kind){
+            html += '<div class="examcal-summary-card"><div class="n" style="color:' +
+                ({'Scheduled':'#1e40af','Completed':'#166534','Cancelled':'#991b1b','Rescheduled':'#92400e','No Show':'#9a3412'}[kind]) +
+                ';">' + dayData[kind].length + '</div><div class="l">' + kind + '</div></div>';
+        });
+        html += '</div>';
+
+        // One combined row list (a single attempt can appear under more
+        // than one kind - e.g. Rescheduled on its original date and
+        // Scheduled again on its new date - so rows are de-duplicated by
+        // attempt id while still using each bucket's own status label for
+        // display where relevant).
+        var rows = [];
+        var seen = {};
+        ['Scheduled', 'Completed', 'Cancelled', 'No Show', 'Rescheduled'].forEach(function(kind){
+            dayData[kind].forEach(function(a){
+                var key = a.attempt_id + '|' + kind;
+                if (seen[key]) return;
+                seen[key] = true;
+                rows.push({ a: a, kind: kind });
+            });
+        });
+
+        html += '<div class="table-responsive"><table class="data-table"><thead><tr>' +
+            '<th>Candidate</th><th>Register No.</th><th>Exam Type</th><th>Branch</th><th>Session</th>' +
+            '<th>Scheduled Date</th><th>Actual Date</th><th>Status</th><th>Attempt</th><th>Result</th><th>Action</th>' +
+            '</tr></thead><tbody>';
+        rows.forEach(function(row){
+            var a = row.a;
+            var displayStatus = row.kind === 'Rescheduled' ? 'Rescheduled' : a.status;
+            html += '<tr>' +
+                '<td style="font-weight:700;color:#1e293b;">' + escapeHtml(a.name) + '</td>' +
+                '<td>' + escapeHtml(a.register_number || '-') + '</td>' +
+                '<td>' + escapeHtml(a.test_type || '-') + '</td>' +
+                '<td>' + escapeHtml(a.branch_name || '-') + '</td>' +
+                '<td>' + escapeHtml(a.session_label || '-') + '</td>' +
+                '<td>' + escapeHtml(a.scheduled_date || '-') + '</td>' +
+                '<td>' + escapeHtml(a.actual_exam_date || '-') + '</td>' +
+                '<td><span class="cbadge ' + (STATUS_BADGE_CLASS[displayStatus] || 'cbadge-unassigned') + '">' + escapeHtml(displayStatus) + '</span></td>' +
+                '<td>Attempt ' + a.attempt_number + '</td>' +
+                '<td>' + escapeHtml(a.result || '-') + '</td>' +
+                '<td><a href="/exams/candidates/' + a.candidate_id + '" class="cand-action-link" style="background:#f1f5f9;color:#334155;">View</a></td>' +
+                '</tr>';
+        });
+        html += '</tbody></table></div>';
+        details.innerHTML = html;
+    }
+
+    document.getElementById('examCalPrev').addEventListener('click', function(){
+        viewMonth--;
+        if (viewMonth < 0){ viewMonth = 11; viewYear--; }
+        renderCalendar();
+    });
+    document.getElementById('examCalNext').addEventListener('click', function(){
+        viewMonth++;
+        if (viewMonth > 11){ viewMonth = 0; viewYear++; }
+        renderCalendar();
+    });
+
+    renderCalendar();
+})();
+</script>
+
+{% endblock %}

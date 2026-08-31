@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="module-header"><h2>Expense Management</h2></div>
+<div class="module-actions" style="margin-bottom:18px;">
+    <a href="{{ url_for('expense_management') }}" class="tab-button">Expenses</a>
+    <a href="{{ url_for('expenses.expense_categories') }}" class="tab-button active">Categories</a>
+    <a href="{{ url_for('expenses.expense_budgets') }}" class="tab-button">Budgets</a>
+    <a href="{{ url_for('expenses.expense_summary') }}" class="tab-button">Summary</a>
+</div>
+
+<div class="module-grid">
+    <div class="panel">
+        <h3>Add Category</h3>
+        <form method="POST" action="{{ url_for('expenses.expense_categories') }}" class="form-grid">
+            <div class="form-row">
+                <label>Category Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Travel">
+            </div>
+            <div class="button-row">
+                <button class="btn-primary" type="submit"><i class="fas fa-plus"></i> Add Category</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="panel">
+        <h3>Categories</h3>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead><tr><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                    {% for c in categories %}
+                    <tr>
+                        <td>{{ c.name }}</td>
+                        <td><span class="status-pill" style="{% if c.status == 'Inactive' %}background:#fee2e2;color:#dc2626;{% endif %}">{{ c.status }}</span></td>
+                        <td>
+                            <form action="{{ url_for('expenses.expense_category_toggle', category_id=c.id) }}" method="POST" style="display:inline;">
+                                <button type="submit" style="padding:5px 12px;border-radius:12px;background:#eef2ff;color:#4338ca;font-weight:600;border:none;cursor:pointer;font-size:0.8rem;">
+                                    {% if c.status == 'Active' %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="muted" style="text-align:center;">No categories yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

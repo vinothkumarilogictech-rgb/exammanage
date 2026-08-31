@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="module-header">
+    <h2>Branch Comparison</h2>
+    <a href="{{ url_for('branches.branch_list') }}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back to Branch List</a>
+</div>
+
+<div class="panel" style="margin-bottom:20px;">
+    <h3>Select Branches to Compare</h3>
+    <form method="GET" action="{{ url_for('branches.branch_compare') }}">
+        <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
+            {% for b in all_branches %}
+            <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border:1.5px solid #c4b5fd;border-radius:8px;cursor:pointer;font-size:0.9rem;color:#374151;">
+                <input type="checkbox" name="ids" value="{{ b.id }}" {% if b.id in selected_ids %}checked{% endif %}>
+                {{ b.branch_name }}
+            </label>
+            {% else %}
+            <p class="muted">No branches available yet. <a href="{{ url_for('branches.branch_add') }}">Add one first.</a></p>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn-primary"><i class="fas fa-balance-scale"></i> Compare</button>
+    </form>
+</div>
+
+{% if selected_branches %}
+<div class="panel">
+    <h3>Comparison Result</h3>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Attribute</th>
+                    {% for b in selected_branches %}
+                    <th>{{ b.branch_name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="font-weight:700;">Region</td>
+                    {% for b in selected_branches %}<td>{{ b.region or '-' }}</td>{% endfor %}
+                </tr>
+                <tr>
+                    <td style="font-weight:700;">Contact Info</td>
+                    {% for b in selected_branches %}<td>{{ b.contact_info or '-' }}</td>{% endfor %}
+                </tr>
+                <tr>
+                    <td style="font-weight:700;">Address</td>
+                    {% for b in selected_branches %}<td>{{ b.address or '-' }}</td>{% endfor %}
+                </tr>
+                <tr>
+                    <td style="font-weight:700;">Status</td>
+                    {% for b in selected_branches %}
+                    <td><span class="status-pill" style="{% if b.status == 'Inactive' %}background:#fee2e2;color:#dc2626;{% endif %}">{{ b.status }}</span></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="font-weight:700;">Created Date</td>
+                    {% for b in selected_branches %}<td>{{ b.created_at.strftime('%d/%m/%Y') if b.created_at else '-' }}</td>{% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="muted" style="margin-top:14px;">More metrics (e.g. sales, expenses, staff) can be added here once those modules support branch-level data.</p>
+</div>
+{% elif selected_ids %}
+<p class="muted">No matching branches found for comparison.</p>
+{% endif %}
+{% endblock %}

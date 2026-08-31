@@ -1,0 +1,11 @@
+{% if s.status == 'Scheduled' %}
+<span style="background:#dbeafe;color:#1e40af;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">Scheduled</span>
+{% elif s.status == 'Completed' %}
+<span style="background:#dcfce7;color:#166534;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">Completed</span>
+{% elif s.status == 'Rescheduled' %}
+<span style="background:#fef3c7;color:#92400e;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">Rescheduled</span>
+{% elif s.status == 'Cancelled' %}
+<span style="background:#fee2e2;color:#991b1b;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">Cancelled</span>
+{% else %}
+<span class="status-pill">{{ s.status }}</span>
+{% endif %}

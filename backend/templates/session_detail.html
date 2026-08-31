@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="module-header">
+    <h2>{{ s.exam_type.name if s.exam_type else '-' }} — {{ s.branch.name if s.branch else '-' }}</h2>
+    <a href="{{ url_for('sessions.list_sessions') }}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> All Sessions</a>
+</div>
+
+<div class="module-grid">
+    <div class="panel">
+        <h3>Session Details</h3>
+        <table style="width:100%;font-size:0.9rem;color:#374151;border-collapse:collapse;">
+            <tr><td style="padding:6px 0;color:#6b7280;">Exam</td><td style="padding:6px 0;font-weight:700;">{{ s.exam_type.name if s.exam_type else '-' }}</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Branch</td><td style="padding:6px 0;font-weight:700;">{{ s.branch.name if s.branch else '-' }}</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Date</td><td style="padding:6px 0;font-weight:700;">{{ s.exam_date.strftime('%d-%b-%Y') if s.exam_date else '-' }}</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Time</td><td style="padding:6px 0;font-weight:700;">{{ s.start_time }} - {{ s.end_time }}</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Fee</td><td style="padding:6px 0;font-weight:700;">{{ '%.2f'|format(s.fee or 0) }}</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Capacity</td><td style="padding:6px 0;font-weight:700;">{{ s.seats_taken }} / {{ s.seat_capacity }} seats filled</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Status</td><td style="padding:6px 0;">{% include 'partials/session_status_pill.html' %}</td></tr>
+        </table>
+
+        {% if s.original_date %}
+        <div style="margin-top:14px;padding:12px;background:#fef9c3;border-radius:8px;font-size:0.82rem;color:#713f12;">
+            <strong>Originally scheduled:</strong> {{ s.original_date.strftime('%d-%b-%Y') }} {{ s.original_start_time }} - {{ s.original_end_time }}<br>
+            {% if s.reschedule_reason %}<strong>Reason:</strong> {{ s.reschedule_reason }}<br>{% endif %}
+            {% if s.rescheduled_at %}<strong>Changed by:</strong> {{ s.rescheduled_by }} on {{ s.rescheduled_at.strftime('%d-%b-%Y %H:%M') }}{% endif %}
+        </div>
+        {% endif %}
+
+        {% if s.status == 'Cancelled' %}
+        <div style="margin-top:14px;padding:12px;background:#fee2e2;border-radius:8px;font-size:0.82rem;color:#991b1b;">
+            <strong>Cancellation reason:</strong> {{ s.cancellation_reason }}<br>
+            <strong>Cancelled by:</strong> {{ s.cancelled_by }} on {{ s.cancelled_at.strftime('%d-%b-%Y %H:%M') if s.cancelled_at else '-' }}
+        </div>
+        {% endif %}
+
+        {% if s.status in ['Scheduled', 'Rescheduled'] %}
+        <div class="button-row" style="margin-top:16px;">
+            <form action="{{ url_for('sessions.mark_completed', session_id=s.id) }}" method="POST"><button type="submit" class="btn-primary">Mark Completed</button></form>
+            <button type="button" class="btn-secondary" onclick="toggleBox('rescheduleBox')">Reschedule</button>
+            <button type="button" class="btn-danger" onclick="toggleBox('cancelBox')">Cancel Session</button>
+        </div>
+
+        <div id="rescheduleBox" class="hidden-view" style="margin-top:16px;padding:16px;background:#f9fafb;border-radius:10px;">
+            <h3 style="margin-bottom:10px;">Reschedule Session</h3>
+            <form action="{{ url_for('sessions.reschedule_session', session_id=s.id) }}" method="POST" class="form-grid">
+                <div class="form-row"><label>New Date</label><input type="date" name="new_date" required></div>
+                <div class="form-row"><label>New Start Time</label><input type="time" name="new_start_time" required></div>
+                <div class="form-row"><label>New End Time</label><input type="time" name="new_end_time" required></div>
+                <div class="form-row"><label>Reason</label><textarea name="reason" placeholder="e.g. Examiner unavailable"></textarea></div>
+                <div class="button-row"><button type="submit" class="btn-primary">Confirm Reschedule</button><button type="button" class="btn-secondary" onclick="toggleBox('rescheduleBox')">Cancel</button></div>
+            </form>
+        </div>
+
+        <div id="cancelBox" class="hidden-view" style="margin-top:16px;padding:16px;background:#fef2f2;border-radius:10px;">
+            <h3 style="margin-bottom:10px;">Cancel Session</h3>
+            <form action="{{ url_for('sessions.cancel_session', session_id=s.id) }}" method="POST" class="form-grid">
+                <div class="form-row"><label>Cancellation Reason (required)</label><textarea name="reason" required placeholder="e.g. Venue unavailable"></textarea></div>
+                <div class="button-row"><button type="submit" class="btn-danger">Confirm Cancellation</button><button type="button" class="btn-secondary" onclick="toggleBox('cancelBox')">Back</button></div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h3>Candidates ({{ s.seats_taken }} / {{ s.seat_capacity }} Seats)</h3>
+
+        {% if s.status != 'Cancelled' and s.seats_taken < s.seat_capacity %}
+        <form action="{{ url_for('candidates.associate_candidate', session_id=s.id) }}" method="POST" class="form-grid" style="margin-bottom:20px;padding:14px;background:#f9fafb;border-radius:10px;">
+            <div class="form-row"><label>Existing Candidate</label>
+                <select name="candidate_id">
+                    <option value="">-- select existing candidate --</option>
+                    {% for c in all_candidates %}<option value="{{ c.id }}">{{ c.name }} {% if c.phone %}({{ c.phone }}){% endif %}</option>{% endfor %}
+                </select>
+            </div>
+            <p class="muted" style="margin:4px 0;">Or add a new candidate:</p>
+            <div class="form-row"><label>New Candidate Name</label><input type="text" name="new_candidate_name" placeholder="e.g. Murugesh"></div>
+            <div class="form-row"><label>Email</label><input type="email" name="new_candidate_email"></div>
+            <div class="form-row"><label>Phone</label><input type="text" name="new_candidate_phone"></div>
+            <div class="button-row"><button type="submit" class="btn-primary"><i class="fas fa-user-plus"></i> Associate Candidate</button></div>
+        </form>
+        {% elif s.status == 'Cancelled' %}
+        <p class="muted">This session is cancelled — candidates cannot be added.</p>
+        {% else %}
+        <p class="muted">Seat capacity reached — no more candidates can be added.</p>
+        {% endif %}
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for link in s.session_candidates %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ link.candidate.name }}</td>
+                        <td>{{ link.candidate.email or '-' }}</td>
+                        <td>{{ link.candidate.phone or '-' }}</td>
+                        <td>
+                            <form action="{{ url_for('candidates.remove_candidate', session_id=s.id, candidate_id=link.candidate_id) }}" method="POST" onsubmit="return confirm('Remove this candidate from the session?');">
+                                <button type="submit" class="btn-danger" style="padding:6px 12px;font-size:0.8rem;">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="muted" style="padding:16px;text-align:center;">No candidates associated yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleBox(id){
+    var el = document.getElementById(id);
+    el.classList.toggle('hidden-view');
+}
+</script>
+{% endblock %}

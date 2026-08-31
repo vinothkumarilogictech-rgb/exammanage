@@ -1,0 +1,14 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+
+# Optional - enables true PDF/Excel file downloads for Expense Management's
+# export buttons. Without these installed, PDF export falls back to a
+# print-friendly HTML page and Excel export falls back to CSV (both still
+# work and open fine in a browser / Excel).
+reportlab
+openpyxl
+
+python-dotenv
+pyodbc
+
