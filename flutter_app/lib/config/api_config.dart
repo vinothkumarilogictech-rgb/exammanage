@@ -21,7 +21,7 @@ class ApiConfig {
       // Flutter app. This avoids localhost/127.0.0.1 and IPv4/IPv6
       // hostname mismatches during local Flutter Web development.
       final host = Uri.base.host.isNotEmpty ? Uri.base.host : '127.0.0.1';
-      return 'http://$host:5000';
+      return 'http://$host:5001';
     }
     return 'http://10.0.2.2:5000';
   }
