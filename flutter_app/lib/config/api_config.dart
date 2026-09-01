@@ -14,17 +14,8 @@ class ApiConfig {
   ///
   /// The API itself is mounted at /api/v1.
   static const String _dartDefineUrl = String.fromEnvironment('API_SERVER_URL');
-  static String get baseUrl {
-    if (_dartDefineUrl.isNotEmpty) return _dartDefineUrl;
-    if (kIsWeb) {
-      // Keep the API on the same hostname the browser used to open the
-      // Flutter app. This avoids localhost/127.0.0.1 and IPv4/IPv6
-      // hostname mismatches during local Flutter Web development.
-      final host = Uri.base.host.isNotEmpty ? Uri.base.host : '127.0.0.1';
-      return 'http://$host:5001';
-    }
-    return 'http://10.0.2.2:5000';
-  }
+  
+  static const String baseUrl = 'https://exam.ilogicigroup.com';
 
   static const String apiBasePath = '/api/v1';
   static String get apiBaseUrl => '$baseUrl$apiBasePath';

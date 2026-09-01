@@ -256,11 +256,12 @@ def create_app():
                 static_folder=os.path.join(root_dir, 'static'))
     
     app.config['SECRET_KEY'] = 'dev_secret_key_for_boss_erp'
-    sql_server = r"vinothkumar\SQLEXPRESS"
-    sql_database = "exam"
+    sql_server = os.environ.get('DB_SERVER', r"vinothkumar\SQLEXPRESS")
+    sql_database = os.environ.get('DB_DATABASE', "exam")
+    sql_driver = os.environ.get('DB_DRIVER', "ODBC Driver 17 for SQL Server")
 
     odbc_connection_string = (
-        "DRIVER={ODBC Driver 17 for SQL Server};"
+        f"DRIVER={{{sql_driver}}};"
         f"SERVER={sql_server};"
         f"DATABASE={sql_database};"
         "Trusted_Connection=yes;"
