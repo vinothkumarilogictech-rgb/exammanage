@@ -15,6 +15,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int index = 0;
 
+  final _dashboardKey = GlobalKey<DashboardScreenState>();
   final _expenseKey = GlobalKey<ExpensesScreenState>();
 
   late final List<Widget> pages;
@@ -22,13 +23,13 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    pages = [
-      const DashboardScreen(),
-      const BranchesScreen(),
-      const ExamsScreen(),
-      ExpensesScreen(key: _expenseKey),
-      const VouchersScreen(),
-    ];
+      pages = [
+    DashboardScreen(key: _dashboardKey),
+    const BranchesScreen(),
+    const ExamsScreen(),
+    ExpensesScreen(key: _expenseKey),
+    const VouchersScreen(),
+  ];
   }
 
   @override
@@ -37,7 +38,13 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(index: index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
-        onDestinationSelected: (v) => setState(() => index = v),
+          onDestinationSelected: (v) {
+    setState(() => index = v);
+
+    if (v == 0) {
+      _dashboardKey.currentState?.reload();
+    }
+  },
         height: 72,
         indicatorColor: const Color(0xFFE8E4FF),
         destinations: const [

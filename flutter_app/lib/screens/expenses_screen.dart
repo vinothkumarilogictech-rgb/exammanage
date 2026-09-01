@@ -33,7 +33,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
   // Search & Period filter values (Search, Branch, Days / Week / Month)
   final TextEditingController _searchCtrl = TextEditingController();
   int? _selectedBranchId; // null = All Branches
+  int? _selectedCategoryId; // null = All Categories
   String _selectedPeriod = 'All'; // 'All', 'Days', 'Week', 'Month'
+  DateTime? _selectedExpenseDate; // null = all dates
 
   // Category tab form controller
   final TextEditingController _newCategoryCtrl = TextEditingController();
@@ -203,6 +205,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     return null;
   }
 
+  String _monthShortName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return months[month - 1];
+  }
+
   String _formatDateDisplay(String? raw) {
     if (raw == null || raw.trim().isEmpty) return '-';
     final dt = _parseDate(raw);
@@ -212,6 +222,35 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '${dt.day.toString().padLeft(2, '0')}-${months[dt.month - 1]}-${dt.year}';
+  }
+
+  Future<void> _pickExpenseFilterDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedExpenseDate ?? now,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      helpText: 'FILTER EXPENSES BY DATE',
+    );
+
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      _selectedExpenseDate = DateTime(picked.year, picked.month, picked.day);
+      // A selected calendar date is an exact-date filter, so reset the
+      // relative period filter to avoid combining two date ranges.
+      _selectedPeriod = 'All';
+      _applyLocalFilters();
+    });
+  }
+
+  void _clearExpenseFilterDate() {
+    if (_selectedExpenseDate == null) return;
+    setState(() {
+      _selectedExpenseDate = null;
+      _applyLocalFilters();
+    });
   }
 
   void _applyLocalFilters() {
@@ -247,8 +286,38 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         }
       }
 
-      // 2. Period Filter: 'All', 'Days' (Today), 'Week', 'Month'
+      // 2. Category filter (All Categories or a specific category)
+      if (_selectedCategoryId != null) {
+        if (e.categoryId != null && e.categoryId != _selectedCategoryId) {
+          return false;
+        }
+        if (e.categoryId == null) {
+          final categoryObj = _categories.firstWhere(
+            (c) => c.id == _selectedCategoryId,
+            orElse: () => ExpenseCategoryItem(
+              id: -1,
+              name: '',
+              status: '',
+              createdAt: '',
+            ),
+          );
+          if (categoryObj.id != -1 &&
+              e.category.toLowerCase() != categoryObj.name.toLowerCase()) {
+            return false;
+          }
+        }
+      }
+
+      // 3. Period Filter: 'All', 'Days' (Today), 'Week', 'Month'
       final dt = _parseDate(e.date);
+
+      // 2a. Exact calendar-date filter.
+      if (_selectedExpenseDate != null) {
+        if (dt == null) return false;
+        final expenseDay = DateTime(dt.year, dt.month, dt.day);
+        if (expenseDay != _selectedExpenseDate) return false;
+      }
+
       if (_selectedPeriod != 'All' && dt != null) {
         if (_selectedPeriod == 'Days') {
           if (dt.isBefore(todayStart) || dt.isAfter(todayEnd)) return false;
@@ -259,7 +328,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         }
       }
 
-      // 3. Search Query (Matches category, description, branch, payment mode, amount)
+      // 4. Search Query (Matches category, description, branch, payment mode, amount)
       if (query.isNotEmpty) {
         final matchCategory = e.category.toLowerCase().contains(query);
         final matchDescription = e.description.toLowerCase().contains(query);
@@ -1483,7 +1552,80 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  // Clean Period / Branch Filter & Action Bar
+  Widget _buildCompactFilterDropdown<T>({
+    required T value,
+    required String hint,
+    required IconData icon,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 16,
+            color: Color(0xFF64748B),
+          ),
+          hint: Row(
+            children: [
+              Icon(icon, size: 15, color: const Color(0xFF64748B)),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  hint,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF334155),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          selectedItemBuilder: (context) => items.map((item) {
+            final child = item.child;
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: DefaultTextStyle(
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF334155),
+                  fontWeight: FontWeight.w700,
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 14, color: const Color(0xFF64748B)),
+                    const SizedBox(width: 5),
+                    Flexible(child: child),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF334155),
+            fontWeight: FontWeight.w700,
+          ),
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  // Clean Period / Branch / Category Filter & Action Bar
   Widget _buildSearchAndPeriodBar() {
     return Container(
       decoration: BoxDecoration(
@@ -1502,34 +1644,109 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Branch Selector Dropdown (own full-width row)
-          Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int?>(
-                value: _selectedBranchId,
-                isExpanded: true,
-                hint: const Text('All Branches', style: TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w600)),
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
-                style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w600),
-                items: [
-                  const DropdownMenuItem<int?>(value: null, child: Text('All Branches')),
-                  ..._branches.map((b) => DropdownMenuItem<int?>(value: b.id, child: Text(b.name))),
-                ],
-                onChanged: (val) {
-                  setState(() {
-                    _selectedBranchId = val;
-                    _applyLocalFilters();
-                  });
-                },
+          // 1. Compact Branch + Category selectors + calendar date filter
+          Row(
+            children: [
+              Expanded(
+                flex: 4,
+                child: _buildCompactFilterDropdown<int?>(
+                  value: _selectedBranchId,
+                  hint: 'All Branches',
+                  icon: Icons.apartment_rounded,
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('All Branches'),
+                    ),
+                    ..._branches.map(
+                      (b) => DropdownMenuItem<int?>(
+                        value: b.id,
+                        child: Text(b.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedBranchId = val;
+                      _applyLocalFilters();
+                    });
+                  },
+                ),
               ),
-            ),
+              const SizedBox(width: 7),
+              Expanded(
+                flex: 4,
+                child: _buildCompactFilterDropdown<int?>(
+                  value: _selectedCategoryId,
+                  hint: 'All Categories',
+                  icon: Icons.category_rounded,
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('All Categories'),
+                    ),
+                    ..._categories.map(
+                      (c) => DropdownMenuItem<int?>(
+                        value: c.id,
+                        child: Text(c.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedCategoryId = val;
+                      _applyLocalFilters();
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 7),
+              Tooltip(
+                message: _selectedExpenseDate == null
+                    ? 'Filter by date'
+                    : 'Filtered: ${_selectedExpenseDate!.day.toString().padLeft(2, '0')}-${_selectedExpenseDate!.month.toString().padLeft(2, '0')}-${_selectedExpenseDate!.year}\nTap to change date',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _pickExpenseFilterDate,
+                    onLongPress: _clearExpenseFilterDate,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      height: 40,
+                      width: _selectedExpenseDate == null ? 44 : 92,
+                      decoration: BoxDecoration(
+                        color: _selectedExpenseDate != null ? const Color(0xFFEDE9FE) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _selectedExpenseDate != null ? const Color(0xFFC4B5FD) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.calendar_month_rounded,
+                            size: 18,
+                            color: _selectedExpenseDate != null ? const Color(0xFF5B21B6) : const Color(0xFF64748B),
+                          ),
+                          if (_selectedExpenseDate != null) ...[
+                            const SizedBox(width: 5),
+                            Text(
+                              '${_selectedExpenseDate!.day.toString().padLeft(2, '0')} ${_monthShortName(_selectedExpenseDate!.month)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF5B21B6),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 10),
