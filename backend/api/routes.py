@@ -515,6 +515,23 @@ def candidate_create():
 
     return ok(candidate_dict(c), 'Candidate created.', 201)
 
+@api_bp.patch('/exams/candidates/<int:candidate_id>/')
+@api_token_required
+def candidate_update(candidate_id):
+    c = Candidate.query.get(candidate_id)
+    if not c:
+        return fail('Candidate not found.', 404)
+
+    d = body()
+    status = str(d.get('status') or '').strip()
+    allowed = {'Absent', 'Rescheduled'}
+    if status not in allowed:
+        return fail('Only Absent or Rescheduled status can be selected.', 422)
+
+    c.status = status
+    db.session.commit()
+    return ok(candidate_dict(c), 'Candidate status updated.')
+
 @api_bp.get('/exams/attempts/')
 @api_token_required
 def attempts():

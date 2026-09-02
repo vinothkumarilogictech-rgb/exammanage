@@ -93,6 +93,25 @@ class _ExamsScreenState extends State<ExamsScreen>
         .toList();
   }
 
+  Future<void> _updateCandidateStatus(int candidateId, String status) async {
+    try {
+      await api.updateCandidateStatus(candidateId, status);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Candidate status updated to $status'),
+          backgroundColor: AppColors.green,
+        ),
+      );
+      reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to update status: $e')),
+      );
+    }
+  }
+
   Future<List<Candidate>> loadCandidates() async {
     final r = await api.candidates();
     return (r.data['data'] as List? ?? const [])
@@ -231,6 +250,9 @@ class _ExamsScreenState extends State<ExamsScreen>
         .toList();
     // Team assignment is optional. Candidates can be added without a team.
     int? selectedTeamId;
+
+    // Candidate status can be selected while adding the candidate.
+    String selectedStatus = 'Registered';
 
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
@@ -376,6 +398,21 @@ class _ExamsScreenState extends State<ExamsScreen>
                   onChanged: (val) => setSheetState(() => selectedTeamId = val == null || val == -1 ? null : val),
                 ),
                 const SizedBox(height: 14),
+                _label('Status'),
+                const SizedBox(height: 6),
+                _dropdown<String>(
+                  value: selectedStatus,
+                  hint: 'Select status',
+                  items: const [
+                    DropdownMenuItem(value: 'Registered', child: Text('Registered')),
+                    DropdownMenuItem(value: 'Absent', child: Text('Absent')),
+                    DropdownMenuItem(value: 'Rescheduled', child: Text('Rescheduled')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setSheetState(() => selectedStatus = val);
+                  },
+                ),
+                const SizedBox(height: 14),
                 _label('Exam Date'),
                 const SizedBox(height: 6),
                 TextField(
@@ -399,10 +436,9 @@ class _ExamsScreenState extends State<ExamsScreen>
                     final picked = await showDatePicker(
                       context: ctx,
                       initialDate: DateTime.now(),
-                      firstDate:
-                          DateTime.now().subtract(const Duration(days: 30)),
-                      lastDate:
-                          DateTime.now().add(const Duration(days: 365)),
+                      // Candidate exam dates are unrestricted: past, today and future are allowed.
+                      firstDate: DateTime(1900),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       dateCtrl.text =
@@ -435,6 +471,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                           'branch_id': selectedBranchId,
                           'exam_type_id': selectedExamTypeId,
                           'team_id': selectedTeamId,
+                          'status': selectedStatus,
                           'exam_date': dateCtrl.text,
                         });
                         if (ctx.mounted) {
@@ -1144,7 +1181,10 @@ class _ExamsScreenState extends State<ExamsScreen>
                 padding: const EdgeInsets.all(16),
                 itemCount: rows.length,
                 itemBuilder: (c, i) =>
-                    _CandidateCard(candidate: rows[i]),
+                    _CandidateCard(
+                      candidate: rows[i],
+                      onStatusChanged: _updateCandidateStatus,
+                    ),
               );
             },
           ),
@@ -1335,7 +1375,12 @@ class _ExamTypeCard extends StatelessWidget {
 
 class _CandidateCard extends StatelessWidget {
   final Candidate candidate;
-  const _CandidateCard({required this.candidate});
+  final Future<void> Function(int candidateId, String status) onStatusChanged;
+
+  const _CandidateCard({
+    required this.candidate,
+    required this.onStatusChanged,
+  });
 
   Color _statusColor(String s) {
     switch (s.toLowerCase()) {
@@ -1343,6 +1388,8 @@ class _CandidateCard extends StatelessWidget {
       case 'scheduled': return AppColors.primary;
       case 'completed': return AppColors.green;
       case 'cancelled': return AppColors.red;
+      case 'absent': return AppColors.orange;
+      case 'rescheduled': return const Color(0xFF7C3AED);
       default: return AppColors.orange;
     }
   }
@@ -1353,12 +1400,94 @@ class _CandidateCard extends StatelessWidget {
       case 'scheduled': return const Color(0xFFEDE9FE);
       case 'completed': return const Color(0xFFDCFCE7);
       case 'cancelled': return const Color(0xFFFFE4E6);
+      case 'absent': return const Color(0xFFFFEDD5);
+      case 'rescheduled': return const Color(0xFFEDE9FE);
       default: return const Color(0xFFFEF3C7);
+    }
+  }
+
+  Future<void> _showStatusMenu(BuildContext context) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SafeArea(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD1D5DB),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Update Candidate Status',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                candidate.name,
+                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEDD5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.person_off_rounded, color: Color(0xFFEA580C)),
+                ),
+                title: const Text('Absent', style: TextStyle(fontWeight: FontWeight.w800)),
+                subtitle: const Text('Candidate did not attend the exam'),
+                onTap: () => Navigator.pop(ctx, 'Absent'),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.event_repeat_rounded, color: Color(0xFF7C3AED)),
+                ),
+                title: const Text('Rescheduled', style: TextStyle(fontWeight: FontWeight.w800)),
+                subtitle: const Text('Candidate exam was moved to another date'),
+                onTap: () => Navigator.pop(ctx, 'Rescheduled'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selected != null) {
+      await onStatusChanged(candidate.id, selected);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final status = candidate.status.isEmpty ? 'Registered' : candidate.status;
+    final canUpdate = !['completed', 'cancelled'].contains(status.toLowerCase());
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -1381,13 +1510,8 @@ class _CandidateCard extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                candidate.name.isNotEmpty
-                    ? candidate.name[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primary),
+                candidate.name.isNotEmpty ? candidate.name[0].toUpperCase() : '?',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.primary),
               ),
             ),
           ),
@@ -1396,25 +1520,21 @@ class _CandidateCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(candidate.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 14.5),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  candidate.name,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 3),
                 if (candidate.examType.isNotEmpty)
-                  Text(candidate.examType,
-                      style: const TextStyle(
-                          color: Color(0xFF4B5563), fontSize: 12)),
+                  Text(candidate.examType, style: const TextStyle(color: Color(0xFF4B5563), fontSize: 12)),
                 if (candidate.teamName.isNotEmpty)
-                  Text('Team: ${candidate.teamName}',
-                      style: const TextStyle(
-                          color: Color(0xFF6D28D9), fontSize: 11.5, fontWeight: FontWeight.w700)),
+                  Text('Team: ${candidate.teamName}', style: const TextStyle(color: Color(0xFF6D28D9), fontSize: 11.5, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
                 Text(
                   [
-                    if (candidate.registerNumber.isNotEmpty)
-                      candidate.registerNumber,
+                    if (candidate.registerNumber.isNotEmpty) candidate.registerNumber,
                     if (candidate.branch.isNotEmpty) candidate.branch,
                     if (candidate.date.isNotEmpty) candidate.date,
                   ].join(' • '),
@@ -1422,24 +1542,48 @@ class _CandidateCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 5),
+                GestureDetector(
+                  onTap: canUpdate ? () => _showStatusMenu(context) : null,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Status: ',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        status,
+                        style: TextStyle(
+                          color: _statusColor(status),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (canUpdate) ...[
+                        const SizedBox(width: 3),
+                        Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: _statusColor(status)),
+                      ],
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 6),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
-              color: _statusBg(candidate.status),
+              color: _statusBg(status),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              candidate.status,
-              style: TextStyle(
-                color: _statusColor(candidate.status),
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-              ),
+              status,
+              style: TextStyle(color: _statusColor(status), fontSize: 10.5, fontWeight: FontWeight.w800),
             ),
           ),
         ],

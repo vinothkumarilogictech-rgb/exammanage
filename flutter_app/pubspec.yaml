@@ -22,6 +22,8 @@ dependencies:
   pdf: ^3.11.3
   printing: ^5.14.2
   image_picker: ^1.2.3
+  excel: ^4.0.6
+  public_file_saver: ^1.1.0
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../app_theme.dart';
 import '../services/dio_client.dart';
 
@@ -18,6 +23,8 @@ class _VouchersScreenState extends State<VouchersScreen>
   Map<String, dynamic> stats = {};
   List<Map<String, dynamic>> vouchers = [];
   List<Map<String, dynamic>> history = [];
+  List<Map<String, dynamic>> _filteredHistory = [];
+  DateTime? _selectedHistoryDate;
 
   @override
   void initState() {
@@ -47,6 +54,7 @@ class _VouchersScreenState extends State<VouchersScreen>
       history = (results[2].data['data'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
+      _applyHistoryFilter();
     } catch (e) {
       if (mounted) _toast('Voucher data load failed: $e', error: true);
     }
@@ -303,6 +311,360 @@ class _VouchersScreenState extends State<VouchersScreen>
   // HISTORY TAB
   // ================================================================
 
+  DateTime? _parseHistoryDate(dynamic value) {
+    if (value == null || '$value'.trim().isEmpty) return null;
+    try {
+      return DateTime.parse('$value').toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _historyDateLabel(DateTime date) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]}';
+  }
+
+  void _applyHistoryFilter() {
+    if (_selectedHistoryDate == null) {
+      _filteredHistory = List<Map<String, dynamic>>.from(history);
+      return;
+    }
+
+    final selected = DateTime(
+      _selectedHistoryDate!.year,
+      _selectedHistoryDate!.month,
+      _selectedHistoryDate!.day,
+    );
+
+    _filteredHistory = history.where((h) {
+      final soldAt = _parseHistoryDate(h['sold_at']);
+      if (soldAt == null) return false;
+      final saleDay = DateTime(soldAt.year, soldAt.month, soldAt.day);
+      return saleDay == selected;
+    }).toList();
+  }
+
+  Future<void> _pickHistoryFilterDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedHistoryDate ?? now,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      helpText: 'FILTER VOUCHER SALES BY DATE',
+    );
+
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      _selectedHistoryDate = DateTime(picked.year, picked.month, picked.day);
+      _applyHistoryFilter();
+    });
+  }
+
+  void _clearHistoryFilterDate() {
+    if (_selectedHistoryDate == null) return;
+    setState(() {
+      _selectedHistoryDate = null;
+      _applyHistoryFilter();
+    });
+  }
+
+  Future<void> _exportHistoryPdf() async {
+    if (_filteredHistory.isEmpty) {
+      _toast('No voucher sales found for the selected filter.', error: true);
+      return;
+    }
+
+    final pdf = pw.Document();
+    final total = _filteredHistory.fold<double>(
+      0,
+      (sum, h) => sum + (double.tryParse('${h['final_amount'] ?? 0}') ?? 0),
+    );
+
+    final filterLabel = _selectedHistoryDate == null
+        ? 'All Dates'
+        : '${_selectedHistoryDate!.day.toString().padLeft(2, '0')}-${_selectedHistoryDate!.month.toString().padLeft(2, '0')}-${_selectedHistoryDate!.year}';
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Voucher Sales History Report',
+                    style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.Text(
+                    dateTime(DateTime.now().toIso8601String()),
+                    style: const pw.TextStyle(fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'Sale Date: $filterLabel',
+                  style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.Text(
+                  'Total Records: ${_filteredHistory.length}',
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 6),
+            pw.Text(
+              'Total Sales: Rs ${total.toStringAsFixed(2)}',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 14),
+            pw.TableHelper.fromTextArray(
+              headers: [
+                'Voucher',
+                'Student',
+                'Mobile',
+                'Sold At',
+                'Amount (Rs)',
+                'Payment',
+                'Status',
+              ],
+              data: _filteredHistory.map((h) {
+                return [
+                  '${h['voucher_code'] ?? '-'}',
+                  '${h['student_name'] ?? '-'}',
+                  '${h['mobile'] ?? h['student_mobile'] ?? '-'}',
+                  dateTime(h['sold_at']),
+                  (double.tryParse('${h['final_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
+                  '${h['payment_mode'] ?? '-'}',
+                  '${h['payment_status'] ?? '-'}',
+                ];
+              }).toList(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFF5B2A86),
+              ),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              rowDecoration: const pw.BoxDecoration(
+                border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+              ),
+            ),
+          ];
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+      name: 'voucher_history_${DateTime.now().millisecondsSinceEpoch}.pdf',
+    );
+  }
+
+  Future<void> _exportHistoryExcel() async {
+    if (_filteredHistory.isEmpty) {
+      _toast('No voucher sales found for the selected filter.', error: true);
+      return;
+    }
+
+    String csv(dynamic value) {
+      final text = '${value ?? '-'}'.replaceAll('"', '""');
+      return '"$text"';
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('Voucher Code,Student Name,Mobile,Sold At,Amount,Payment Mode,Payment Status,Payment Reference');
+
+    for (final h in _filteredHistory) {
+      buffer.writeln([
+        csv(h['voucher_code']),
+        csv(h['student_name']),
+        csv(h['mobile'] ?? h['student_mobile']),
+        csv(dateTime(h['sold_at'])),
+        (double.tryParse('${h['final_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
+        csv(h['payment_mode']),
+        csv(h['payment_status']),
+        csv(h['payment_reference']),
+      ].join(','));
+    }
+
+    final bytes = Uint8List.fromList(buffer.toString().codeUnits);
+    await Printing.sharePdf(
+      bytes: bytes,
+      filename: 'voucher_history_${DateTime.now().millisecondsSinceEpoch}.csv',
+    );
+  }
+
+  Widget _historyFilterBar() {
+    final selected = _selectedHistoryDate;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 12,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _pickHistoryFilterDate,
+                    onLongPress: _clearHistoryFilterDate,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      height: 42,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: selected != null
+                            ? const Color(0xFFEDE9FE)
+                            : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: selected != null
+                              ? const Color(0xFFC4B5FD)
+                              : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_month_rounded,
+                            size: 19,
+                            color: selected != null
+                                ? const Color(0xFF5B21B6)
+                                : const Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              selected == null
+                                  ? 'Filter by sale date'
+                                  : 'Date: ${_historyDateLabel(selected)} ${selected.year}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: selected != null
+                                    ? const Color(0xFF5B21B6)
+                                    : const Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                          if (selected != null)
+                            GestureDetector(
+                              onTap: _clearHistoryFilterDate,
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 18,
+                                color: Color(0xFF5B21B6),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: _exportHistoryPdf,
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFC4B5FD)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.picture_as_pdf_rounded, size: 15, color: Color(0xFF5B21B6)),
+                        SizedBox(width: 5),
+                        Text(
+                          'Export PDF',
+                          style: TextStyle(
+                            color: Color(0xFF5B21B6),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: InkWell(
+                  onTap: _exportHistoryExcel,
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFC4B5FD)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.table_chart_rounded, size: 15, color: Color(0xFF5B21B6)),
+                        SizedBox(width: 5),
+                        Text(
+                          'Export Excel',
+                          style: TextStyle(
+                            color: Color(0xFF5B21B6),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _historyTab() {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -311,15 +673,34 @@ class _VouchersScreenState extends State<VouchersScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Sales History', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
-            Text('${history.length} records', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+            const Text(
+              'Sales History',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
+              ),
+            ),
+            Text(
+              '${_filteredHistory.length} records',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
-        if (history.isEmpty)
-          _empty('Every voucher sale will appear here with the complete student and payment details.')
+        _historyFilterBar(),
+        const SizedBox(height: 14),
+        if (_filteredHistory.isEmpty)
+          _empty(
+            _selectedHistoryDate == null
+                ? 'Every voucher sale will appear here with the complete student and payment details.'
+                : 'No voucher sales found for the selected date.',
+          )
         else
-          ...history.map(_historyTile),
+          ..._filteredHistory.map(_historyTile),
       ],
     );
   }
