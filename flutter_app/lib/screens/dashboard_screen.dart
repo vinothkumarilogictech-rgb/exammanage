@@ -65,6 +65,32 @@ class DashboardScreenState extends State<DashboardScreen> {
     final todayCandidatesList = allCandidates.where((c) => isSameDate(c.date, stats.today) && c.status != 'Cancelled').toList();
     final tomorrowCandidatesList = allCandidates.where((c) => isSameDate(c.date, stats.tomorrow) && c.status != 'Cancelled').toList();
 
+    // ==============================================================
+    // CURRENT MONTH CANDIDATE SUMMARY
+    // ==============================================================
+    // Dashboard candidate totals are intentionally month-wise.  The
+    // current calendar month is calculated from the device date, so
+    // when a new month starts these three counts automatically switch
+    // to the new month's candidates without deleting old records.
+    final now = DateTime.now();
+    bool isCurrentMonth(String? value) {
+      if (value == null || value.trim().isEmpty) return false;
+      final d = DateTime.tryParse(value.trim());
+      return d != null && d.year == now.year && d.month == now.month;
+    }
+
+    final currentMonthCandidates = allCandidates
+        .where((c) => isCurrentMonth(c.date) && c.status != 'Cancelled')
+        .toList();
+
+    final currentMonthTotal = currentMonthCandidates.length;
+    final currentMonthAbsent = currentMonthCandidates
+        .where((c) => (c.status ?? '').trim().toLowerCase() == 'absent')
+        .length;
+    final currentMonthRescheduled = currentMonthCandidates
+        .where((c) => (c.status ?? '').trim().toLowerCase() == 'rescheduled')
+        .length;
+
     return {
       'stats': stats,
 
@@ -95,6 +121,9 @@ class DashboardScreenState extends State<DashboardScreen> {
       'todayCandidates': todayCandidatesList,
       'tomorrowCandidates': tomorrowCandidatesList,
       'allCandidates': allCandidates,
+      'currentMonthTotal': currentMonthTotal,
+      'currentMonthAbsent': currentMonthAbsent,
+      'currentMonthRescheduled': currentMonthRescheduled,
     };
   }
 
@@ -454,6 +483,9 @@ class DashboardScreenState extends State<DashboardScreen> {
             ? examTypesList.first['id']
             : null;
 
+    // Candidate status can also be selected while adding the candidate.
+    String selectedStatus = 'Registered';
+
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
@@ -633,6 +665,58 @@ class DashboardScreenState extends State<DashboardScreen> {
 
                   const SizedBox(height: 14),
 
+                  // Candidate Status
+                  _FieldLabel('Status'),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: selectedStatus,
+                        hint: const Text('Select status'),
+                        items: const [
+                          DropdownMenuItem<String>(
+                            value: 'Registered',
+                            child: Row(children: [
+                              Icon(Icons.how_to_reg_rounded, size: 18, color: Color(0xFF2563EB)),
+                              SizedBox(width: 8),
+                              Expanded(child: Text('Registered')),
+                            ]),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: 'Absent',
+                            child: Row(children: [
+                              Icon(Icons.person_off_rounded, size: 18, color: Color(0xFFEA580C)),
+                              SizedBox(width: 8),
+                              Expanded(child: Text('Absent')),
+                            ]),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: 'Rescheduled',
+                            child: Row(children: [
+                              Icon(Icons.event_repeat_rounded, size: 18, color: Color(0xFF7C3AED)),
+                              SizedBox(width: 8),
+                              Expanded(child: Text('Rescheduled')),
+                            ]),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setSheetState(() => selectedStatus = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
                   // Exam Date
                   _FieldLabel('Exam Date'),
                   const SizedBox(height: 6),
@@ -663,12 +747,10 @@ class DashboardScreenState extends State<DashboardScreen> {
                       final picked = await showDatePicker(
                         context: ctx,
                         initialDate: DateTime.now(),
-                        firstDate: DateTime.now().subtract(
-                          const Duration(days: 30),
-                        ),
-                        lastDate: DateTime.now().add(
-                          const Duration(days: 365),
-                        ),
+                        // Candidate dates are intentionally unrestricted:
+                        // past, today, and future dates are all allowed.
+                        firstDate: DateTime(1900),
+                        lastDate: DateTime(2100),
                       );
                       if (picked != null) {
                         dateCtrl.text =
@@ -716,6 +798,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                             'branch_id': selectedBranchId,
                             'exam_type_id':
                                 selectedExamTypeId,
+                            'status': selectedStatus,
                             'exam_date': dateCtrl.text,
                           });
                           if (ctx.mounted) {
@@ -1288,6 +1371,13 @@ class DashboardScreenState extends State<DashboardScreen> {
           final stats =
               data['stats'] as DashboardStats;
 
+          final currentMonthTotal =
+              data['currentMonthTotal'] as int? ?? 0;
+          final currentMonthAbsent =
+              data['currentMonthAbsent'] as int? ?? 0;
+          final currentMonthRescheduled =
+              data['currentMonthRescheduled'] as int? ?? 0;
+
           /*
            * IMPORTANT:
            *
@@ -1475,7 +1565,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
                     _KpiCard(
                       title: 'Total Candidates',
-                      value: '${stats.totalAttendedCandidates}',
+                      value: '$currentMonthTotal',
                       icon: Icons.verified_rounded,
                       tint: const Color(0xFFDBEAFE),
                       iconColor: AppColors.blue,
@@ -1484,6 +1574,50 @@ class DashboardScreenState extends State<DashboardScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => const AttendedCandidatesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // ---------------------------------------------
+                    // CURRENT MONTH ABSENT
+                    // ---------------------------------------------
+                    _KpiCard(
+                      title: 'Total Absent',
+                      value: '$currentMonthAbsent',
+                      icon: Icons.person_off_rounded,
+                      tint: const Color(0xFFFFEDD5),
+                      iconColor: const Color(0xFFEA580C),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AttendedCandidatesScreen(
+                              initialFilter: 'Today',
+                              initialStatus: 'Absent',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // ---------------------------------------------
+                    // CURRENT MONTH RESCHEDULED
+                    // ---------------------------------------------
+                    _KpiCard(
+                      title: 'Total Rescheduled',
+                      value: '$currentMonthRescheduled',
+                      icon: Icons.event_repeat_rounded,
+                      tint: const Color(0xFFEDE9FE),
+                      iconColor: const Color(0xFF7C3AED),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AttendedCandidatesScreen(
+                              initialFilter: 'Today',
+                              initialStatus: 'Rescheduled',
+                            ),
                           ),
                         );
                       },

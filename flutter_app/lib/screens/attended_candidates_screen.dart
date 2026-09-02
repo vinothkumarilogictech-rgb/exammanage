@@ -1,4 +1,10 @@
+import 'dart:typed_data';
 import 'dart:ui';
+
+import 'package:excel/excel.dart' as ex;
+import 'package:pdf/pdf.dart' as pdf;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:public_file_saver/public_file_saver.dart';
 
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
@@ -7,7 +13,14 @@ import '../services/dio_client.dart';
 import '../widgets/common.dart';
 
 class AttendedCandidatesScreen extends StatefulWidget {
-  const AttendedCandidatesScreen({super.key});
+  final String? initialFilter;
+  final String? initialStatus;
+
+  const AttendedCandidatesScreen({
+    super.key,
+    this.initialFilter,
+    this.initialStatus,
+  });
 
   @override
   State<AttendedCandidatesScreen> createState() => _AttendedCandidatesScreenState();
@@ -16,6 +29,7 @@ class AttendedCandidatesScreen extends StatefulWidget {
 class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
   final api = DioClient();
   String filter = 'Month';
+  String? statusFilter;
   DateTime? selectedDate;
   DateTime? monthDate = DateTime.now();
   DateTime? rangeStart;
@@ -27,79 +41,89 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
   @override
   void initState() {
     super.initState();
+    filter = widget.initialFilter ?? 'Month';
+    statusFilter = widget.initialStatus;
     future = load();
   }
 
   Future<Map<String, dynamic>> load() async {
-    final now = DateTime.now();
-    final currentMonthStr =
-        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}';
+    // Attendance History is based on the candidates that were registered
+    // with an Exam Date. A candidate should appear here immediately after
+    // being added, regardless of whether an ExamAttempt is completed.
+    final r = await api.candidates();
+    final candidates = (r.data['data'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
 
-    int registeredThisMonth = 0;
-    try {
-      final candRes = await api.candidates();
-      final allCand = (candRes.data['data'] as List? ?? [])
-          .map((e) => Candidate.fromMap(Map<String, dynamic>.from(e)))
-          .toList();
-      registeredThisMonth = allCand.where((c) {
-        if (c.date.startsWith(currentMonthStr)) return true;
-        return true;
-      }).length;
-    } catch (_) {}
+    final allRows = candidates.map((candidate) {
+      return AttendedCandidate.fromMap({
+        'attempt_id': candidate['id'] ?? 0,
+        'candidate_id': candidate['id'] ?? 0,
+        'attempt_number': 1,
+        'candidate_name': candidate['name'] ?? '',
+        'register_number': candidate['register_number'] ?? '',
+        'exam_type_name': candidate['exam_type_name'] ?? '',
+        'branch_name': candidate['branch_name'] ?? '',
+        'attended_date': candidate['exam_date'] ?? '',
+        'result': candidate['status'] ?? 'Registered',
+        'remarks': candidate['team_name'] ?? '',
+      });
+    }).toList();
 
-    int attendedThisMonth = 0;
-    int passedThisMonth = 0;
-    try {
-      final monthHistoryRes = await api.attendedHistory(month: currentMonthStr);
-      final monthRows =
-          Map<String, dynamic>.from(monthHistoryRes.data['data'] ?? {})['rows'] as List? ?? [];
-      for (final r in monthRows) {
-        final resStr = '${r['result'] ?? ''}'.toLowerCase();
-        if (resStr.contains('pass') ||
-            resStr == 'completed' ||
-            resStr == 'fail' ||
-            resStr.contains('attended')) {
-          attendedThisMonth++;
-        }
-        if (resStr.contains('pass')) passedThisMonth++;
-      }
-    } catch (_) {}
-
-    String? date, month, from, to;
-    if (filter == 'Today') {
-      date = _fmt(now);
-    } else if (filter == 'Date' && selectedDate != null) {
-      date = _fmt(selectedDate!);
-    } else if (filter == 'Month') {
-      final targetMonth = monthDate ?? now;
-      month =
-          '${targetMonth.year.toString().padLeft(4, '0')}-${targetMonth.month.toString().padLeft(2, '0')}';
-    } else if (filter == 'Range' && rangeStart != null && rangeEnd != null) {
-      from = _fmt(rangeStart!);
-      to = _fmt(rangeEnd!);
+    bool sameDay(String value, DateTime target) {
+      final d = DateTime.tryParse(value);
+      return d != null &&
+          d.year == target.year &&
+          d.month == target.month &&
+          d.day == target.day;
     }
 
-    final r = await api.attendedHistory(
-      date: date,
-      month: month,
-      dateFrom: from,
-      dateTo: to,
-    );
-    final rows =
-        (Map<String, dynamic>.from(r.data['data'] ?? {})['rows'] as List? ?? [])
-            .map((e) => AttendedCandidate.fromMap(Map<String, dynamic>.from(e)))
-            .toList();
+    bool sameMonth(String value, DateTime target) {
+      final d = DateTime.tryParse(value);
+      return d != null && d.year == target.year && d.month == target.month;
+    }
 
-    return {
-      'registeredThisMonth': registeredThisMonth,
-      'attendedThisMonth': attendedThisMonth,
-      'passedThisMonth': passedThisMonth,
-      'rows': rows,
-    };
+    final now = DateTime.now();
+    final rows = allRows.where((row) {
+      if (filter == 'Today') return sameDay(row.attendedDate, now);
+      if (filter == 'Date' && selectedDate != null) {
+        return sameDay(row.attendedDate, selectedDate!);
+      }
+      if (filter == 'Month') {
+        return sameMonth(row.attendedDate, monthDate ?? now);
+      }
+      if (filter == 'Range' && rangeStart != null && rangeEnd != null) {
+        final d = DateTime.tryParse(row.attendedDate);
+        if (d == null) return false;
+        final day = DateTime(d.year, d.month, d.day);
+        final start = DateTime(
+          rangeStart!.year,
+          rangeStart!.month,
+          rangeStart!.day,
+        );
+        final end = DateTime(
+          rangeEnd!.year,
+          rangeEnd!.month,
+          rangeEnd!.day,
+        );
+        if (day.isBefore(start) || day.isAfter(end)) return false;
+      }
+
+      // Optional status filter used by Dashboard KPI cards.  For example,
+      // tapping "Total Absent" opens only today's Absent candidates rather
+      // than showing every candidate scheduled for today.
+      if (statusFilter != null &&
+          statusFilter!.trim().isNotEmpty &&
+          row.result.trim().toLowerCase() != statusFilter!.trim().toLowerCase()) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+
+    return {'rows': rows};
   }
 
-  String _fmt(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   String _label(DateTime? d) => d == null
       ? 'Select'
@@ -158,6 +182,102 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
     }
   }
 
+  String _exportFilterLabel() {
+    if (filter == 'Today') return 'Today';
+    if (filter == 'Date') return 'Date ${_label(selectedDate)}';
+    if (filter == 'Month') return 'Month ${monthDate?.month}/${monthDate?.year}';
+    if (filter == 'Range') return 'Range ${_label(rangeStart)} - ${_label(rangeEnd)}';
+    return 'All';
+  }
+
+  Future<List<AttendedCandidate>> _currentFilteredRows() async {
+    final data = await future;
+    final allRows = data['rows'] as List<AttendedCandidate>? ?? [];
+    final q = searchQuery.trim().toLowerCase();
+    return allRows.where((r) {
+      if (q.isEmpty) return true;
+      return r.candidateName.toLowerCase().contains(q) ||
+          r.registerNumber.toLowerCase().contains(q) ||
+          r.branchName.toLowerCase().contains(q) ||
+          r.examTypeName.toLowerCase().contains(q) ||
+          r.result.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  Future<void> _exportPdf() async {
+    try {
+      final rows = await _currentFilteredRows();
+      final doc = pw.Document();
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: pdf.PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.all(24),
+          build: (context) => [
+            pw.Text('Attended Candidates', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 6),
+            pw.Text('Filter: ${_exportFilterLabel()}${searchQuery.trim().isEmpty ? '' : ' | Search: ${searchQuery.trim()}'}'),
+            pw.SizedBox(height: 14),
+            pw.Table.fromTextArray(
+              headers: const ['Candidate', 'Roll No', 'Exam Type', 'Branch', 'Exam Date', 'Status', 'Remarks'],
+              data: rows.map((r) => [
+                r.candidateName, r.registerNumber, r.examTypeName, r.branchName,
+                r.attendedDate, r.result, r.remarks,
+              ]).toList(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white),
+              headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              cellPadding: const pw.EdgeInsets.all(5),
+              border: pw.TableBorder.all(color: pdf.PdfColors.grey400, width: 0.5),
+            ),
+          ],
+        ),
+      );
+      final bytes = Uint8List.fromList(await doc.save());
+      await PublicFileSaver().saveBytes(
+        bytes: bytes,
+        fileName: 'attended_candidates_${DateTime.now().millisecondsSinceEpoch}.pdf',
+        mimeType: 'application/pdf',
+      );
+      if (mounted) _showExportMessage('PDF downloaded successfully.');
+    } catch (e) {
+      if (mounted) _showExportMessage('PDF export failed: $e', error: true);
+    }
+  }
+
+  Future<void> _exportExcel() async {
+    try {
+      final rows = await _currentFilteredRows();
+      final workbook = ex.Excel.createExcel();
+      final sheet = workbook['Attended Candidates'];
+      sheet.appendRow([
+        ex.TextCellValue('Candidate'), ex.TextCellValue('Roll No'), ex.TextCellValue('Exam Type'),
+        ex.TextCellValue('Branch'), ex.TextCellValue('Attended Date'), ex.TextCellValue('Result'), ex.TextCellValue('Remarks'),
+      ]);
+      for (final r in rows) {
+        sheet.appendRow([
+          ex.TextCellValue(r.candidateName), ex.TextCellValue(r.registerNumber), ex.TextCellValue(r.examTypeName),
+          ex.TextCellValue(r.branchName), ex.TextCellValue(r.attendedDate), ex.TextCellValue(r.result), ex.TextCellValue(r.remarks),
+        ]);
+      }
+      final bytes = workbook.save();
+      if (bytes == null) throw Exception('Could not create Excel file.');
+      await PublicFileSaver().saveBytes(
+        bytes: Uint8List.fromList(bytes),
+        fileName: 'attended_candidates_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      if (mounted) _showExportMessage('Excel downloaded successfully.');
+    } catch (e) {
+      if (mounted) _showExportMessage('Excel export failed: $e', error: true);
+    }
+  }
+
+  void _showExportMessage(String message, {bool error = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: error ? Colors.redAccent : AppColors.green),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -192,9 +312,6 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
           }
 
           final data = snapshot.requireData;
-          final registeredCount = data['registeredThisMonth'] as int? ?? 0;
-          final attendedCount = data['attendedThisMonth'] as int? ?? 0;
-          final passedCount = data['passedThisMonth'] as int? ?? 0;
           final allRows = data['rows'] as List<AttendedCandidate>? ?? [];
 
           final rows = allRows.where((r) {
@@ -219,53 +336,6 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _SectionTitle(
-                        icon: Icons.analytics_rounded,
-                        title: 'Monthly Summary',
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatBox(
-                              title: 'Registered\nThis Month',
-                              value: '$registeredCount',
-                              icon: Icons.app_registration_rounded,
-                              color: const Color(0xFF2563EB),
-                              bgColor: const Color(0xFFEEF4FF),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _StatBox(
-                              title: 'Attended\nThis Month',
-                              value: '$attendedCount',
-                              icon: Icons.how_to_reg_rounded,
-                              color: const Color(0xFF7C3AED),
-                              bgColor: const Color(0xFFF3EDFF),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _StatBox(
-                              title: 'Passed\nThis Month',
-                              value: '$passedCount',
-                              icon: Icons.verified_rounded,
-                              color: const Color(0xFF059669),
-                              bgColor: const Color(0xFFEAFBF3),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _GlassSection(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
                       Row(
                         children: [
                           const Expanded(
@@ -278,7 +348,37 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                           _RecordBadge(count: rows.length),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: rows.isEmpty ? null : _exportPdf,
+                              icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                              label: const Text('PDF'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFB91C1C),
+                                side: const BorderSide(color: Color(0xFFFECACA)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: rows.isEmpty ? null : _exportExcel,
+                              icon: const Icon(Icons.table_chart_rounded, size: 18),
+                              label: const Text('Excel'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF047857),
+                                side: const BorderSide(color: Color(0xFFA7F3D0)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       _GlassSearchField(
                         value: searchQuery,
                         onChanged: (value) => setState(() => searchQuery = value),

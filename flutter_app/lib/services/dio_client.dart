@@ -202,6 +202,9 @@ class DioClient {
   Future<Response> createCandidate(Map<String, dynamic> data) =>
       dio.post(ApiConfig.candidatesPath, data: data);
 
+  Future<Response> updateCandidateStatus(int id, String status) =>
+      dio.patch('${ApiConfig.candidatesPath}$id/', data: {'status': status});
+
   Future<Response> createSession(Map<String, dynamic> data) =>
       dio.post(ApiConfig.sessionsPath, data: data);
 
