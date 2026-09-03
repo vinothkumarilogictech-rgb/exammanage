@@ -74,6 +74,7 @@ def employee_dict(e):
     return {
         'id': e.id, 'employee_id': e.employee_id, 'employee_code': e.employee_id,
         'full_name': e.full_name, 'name': e.full_name, 'designation': e.designation,
+        'username': e.credential.username if getattr(e, 'credential', None) else None,
         'branch_id': e.branch_id, 'branch_name': e.branch.branch_name if e.branch else None,
         'contact_number': e.contact_number, 'phone': e.contact_number, 'email': e.email,
         'joining_date': iso(e.joining_date), 'address': e.address,
