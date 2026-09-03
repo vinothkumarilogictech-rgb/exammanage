@@ -76,12 +76,14 @@ class _VouchersScreenState extends State<VouchersScreen>
 
   void _toast(String text, {bool error = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(text),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: error ? AppColors.red : AppColors.green,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: error ? AppColors.red : AppColors.green,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   // ================================================================
@@ -91,7 +93,7 @@ class _VouchersScreenState extends State<VouchersScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFFCF8F7),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
@@ -99,10 +101,7 @@ class _VouchersScreenState extends State<VouchersScreen>
         shape: AppBarStyle.shape,
         backgroundColor: AppColors.primaryLight,
         foregroundColor: Colors.white,
-        title: const Text(
-          'Voucher Management',
-          style: AppBarStyle.titleStyle,
-        ),
+        title: const Text('Voucher  ', style: AppBarStyle.titleStyle),
         actions: [
           IconButton(onPressed: load, icon: const Icon(Icons.refresh_rounded)),
         ],
@@ -125,8 +124,14 @@ class _VouchersScreenState extends State<VouchersScreen>
               dividerColor: Colors.transparent,
               labelColor: AppColors.primary,
               unselectedLabelColor: Colors.white,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 12.5,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+              ),
               tabs: const [
                 Tab(text: 'Overview'),
                 Tab(text: 'Sold'),
@@ -137,17 +142,15 @@ class _VouchersScreenState extends State<VouchersScreen>
         ),
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: load,
               child: TabBarView(
                 controller: _tabs,
-                children: [
-                  _overview(),
-                  _soldTab(),
-                  _historyTab(),
-                ],
+                children: [_overview(), _soldTab(), _historyTab()],
               ),
             ),
     );
@@ -158,8 +161,12 @@ class _VouchersScreenState extends State<VouchersScreen>
   // ================================================================
 
   Widget _overview() {
-    final available = vouchers.where((v) => v['status'] == 'Available').toList();
-    final sold = vouchers.where((v) => ['Sold', 'Assigned', 'Used'].contains(v['status'])).toList();
+    final available = vouchers
+        .where((v) => v['status'] == 'Available')
+        .toList();
+    final sold = vouchers
+        .where((v) => ['Sold', 'Assigned', 'Used'].contains(v['status']))
+        .toList();
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -177,7 +184,7 @@ class _VouchersScreenState extends State<VouchersScreen>
               title: 'Available',
               value: '${stats['available'] ?? available.length}',
               icon: Icons.inventory_2_rounded,
-              tint: const Color(0xFFEDE9FE),
+              tint: const Color(0xFFFEEEE9),
               iconColor: AppColors.primary,
             ),
             _VoucherKpiCard(
@@ -204,47 +211,83 @@ class _VouchersScreenState extends State<VouchersScreen>
           ],
         ),
         const SizedBox(height: 14),
-        Row(children: [
-          Expanded(
-            child: _VoucherQuickAction(
-              icon: Icons.add_card_rounded,
-              title: 'Sell Voucher',
-              gradientColors: const [Color(0xFF6D28D9), AppColors.primary],
-              onTap: _showSellVoucher,
+        Row(
+          children: [
+            Expanded(
+              child: _VoucherQuickAction(
+                icon: Icons.add_card_rounded,
+                title: 'Sell Voucher',
+                gradientColors: const [Color(0xFFD95128), AppColors.primary],
+                onTap: _showSellVoucher,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _VoucherQuickAction(
-              icon: Icons.inventory_rounded,
-              title: 'Bulk Purchase',
-              gradientColors: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-              onTap: _showPurchase,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _VoucherQuickAction(
+                icon: Icons.inventory_rounded,
+                title: 'Bulk Purchase',
+                gradientColors: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                onTap: _showPurchase,
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
         const SizedBox(height: 16),
         _VoucherSectionCard(
           title: 'Stock Summary',
           icon: Icons.bar_chart_rounded,
-          child: Column(children: [
-            _summaryLine('Purchase Cost', money(stats['purchase_cost']), Icons.shopping_bag_outlined),
-            _summaryLine('Available Stock Value', money(stats['stock_value']), Icons.account_balance_wallet_outlined),
-            _summaryLine('Total Purchased', '${stats['purchased'] ?? 0} vouchers', Icons.inventory_2_outlined),
-            _summaryLine('Total Sales', '${stats['sale_count'] ?? history.length} sales', Icons.receipt_long_outlined, last: true),
-          ]),
+          child: Column(
+            children: [
+              _summaryLine(
+                'Purchase Cost',
+                money(stats['purchase_cost']),
+                Icons.shopping_bag_outlined,
+              ),
+              _summaryLine(
+                'Available Stock Value',
+                money(stats['stock_value']),
+                Icons.account_balance_wallet_outlined,
+              ),
+              _summaryLine(
+                'Total Purchased',
+                '${stats['purchased'] ?? 0} vouchers',
+                Icons.inventory_2_outlined,
+              ),
+              _summaryLine(
+                'Total Sales',
+                '${stats['sale_count'] ?? history.length} sales',
+                Icons.receipt_long_outlined,
+                last: true,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 18),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Available Voucher IDs',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+            const Text(
+              'Available Voucher IDs',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(20)),
-              child: Text('${available.length}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 12)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEEEE9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${available.length}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
@@ -256,7 +299,8 @@ class _VouchersScreenState extends State<VouchersScreen>
         if (available.length > 20)
           Center(
             child: TextButton(
-              onPressed: () => _showVoucherList('Available Vouchers', available),
+              onPressed: () =>
+                  _showVoucherList('Available Vouchers', available),
               child: Text('View all ${available.length} available vouchers'),
             ),
           ),
@@ -264,18 +308,36 @@ class _VouchersScreenState extends State<VouchersScreen>
     );
   }
 
-  Widget _summaryLine(String label, String value, IconData icon, {bool last = false}) {
+  Widget _summaryLine(
+    String label,
+    String value,
+    IconData icon, {
+    bool last = false,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        border: last ? null : const Border(bottom: BorderSide(color: Color(0xFFF3F4F6))),
+        border: last
+            ? null
+            : const Border(bottom: BorderSide(color: Color(0xFFF3F4F6))),
       ),
       child: Row(
         children: [
           Icon(icon, size: 17, color: Colors.grey.shade500),
           const SizedBox(width: 10),
-          Expanded(child: Text(label, style: TextStyle(color: Colors.grey.shade700, fontSize: 13.5))),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827))),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13.5),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF111827),
+            ),
+          ),
         ],
       ),
     );
@@ -286,7 +348,9 @@ class _VouchersScreenState extends State<VouchersScreen>
   // ================================================================
 
   Widget _soldTab() {
-    final sold = vouchers.where((v) => ['Sold', 'Assigned', 'Used'].contains(v['status'])).toList();
+    final sold = vouchers
+        .where((v) => ['Sold', 'Assigned', 'Used'].contains(v['status']))
+        .toList();
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
@@ -294,8 +358,21 @@ class _VouchersScreenState extends State<VouchersScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Sold Vouchers', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
-            Text('${sold.length} total', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+            const Text(
+              'Sold Vouchers',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
+              ),
+            ),
+            Text(
+              '${sold.length} total',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -322,8 +399,18 @@ class _VouchersScreenState extends State<VouchersScreen>
 
   String _historyDateLabel(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]}';
   }
@@ -403,7 +490,10 @@ class _VouchersScreenState extends State<VouchersScreen>
                 children: [
                   pw.Text(
                     'Voucher Sales History Report',
-                    style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
                   ),
                   pw.Text(
                     dateTime(DateTime.now().toIso8601String()),
@@ -418,7 +508,10 @@ class _VouchersScreenState extends State<VouchersScreen>
               children: [
                 pw.Text(
                   'Sale Date: $filterLabel',
-                  style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
                 pw.Text(
                   'Total Records: ${_filteredHistory.length}',
@@ -448,19 +541,25 @@ class _VouchersScreenState extends State<VouchersScreen>
                   '${h['student_name'] ?? '-'}',
                   '${h['mobile'] ?? h['student_mobile'] ?? '-'}',
                   dateTime(h['sold_at']),
-                  (double.tryParse('${h['final_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
+                  (double.tryParse('${h['final_amount'] ?? 0}') ?? 0)
+                      .toStringAsFixed(2),
                   '${h['payment_mode'] ?? '-'}',
                   '${h['payment_status'] ?? '-'}',
                 ];
               }).toList(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
               headerDecoration: const pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFF5B2A86),
+                color: PdfColor.fromInt(0xFF863F2A),
               ),
               cellAlignment: pw.Alignment.centerLeft,
               cellStyle: const pw.TextStyle(fontSize: 8),
               rowDecoration: const pw.BoxDecoration(
-                border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
               ),
             ),
           ];
@@ -486,19 +585,25 @@ class _VouchersScreenState extends State<VouchersScreen>
     }
 
     final buffer = StringBuffer();
-    buffer.writeln('Voucher Code,Student Name,Mobile,Sold At,Amount,Payment Mode,Payment Status,Payment Reference');
+    buffer.writeln(
+      'Voucher Code,Student Name,Mobile,Sold At,Amount,Payment Mode,Payment Status,Payment Reference',
+    );
 
     for (final h in _filteredHistory) {
-      buffer.writeln([
-        csv(h['voucher_code']),
-        csv(h['student_name']),
-        csv(h['mobile'] ?? h['student_mobile']),
-        csv(dateTime(h['sold_at'])),
-        (double.tryParse('${h['final_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
-        csv(h['payment_mode']),
-        csv(h['payment_status']),
-        csv(h['payment_reference']),
-      ].join(','));
+      buffer.writeln(
+        [
+          csv(h['voucher_code']),
+          csv(h['student_name']),
+          csv(h['mobile'] ?? h['student_mobile']),
+          csv(dateTime(h['sold_at'])),
+          (double.tryParse('${h['final_amount'] ?? 0}') ?? 0).toStringAsFixed(
+            2,
+          ),
+          csv(h['payment_mode']),
+          csv(h['payment_status']),
+          csv(h['payment_reference']),
+        ].join(','),
+      );
     }
 
     final bytes = Uint8List.fromList(buffer.toString().codeUnits);
@@ -542,12 +647,12 @@ class _VouchersScreenState extends State<VouchersScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                         color: selected != null
-                            ? const Color(0xFFEDE9FE)
+                            ? const Color(0xFFFEEEE9)
                             : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: selected != null
-                              ? const Color(0xFFC4B5FD)
+                              ? const Color(0xFFFDC6B5)
                               : const Color(0xFFE2E8F0),
                         ),
                       ),
@@ -557,7 +662,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                             Icons.calendar_month_rounded,
                             size: 19,
                             color: selected != null
-                                ? const Color(0xFF5B21B6)
+                                ? const Color(0xFFB64421)
                                 : const Color(0xFF64748B),
                           ),
                           const SizedBox(width: 8),
@@ -570,7 +675,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: selected != null
-                                    ? const Color(0xFF5B21B6)
+                                    ? const Color(0xFFB64421)
                                     : const Color(0xFF475569),
                               ),
                             ),
@@ -581,7 +686,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                               child: const Icon(
                                 Icons.close_rounded,
                                 size: 18,
-                                color: Color(0xFF5B21B6),
+                                color: Color(0xFFB64421),
                               ),
                             ),
                         ],
@@ -607,48 +712,21 @@ class _VouchersScreenState extends State<VouchersScreen>
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFC4B5FD)),
+                      border: Border.all(color: const Color(0xFFFDC6B5)),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.picture_as_pdf_rounded, size: 15, color: Color(0xFF5B21B6)),
-                        SizedBox(width: 5),
-                        Text(
-                          'Export PDF',
-                          style: TextStyle(
-                            color: Color(0xFF5B21B6),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Icon(
+                          Icons.print_rounded,
+                          size: 15,
+                          color: Color(0xFFB64421),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  onTap: _exportHistoryExcel,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFC4B5FD)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.table_chart_rounded, size: 15, color: Color(0xFF5B21B6)),
                         SizedBox(width: 5),
                         Text(
-                          'Export Excel',
+                          'Print',
                           style: TextStyle(
-                            color: Color(0xFF5B21B6),
+                            color: Color(0xFFB64421),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -712,7 +790,13 @@ class _VouchersScreenState extends State<VouchersScreen>
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -727,31 +811,55 @@ class _VouchersScreenState extends State<VouchersScreen>
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEDE9FE),
+                    color: const Color(0xFFFEEEE9),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary),
+                  child: const Icon(
+                    Icons.receipt_long_rounded,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${h['voucher_code'] ?? '-'}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                      Text(
+                        '${h['voucher_code'] ?? '-'}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14.5,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('${h['student_name'] ?? '-'} • ${h['mobile'] ?? '-'}',
-                          style: TextStyle(color: Colors.grey.shade700, fontSize: 12.5)),
+                      Text(
+                        '${h['student_name'] ?? '-'} • ${h['mobile'] ?? '-'}',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12.5,
+                        ),
+                      ),
                       const SizedBox(height: 3),
-                      Text(dateTime(h['sold_at']),
-                          style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500)),
+                      Text(
+                        dateTime(h['sold_at']),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(money(h['final_amount']), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5)),
+                    Text(
+                      money(h['final_amount']),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14.5,
+                      ),
+                    ),
                     const SizedBox(height: 5),
                     _statusChip('${h['payment_status'] ?? 'Pending'}'),
                   ],
@@ -772,7 +880,13 @@ class _VouchersScreenState extends State<VouchersScreen>
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -787,28 +901,50 @@ class _VouchersScreenState extends State<VouchersScreen>
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: sold ? const Color(0xFFDCFCE7) : const Color(0xFFEDE9FE),
+                    color: sold
+                        ? const Color(0xFFDCFCE7)
+                        : const Color(0xFFFEEEE9),
                     borderRadius: BorderRadius.circular(13),
                   ),
-                  child: Icon(sold ? Icons.verified_rounded : Icons.confirmation_num_outlined,
-                      color: sold ? AppColors.green : AppColors.primary),
+                  child: Icon(
+                    sold
+                        ? Icons.verified_rounded
+                        : Icons.confirmation_num_outlined,
+                    color: sold ? AppColors.green : AppColors.primary,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${v['voucher_code'] ?? '-'}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                      Text(
+                        '${v['voucher_code'] ?? '-'}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14.5,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(sold ? '${v['student_name'] ?? '-'} • ${v['student_mobile'] ?? '-'}' : 'Available for sale',
-                          style: TextStyle(color: Colors.grey.shade700, fontSize: 12.5)),
+                      Text(
+                        sold
+                            ? '${v['student_name'] ?? '-'} • ${v['student_mobile'] ?? '-'}'
+                            : 'Available for sale',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12.5,
+                        ),
+                      ),
                       const SizedBox(height: 3),
                       Text(
-                          sold
-                              ? dateTime(v['sold_at'] ?? v['issued_at'])
-                              : 'Purchase cost ${money(v['purchase_cost'])}',
-                          style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500)),
+                        sold
+                            ? dateTime(v['sold_at'] ?? v['issued_at'])
+                            : 'Purchase cost ${money(v['purchase_cost'])}',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -816,20 +952,32 @@ class _VouchersScreenState extends State<VouchersScreen>
                   Container(
                     width: 34,
                     height: 34,
-                    decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       tooltip: 'Sell this voucher',
                       onPressed: () => _showSellVoucher(preselected: v),
-                      icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                      icon: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   )
                 else
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(money(v['sale_final_amount'] ?? v['selling_price']),
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5)),
+                      Text(
+                        money(v['sale_final_amount'] ?? v['selling_price']),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14.5,
+                        ),
+                      ),
                       const SizedBox(height: 5),
                       _statusChip('${v['status'] ?? '-'}'),
                     ],
@@ -851,30 +999,48 @@ class _VouchersScreenState extends State<VouchersScreen>
         color: color.withOpacity(.12),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: color)),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: color,
+        ),
+      ),
     );
   }
 
   Widget _empty(String message) => Container(
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+    padding: const EdgeInsets.all(28),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFFE5E7EB)),
+    ),
+    child: Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.receipt_long_outlined,
+            size: 26,
+            color: Colors.grey.shade400,
+          ),
         ),
-        child: Column(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(color: const Color(0xFFF3F4F6), shape: BoxShape.circle),
-              child: Icon(Icons.receipt_long_outlined, size: 26, color: Colors.grey.shade400),
-            ),
-            const SizedBox(height: 14),
-            Text(message, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 13.5)),
-          ],
+        const SizedBox(height: 14),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 13.5),
         ),
-      );
+      ],
+    ),
+  );
 
   // ================================================================
   // FORM HELPERS
@@ -884,58 +1050,99 @@ class _VouchersScreenState extends State<VouchersScreen>
     final parts = text.split('. ');
     final num = parts.length > 1 ? parts[0] : '';
     final label = parts.length > 1 ? parts[1] : text;
-    return Row(children: [
-      Container(
-        width: 22,
-        height: 22,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryLight]),
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Text(num, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white)),
-      ),
-      const SizedBox(width: 8),
-      Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF374151))),
-    ]);
-  }
-
-  Widget _input(TextEditingController c, String label, IconData icon,
-      {TextInputType? keyboard, int maxLines = 1}) {
-    return TextField(
-        controller: c,
-        keyboardType: keyboard,
-        maxLines: maxLines,
-        style: const TextStyle(fontSize: 14),
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, size: 20, color: const Color(0xFF6B7280)),
-          filled: true,
-          fillColor: const Color(0xFFF6F5FA),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+    return Row(
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight],
+            ),
+            borderRadius: BorderRadius.circular(7),
           ),
-        ));
+          child: Text(
+            num,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF374151),
+          ),
+        ),
+      ],
+    );
   }
 
-  Widget _dropdownField<T>(
-      {required String label, required T value, required List<T> items, required ValueChanged<T?> onChanged}) {
+  Widget _input(
+    TextEditingController c,
+    String label,
+    IconData icon, {
+    TextInputType? keyboard,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: c,
+      keyboardType: keyboard,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 20, color: const Color(0xFF6B7280)),
+        filled: true,
+        fillColor: const Color(0xFFFAF6F5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+        ),
+      ),
+    );
+  }
+
+  Widget _dropdownField<T>({
+    required String label,
+    required T value,
+    required List<T> items,
+    required ValueChanged<T?> onChanged,
+  }) {
     return DropdownButtonFormField<T>(
       value: value,
       isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const Color(0xFFF6F5FA),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        fillColor: const Color(0xFFFAF6F5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
         ),
       ),
-      items: items.map((e) => DropdownMenuItem(value: e, child: Text('$e', overflow: TextOverflow.ellipsis))).toList(),
+      items: items
+          .map(
+            (e) => DropdownMenuItem(
+              value: e,
+              child: Text('$e', overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
       onChanged: onChanged,
     );
   }
@@ -955,18 +1162,43 @@ class _VouchersScreenState extends State<VouchersScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Bulk Voucher Purchase'),
         content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-          _input(q, 'Quantity', Icons.numbers, keyboard: TextInputType.number),
-          const SizedBox(height: 10),
-          _input(c, 'Cost / Voucher', Icons.currency_rupee, keyboard: TextInputType.numberWithOptions(decimal: true)),
-          const SizedBox(height: 10),
-          _input(s, 'Selling Price / Voucher', Icons.sell_outlined,
-              keyboard: TextInputType.numberWithOptions(decimal: true)),
-          const SizedBox(height: 10),
-          _input(supplier, 'Supplier (optional)', Icons.storefront_outlined),
-        ])),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _input(
+                q,
+                'Quantity',
+                Icons.numbers,
+                keyboard: TextInputType.number,
+              ),
+              const SizedBox(height: 10),
+              _input(
+                c,
+                'Cost / Voucher',
+                Icons.currency_rupee,
+                keyboard: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 10),
+              _input(
+                s,
+                'Selling Price / Voucher',
+                Icons.sell_outlined,
+                keyboard: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 10),
+              _input(
+                supplier,
+                'Supplier (optional)',
+                Icons.storefront_outlined,
+              ),
+            ],
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () async {
@@ -974,7 +1206,10 @@ class _VouchersScreenState extends State<VouchersScreen>
               final cost = double.tryParse(c.text) ?? 0;
               final sell = double.tryParse(s.text) ?? 0;
               if (qty <= 0 || cost <= 0) {
-                _toast('Enter a valid quantity and purchase cost.', error: true);
+                _toast(
+                  'Enter a valid quantity and purchase cost.',
+                  error: true,
+                );
                 return;
               }
               try {
@@ -991,7 +1226,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                 _toast('Purchase failed: $e', error: true);
               }
             },
-            child: const Text('Save Purchase'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -1005,14 +1240,32 @@ class _VouchersScreenState extends State<VouchersScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         height: MediaQuery.of(context).size.height * .8,
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 20), children: [
-          Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
-          const SizedBox(height: 16),
-          Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 14),
-          ...rows.map((v) => _voucherTile(v, allowSell: true)),
-        ]),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 14),
+            ...rows.map((v) => _voucherTile(v, allowSell: true)),
+          ],
+        ),
       ),
     );
   }
@@ -1029,82 +1282,165 @@ class _VouchersScreenState extends State<VouchersScreen>
   }
 
   void _showHistoryDetail(Map<String, dynamic> h) {
-    _showDetailSheet({'voucher': h, 'purchase': {}, 'history': [h]});
+    _showDetailSheet({
+      'voucher': h,
+      'purchase': {},
+      'history': [h],
+    });
   }
 
   void _showDetailSheet(Map<String, dynamic> data) {
     final v = Map<String, dynamic>.from(data['voucher'] ?? {});
     final p = Map<String, dynamic>.from(data['purchase'] ?? {});
-    final hs = (data['history'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
+    final hs = (data['history'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .9),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * .9,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: ListView(children: [
-          Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
-          const SizedBox(height: 14),
-          Row(children: [
-            Container(width: 46, height: 46, decoration: BoxDecoration(color: AppColors.primary.withOpacity(.10), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.confirmation_num_rounded, color: AppColors.primary)),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${v['voucher_code'] ?? '-'}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 2),
-              _statusChip('${v['status'] ?? 'Available'}'),
-            ])),
-          ]),
-          const SizedBox(height: 18),
-          _detailSection('Voucher Information', [
-            _detail('Voucher ID', '${v['voucher_code'] ?? '-'}'),
-            _detail('Batch', '${p['batch_number'] ?? v['batch_number'] ?? '-'}'),
-            _detail('Purchase Date', '${p['purchase_date'] ?? '-'}'),
-            _detail('Purchase Cost', money(v['purchase_cost'])),
-            _detail('Selling Price', money(v['selling_price'])),
-          ]),
-          if ((v['student_name'] ?? '').toString().isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _detailSection('Student Details', [
-              _detail('Name', '${v['student_name']}'),
-              _detail('Mobile', '${v['student_mobile'] ?? '-'}'),
-              _detail('Email', '${v['student_email'] ?? '-'}'),
-              _detail('ID Number', '${v['student_id_number'] ?? '-'}'),
-              _detail('Address', '${v['student_address'] ?? '-'}'),
+        child: ListView(
+          children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.confirmation_num_rounded,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${v['voucher_code'] ?? '-'}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      _statusChip('${v['status'] ?? 'Available'}'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _detailSection('Voucher Information', [
+              _detail('Voucher ID', '${v['voucher_code'] ?? '-'}'),
+              _detail(
+                'Batch',
+                '${p['batch_number'] ?? v['batch_number'] ?? '-'}',
+              ),
+              _detail('Purchase Date', '${p['purchase_date'] ?? '-'}'),
+              _detail('Purchase Cost', money(v['purchase_cost'])),
+              _detail('Selling Price', money(v['selling_price'])),
             ]),
-          ],
-          if (hs.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _detailSection('Sale & Payment', [
-              _detail('Sold At', dateTime(hs.first['sold_at'])),
-              _detail('Amount', money(hs.first['final_amount'])),
-              _detail('Discount', money(hs.first['discount'])),
-              _detail('Payment', '${hs.first['payment_mode'] ?? '-'} • ${hs.first['payment_status'] ?? '-'}'),
-              _detail('Reference', '${hs.first['payment_reference'] ?? '-'}'),
-            ]),
-          ],
-          const SizedBox(height: 16),
-          const Text('Voucher History', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          if (hs.isEmpty)
-            Text('Purchased and waiting for sale.', style: TextStyle(color: Colors.grey.shade600))
-          else
-            ...hs.map((h) => Container(
+            if ((v['student_name'] ?? '').toString().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _detailSection('Student Details', [
+                _detail('Name', '${v['student_name']}'),
+                _detail('Mobile', '${v['student_mobile'] ?? '-'}'),
+                _detail('Email', '${v['student_email'] ?? '-'}'),
+                _detail('ID Number', '${v['student_id_number'] ?? '-'}'),
+                _detail('Address', '${v['student_address'] ?? '-'}'),
+              ]),
+            ],
+            if (hs.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _detailSection('Sale & Payment', [
+                _detail('Sold At', dateTime(hs.first['sold_at'])),
+                _detail('Amount', money(hs.first['final_amount'])),
+                _detail('Discount', money(hs.first['discount'])),
+                _detail(
+                  'Payment',
+                  '${hs.first['payment_mode'] ?? '-'} • ${hs.first['payment_status'] ?? '-'}',
+                ),
+                _detail('Reference', '${hs.first['payment_reference'] ?? '-'}'),
+              ]),
+            ],
+            const SizedBox(height: 16),
+            const Text(
+              'Voucher History',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            if (hs.isEmpty)
+              Text(
+                'Purchased and waiting for sale.',
+                style: TextStyle(color: Colors.grey.shade600),
+              )
+            else
+              ...hs.map(
+                (h) => Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: const Color(0xFFF8F7FA), borderRadius: BorderRadius.circular(14)),
-                  child: Row(children: [
-                    const Icon(Icons.circle, size: 8, color: AppColors.primary),
-                    const SizedBox(width: 10),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Voucher Sold', style: TextStyle(fontWeight: FontWeight.w800)),
-                      Text('${h['student_name'] ?? '-'} • ${dateTime(h['sold_at'])}', style: const TextStyle(fontSize: 12)),
-                    ])),
-                    Text(money(h['final_amount']), style: const TextStyle(fontWeight: FontWeight.w800)),
-                  ]),
-                )),
-        ]),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAF8F7),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.circle,
+                        size: 8,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Voucher Sold',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            Text(
+                              '${h['student_name'] ?? '-'} • ${dateTime(h['sold_at'])}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        money(h['final_amount']),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1117,21 +1453,38 @@ class _VouchersScreenState extends State<VouchersScreen>
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       padding: const EdgeInsets.all(14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-        const SizedBox(height: 7),
-        ...children,
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 7),
+          ...children,
+        ],
+      ),
     );
   }
 
   Widget _detail(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 118, child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13))),
-        Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
-      ]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 118,
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1140,9 +1493,14 @@ class _VouchersScreenState extends State<VouchersScreen>
   // ================================================================
 
   Future<void> _showSellVoucher({Map<String, dynamic>? preselected}) async {
-    final available = vouchers.where((v) => v['status'] == 'Available').toList();
+    final available = vouchers
+        .where((v) => v['status'] == 'Available')
+        .toList();
     if (available.isEmpty) {
-      _toast('No available voucher stock. Please purchase vouchers first.', error: true);
+      _toast(
+        'No available voucher stock. Please purchase vouchers first.',
+        error: true,
+      );
       return;
     }
 
@@ -1152,7 +1510,9 @@ class _VouchersScreenState extends State<VouchersScreen>
     final email = TextEditingController();
     final address = TextEditingController();
     final idNumber = TextEditingController();
-    final price = TextEditingController(text: '${selected['selling_price'] ?? 0}');
+    final price = TextEditingController(
+      text: '${selected['selling_price'] ?? 0}',
+    );
     final discount = TextEditingController(text: '0');
     final reference = TextEditingController();
     final notes = TextEditingController();
@@ -1167,7 +1527,9 @@ class _VouchersScreenState extends State<VouchersScreen>
         builder: (ctx, setSheetState) {
           final bottom = MediaQuery.of(ctx).viewInsets.bottom;
           return Container(
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * .92),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * .92,
+            ),
             padding: EdgeInsets.fromLTRB(20, 10, 20, bottom + 20),
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -1177,7 +1539,16 @@ class _VouchersScreenState extends State<VouchersScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(5)))),
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -1189,24 +1560,54 @@ class _VouchersScreenState extends State<VouchersScreen>
                       ),
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
-                        BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 14, offset: const Offset(0, 6)),
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
                       ],
                     ),
-                    child: Row(children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(14)),
-                        child: const Icon(Icons.sell_rounded, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Sell Voucher', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
-                        SizedBox(height: 2),
-                        Text('Create a voucher sale with its own student record',
-                            style: TextStyle(fontSize: 11.5, color: Colors.white70)),
-                      ])),
-                    ]),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.sell_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sell Voucher',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Create a voucher sale with its own student record',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 20),
                   _sectionTitle('1. Voucher'),
@@ -1215,17 +1616,35 @@ class _VouchersScreenState extends State<VouchersScreen>
                     value: selected,
                     isExpanded: true,
                     decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.confirmation_num_outlined, color: Color(0xFF6B7280)),
+                      prefixIcon: const Icon(
+                        Icons.confirmation_num_outlined,
+                        color: Color(0xFF6B7280),
+                      ),
                       labelText: 'Voucher ID',
                       filled: true,
-                      fillColor: const Color(0xFFF6F5FA),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      fillColor: const Color(0xFFFAF6F5),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 1.6,
+                        ),
                       ),
                     ),
-                    items: available.map((v) => DropdownMenuItem(value: v, child: Text('${v['voucher_code']}  •  ${money(v['selling_price'])}'))).toList(),
+                    items: available
+                        .map(
+                          (v) => DropdownMenuItem(
+                            value: v,
+                            child: Text(
+                              '${v['voucher_code']}  •  ${money(v['selling_price'])}',
+                            ),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (v) {
                       if (v == null) return;
                       setSheetState(() {
@@ -1239,33 +1658,92 @@ class _VouchersScreenState extends State<VouchersScreen>
                   const SizedBox(height: 9),
                   _input(name, 'Full Name *', Icons.person_outline_rounded),
                   const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(child: _input(mobile, 'Mobile Number', Icons.phone_outlined, keyboard: TextInputType.phone)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _input(idNumber, 'ID / ID Number', Icons.badge_outlined)),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _input(
+                          mobile,
+                          'Mobile Number',
+                          Icons.phone_outlined,
+                          keyboard: TextInputType.phone,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _input(
+                          idNumber,
+                          'ID / ID Number',
+                          Icons.badge_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
-                  _input(email, 'Email Address', Icons.email_outlined, keyboard: TextInputType.emailAddress),
+                  _input(
+                    email,
+                    'Email Address',
+                    Icons.email_outlined,
+                    keyboard: TextInputType.emailAddress,
+                  ),
                   const SizedBox(height: 10),
-                  _input(address, 'Address', Icons.location_on_outlined, maxLines: 2),
+                  _input(
+                    address,
+                    'Address',
+                    Icons.location_on_outlined,
+                    maxLines: 2,
+                  ),
                   const SizedBox(height: 18),
                   _sectionTitle('3. Sale & Payment'),
                   const SizedBox(height: 9),
-                  Row(children: [
-                    Expanded(child: _input(price, 'Selling Price', Icons.currency_rupee, keyboard: TextInputType.numberWithOptions(decimal: true))),
-                    const SizedBox(width: 10),
-                    Expanded(child: _input(discount, 'Discount', Icons.discount_outlined, keyboard: TextInputType.numberWithOptions(decimal: true))),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _input(
+                          price,
+                          'Selling Price',
+                          Icons.currency_rupee,
+                          keyboard: TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _input(
+                          discount,
+                          'Discount',
+                          Icons.discount_outlined,
+                          keyboard: TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(child: _dropdownField<String>(label: 'Payment Mode', value: paymentMode, items: const ['Cash', 'UPI', 'Card', 'Bank Transfer'], onChanged: (v) => setSheetState(() => paymentMode = v!))),
-                    const SizedBox(width: 10),
-                    Expanded(child: _dropdownField<String>(label: 'Payment Status', value: paymentStatus, items: const ['Paid', 'Pending', 'Partial'], onChanged: (v) => setSheetState(() => paymentStatus = v!))),
-                  ]),
-                  const SizedBox(height: 10),
-                  _input(reference, 'Payment Reference (optional)', Icons.tag_outlined),
-                  const SizedBox(height: 10),
-                  _input(notes, 'Notes (optional)', Icons.notes_rounded, maxLines: 2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _dropdownField<String>(
+                          label: 'Payment Mode',
+                          value: paymentMode,
+                          items: const ['Cash', 'UPI', 'Card', 'Bank Transfer'],
+                          onChanged: (v) =>
+                              setSheetState(() => paymentMode = v!),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _dropdownField<String>(
+                          label: 'Payment Status',
+                          value: paymentStatus,
+                          items: const ['Paid', 'Pending', 'Partial'],
+                          onChanged: (v) =>
+                              setSheetState(() => paymentStatus = v!),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 18),
                   SizedBox(
                     width: double.infinity,
@@ -1274,20 +1752,30 @@ class _VouchersScreenState extends State<VouchersScreen>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                       onPressed: saving
                           ? null
                           : () async {
                               final n = name.text.trim();
                               if (n.isEmpty || selected == null) {
-                                _toast('Voucher ID and student name are required.', error: true);
+                                _toast(
+                                  'Voucher ID and student name are required.',
+                                  error: true,
+                                );
                                 return;
                               }
-                              final sell = double.tryParse(price.text.trim()) ?? 0;
-                              final disc = double.tryParse(discount.text.trim()) ?? 0;
+                              final sell =
+                                  double.tryParse(price.text.trim()) ?? 0;
+                              final disc =
+                                  double.tryParse(discount.text.trim()) ?? 0;
                               if (sell <= 0 || disc < 0 || disc > sell) {
-                                _toast('Enter a valid selling price and discount.', error: true);
+                                _toast(
+                                  'Enter a valid selling price and discount.',
+                                  error: true,
+                                );
                                 return;
                               }
                               setSheetState(() => saving = true);
@@ -1314,8 +1802,17 @@ class _VouchersScreenState extends State<VouchersScreen>
                                 _toast('Sale failed: $e', error: true);
                               }
                             },
-                      icon: saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle_outline),
-                      label: Text(saving ? 'Saving Sale...' : 'Sell Voucher'),
+                      icon: saving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check_circle_outline),
+                      label: Text(saving ? 'Saving...' : 'Save'),
                     ),
                   ),
                 ],
@@ -1356,7 +1853,11 @@ class _VoucherKpiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: tint),
         boxShadow: const [
-          BoxShadow(color: Color(0x10000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -1365,19 +1866,34 @@ class _VoucherKpiCard extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(11)),
+            decoration: BoxDecoration(
+              color: tint,
+              borderRadius: BorderRadius.circular(11),
+            ),
             child: Icon(icon, color: iconColor, size: 19),
           ),
           const Spacer(),
-          Text(title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF4B5563))),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF4B5563),
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF111827),
+            ),
+          ),
         ],
       ),
     );
@@ -1411,10 +1927,18 @@ class _VoucherQuickAction extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+            gradient: LinearGradient(
+              colors: gradientColors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
-              BoxShadow(color: gradientColors.first.withOpacity(.30), blurRadius: 14, offset: const Offset(0, 6)),
+              BoxShadow(
+                color: gradientColors.first.withOpacity(.30),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
             ],
           ),
           child: Row(
@@ -1422,13 +1946,23 @@ class _VoucherQuickAction extends StatelessWidget {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: Colors.white.withOpacity(.20), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(.20),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Icon(icon, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(title,
-                    style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800, height: 1.2)),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
               ),
             ],
           ),
@@ -1447,7 +1981,11 @@ class _VoucherSectionCard extends StatelessWidget {
   final IconData icon;
   final Widget child;
 
-  const _VoucherSectionCard({required this.title, required this.icon, required this.child});
+  const _VoucherSectionCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1458,7 +1996,11 @@ class _VoucherSectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: const [
-          BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 3)),
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
@@ -1469,13 +2011,22 @@ class _VoucherSectionCard extends StatelessWidget {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEEEE9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Icon(icon, color: AppColors.primary, size: 21),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF111827),
+                  ),
+                ),
               ),
             ],
           ),

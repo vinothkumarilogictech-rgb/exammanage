@@ -224,7 +224,7 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                 r.attendedDate, r.result, r.remarks,
               ]).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
+              headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepOrange),
               cellStyle: const pw.TextStyle(fontSize: 8),
               cellPadding: const pw.EdgeInsets.all(5),
               border: pw.TableBorder.all(color: pdf.PdfColors.grey400, width: 0.5),
@@ -281,7 +281,7 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F4FB),
+      backgroundColor: const Color(0xFFFBF6F4),
       appBar: AppBar(
         elevation: 0,
         toolbarHeight: AppBarStyle.height,
@@ -907,7 +907,7 @@ class _HistoryCard extends StatelessWidget {
 
   Color _avatarBg(String name) {
     final colors = [
-      const Color(0xFFEDE9FE),
+      const Color(0xFFFEEEE9),
       const Color(0xFFDCFCE7),
       const Color(0xFFDBEAFE),
       const Color(0xFFFFE4E6),
@@ -951,7 +951,7 @@ class _HistoryCard extends StatelessWidget {
       badgeBg = const Color(0xFFFFEDD5);
     } else {
       badgeText = AppColors.primary;
-      badgeBg = const Color(0xFFEDE9FE);
+      badgeBg = const Color(0xFFFEEEE9);
     }
 
     return ClipRRect(
@@ -1034,7 +1034,7 @@ class _HistoryCard extends StatelessWidget {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF3F1FA),
+                                color: const Color(0xFFFAF3F1),
                                 borderRadius: BorderRadius.circular(7),
                               ),
                               child: Text(

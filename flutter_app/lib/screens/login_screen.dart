@@ -147,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen>
               const Text(
                 'CONTROL PANEL',
                 style: TextStyle(
-                  color: Color(0xFF7027D6),
+                  color: Color(0xFFD65027),
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2.2,
@@ -185,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen>
                     obscure
                         ? Icons.visibility_rounded
                         : Icons.visibility_off_rounded,
-                    color: const Color(0xFF6C27CE),
+                    color: const Color(0xFFCE4E27),
                     size: 22,
                   ),
                 ),
@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen>
                     padding: EdgeInsets.symmetric(horizontal: 10),
                     child: Icon(
                       Icons.verified_user_rounded,
-                      color: Color(0xFF7B31D5),
+                      color: Color(0xFFD55731),
                       size: 20,
                     ),
                   ),
@@ -224,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen>
               Text(
                 'iLOGIC TECH  •  SMART SOLUTIONS',
                 style: TextStyle(
-                  color: const Color(0xFFAAA9B7),
+                  color: const Color(0xFFB7ACA9),
                   fontSize: 8.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.1,
@@ -253,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen>
                   TextSpan(
                     text: 'iLOGIC',
                     style: TextStyle(
-                      color: Color(0xFF3D159B),
+                      color: Color(0xFF9B3415),
                       fontSize: 23,
                       fontWeight: FontWeight.w900,
                     ),
@@ -261,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen>
                   TextSpan(
                     text: ' TECH',
                     style: TextStyle(
-                      color: Color(0xFF7B2CE0),
+                      color: Color(0xFFE0562C),
                       fontSize: 23,
                       fontWeight: FontWeight.w800,
                     ),
@@ -272,12 +272,12 @@ class _LoginScreenState extends State<LoginScreen>
             const SizedBox(height: 3),
             Row(
               children: [
-                Container(width: 21, height: 1.2, color: const Color(0xFF8A3AE2)),
+                Container(width: 21, height: 1.2, color: const Color(0xFFE2613A)),
                 const SizedBox(width: 6),
                 const Text(
                   'SMART SOLUTIONS',
                   style: TextStyle(
-                    color: Color(0xFF6D2BC9),
+                    color: Color(0xFFC9502B),
                     fontSize: 7.5,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.8,
@@ -318,10 +318,10 @@ class _LoginScreenState extends State<LoginScreen>
       duration: const Duration(milliseconds: 180),
       height: 57,
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F7FC),
+        color: const Color(0xFFFCF8F7),
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: focused ? const Color(0xFF7A2BDC) : const Color(0xFFE0DDEA),
+          color: focused ? const Color(0xFFDC542B) : const Color(0xFFEAE0DD),
           width: focused ? 1.7 : 1.1,
         ),
         boxShadow: focused
@@ -340,13 +340,13 @@ class _LoginScreenState extends State<LoginScreen>
             width: 57,
             height: double.infinity,
             decoration: const BoxDecoration(
-              color: Color(0xFFF0E8FF),
+              color: Color(0xFFFFEDE8),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(14),
                 bottomLeft: Radius.circular(14),
               ),
             ),
-            child: Icon(icon, color: const Color(0xFF6627C8), size: 23),
+            child: Icon(icon, color: const Color(0xFFC84D27), size: 23),
           ),
           const SizedBox(width: 11),
           Expanded(
@@ -357,7 +357,7 @@ class _LoginScreenState extends State<LoginScreen>
                 obscureText: obscure,
                 textInputAction: action,
                 onSubmitted: onSubmitted,
-                cursorColor: const Color(0xFF6C27CE),
+                cursorColor: const Color(0xFFCE4E27),
                 style: const TextStyle(
                   color: Color(0xFF172039),
                   fontSize: 16,
@@ -366,7 +366,7 @@ class _LoginScreenState extends State<LoginScreen>
                 decoration: InputDecoration(
                   hintText: hint,
                   hintStyle: const TextStyle(
-                    color: Color(0xFFA0A1AE),
+                    color: Color(0xFFAEA3A0),
                     fontSize: 13.5,
                   ),
                   border: InputBorder.none,
@@ -389,7 +389,7 @@ class _LoginScreenState extends State<LoginScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(15),
         gradient: const LinearGradient(
-          colors: [Color(0xFF8526ED), Color(0xFF5A20C8)],
+          colors: [Color(0xFFED5426), Color(0xFFC84720)],
         ),
         boxShadow: const [
           BoxShadow(
@@ -462,7 +462,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       );
 
-  Widget _line() => Container(height: 1, color: const Color(0xFFE8E1F1));
+  Widget _line() => Container(height: 1, color: const Color(0xFFF1E5E1));
 }
 
 class _BrandMark extends StatelessWidget {
@@ -479,7 +479,7 @@ class _BrandMark extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF9C4DFF), Color(0xFF5318D4)],
+          colors: [Color(0xFFFF774D), Color(0xFFD44418)],
         ),
         boxShadow: const [
           BoxShadow(
@@ -542,7 +542,7 @@ class _BackgroundPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF160039), Color(0xFF3C087F), Color(0xFF701BC6), Color(0xFF1B0048)],
+        colors: [Color(0xFF390D00), Color(0xFF7F2408), Color(0xFFC6431B), Color(0xFF481100)],
       ).createShader(rect);
     canvas.drawRect(rect, paint);
 
@@ -553,7 +553,7 @@ class _BackgroundPainter extends CustomPainter {
     for (final center in centers) {
       final glow = Paint()
         ..shader = RadialGradient(
-          colors: [const Color(0xFFBF61FF).withOpacity(.30), Colors.transparent],
+          colors: [const Color(0xFFFF8661).withOpacity(.30), Colors.transparent],
         ).createShader(Rect.fromCircle(center: center, radius: size.width * .58));
       canvas.drawCircle(center, size.width * .58, glow);
     }

@@ -51,7 +51,7 @@ class _ScheduledCandidatesScreenState extends State<ScheduledCandidatesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFFCF8F7),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
@@ -160,7 +160,7 @@ class _ScheduledCandidatesScreenState extends State<ScheduledCandidatesScreen> {
                                       label: Text(b),
                                       selected: selectedBranch == b,
                                       onSelected: (_) => setState(() => selectedBranch = b),
-                                      selectedColor: const Color(0xFFEDE9FE),
+                                      selectedColor: const Color(0xFFFEEEE9),
                                       labelStyle: TextStyle(
                                         color: selectedBranch == b ? AppColors.primary : const Color(0xFF4B5563),
                                         fontSize: 11.5,
@@ -182,7 +182,7 @@ class _ScheduledCandidatesScreenState extends State<ScheduledCandidatesScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                color: widget.isToday ? const Color(0xFFDCFCE7) : const Color(0xFFF0E9FF),
+                color: widget.isToday ? const Color(0xFFDCFCE7) : const Color(0xFFFFEEE9),
                 child: Row(
                   children: [
                     Icon(
@@ -300,12 +300,12 @@ class _CandidateCard extends StatelessWidget {
   // Color generator based on name
   Color _avatarBg(String name) {
     final colors = [
-      const Color(0xFFEDE9FE),
+      const Color(0xFFFEEEE9),
       const Color(0xFFDCFCE7),
       const Color(0xFFDBEAFE),
       const Color(0xFFFFE4E6),
       const Color(0xFFFEF3C7),
-      const Color(0xFFF3E8FF),
+      const Color(0xFFFFEDE8),
     ];
     if (name.isEmpty) return colors[0];
     final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
@@ -319,7 +319,7 @@ class _CandidateCard extends StatelessWidget {
       AppColors.blue,
       const Color(0xFFE11D48),
       const Color(0xFFD97706),
-      const Color(0xFF9333EA),
+      const Color(0xFFEA5E33),
     ];
     if (name.isEmpty) return colors[0];
     final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
@@ -494,8 +494,8 @@ class _StatusBadge extends StatelessWidget {
       textColor = const Color(0xFFD97706); // Yellow / Amber
       bgColor = const Color(0xFFFEF3C7);
     } else if (s == 'scheduled') {
-      textColor = const Color(0xFF7C3AED); // Purple
-      bgColor = const Color(0xFFEDE9FE);
+      textColor = const Color(0xFFED643A); // Purple
+      bgColor = const Color(0xFFFEEEE9);
     } else if (s == 'no show' || s == 'no_show' || s == 'absent') {
       textColor = const Color(0xFFEA580C); // Orange
       bgColor = const Color(0xFFFFEDD5);

@@ -46,7 +46,7 @@ class _AppShellState extends State<AppShell> {
     }
   },
         height: 72,
-        indicatorColor: const Color(0xFFE8E4FF),
+        indicatorColor: const Color(0xFFFFEAE4),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),

@@ -8,6 +8,12 @@ import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
 
+class _CategoryVisual {
+  final IconData icon;
+  final Color color;
+  const _CategoryVisual(this.icon, this.color);
+}
+
 class ExpensesScreen extends StatefulWidget {
   final bool openAddOnStart;
   const ExpensesScreen({super.key, this.openAddOnStart = false});
@@ -57,12 +63,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     'Other',
   ];
 
-  static const List<String> _periodOptions = [
-    'All',
-    'Days',
-    'Week',
-    'Month',
-  ];
+  static const List<String> _periodOptions = ['All', 'Days', 'Week', 'Month'];
 
   bool _opened = false;
 
@@ -207,8 +208,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
   String _monthShortName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return months[month - 1];
   }
@@ -218,8 +229,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     final dt = _parseDate(raw);
     if (dt == null) return raw;
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${dt.day.toString().padLeft(2, '0')}-${months[dt.month - 1]}-${dt.year}';
   }
@@ -263,7 +284,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
     // Bounds for Week (Current Week Monday to Sunday)
     final weekStart = todayStart.subtract(Duration(days: now.weekday - 1));
-    final weekEnd = weekStart.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+    final weekEnd = weekStart.add(
+      const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
+    );
 
     // Bounds for Month (Current Month)
     final monthStart = DateTime(now.year, now.month, 1);
@@ -278,9 +301,17 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         if (e.branchId == null) {
           final branchObj = _branches.firstWhere(
             (b) => b.id == _selectedBranchId,
-            orElse: () => Branch(id: -1, name: '', address: '', contact: '', region: '', status: ''),
+            orElse: () => Branch(
+              id: -1,
+              name: '',
+              address: '',
+              contact: '',
+              region: '',
+              status: '',
+            ),
           );
-          if (branchObj.id != -1 && e.branch.toLowerCase() != branchObj.name.toLowerCase()) {
+          if (branchObj.id != -1 &&
+              e.branch.toLowerCase() != branchObj.name.toLowerCase()) {
             return false;
           }
         }
@@ -335,7 +366,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         final matchPaymentMode = e.paymentMode.toLowerCase().contains(query);
         final matchBranch = e.branch.toLowerCase().contains(query);
         final matchAmount = e.amount.toString().contains(query);
-        if (!matchCategory && !matchDescription && !matchPaymentMode && !matchBranch && !matchAmount) {
+        if (!matchCategory &&
+            !matchDescription &&
+            !matchPaymentMode &&
+            !matchBranch &&
+            !matchAmount) {
           return false;
         }
       }
@@ -371,9 +406,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       await reload();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating category: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error creating category: $e')));
       }
     } finally {
       if (mounted) setState(() => _isAddingCategory = false);
@@ -388,16 +423,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Category "${cat.name}" is now $newStatus.'),
-            backgroundColor: newStatus == 'Active' ? AppColors.green : Colors.grey[800],
+            backgroundColor: newStatus == 'Active'
+                ? AppColors.green
+                : Colors.grey[800],
           ),
         );
       }
       await reload();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating category: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating category: $e')));
       }
     }
   }
@@ -485,10 +522,15 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     hintText: '0.00',
-                    prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.currency_rupee_rounded,
+                      size: 20,
+                    ),
                     filled: true,
                     fillColor: const Color(0xFFF9FAFB),
                     border: OutlineInputBorder(
@@ -570,7 +612,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           value: null,
                           child: Text('- None / General -'),
                         ),
-                        ..._branches.map((b) => DropdownMenuItem<int?>(value: b.id, child: Text(b.name))),
+                        ..._branches.map(
+                          (b) => DropdownMenuItem<int?>(
+                            value: b.id,
+                            child: Text(b.name),
+                          ),
+                        ),
                       ],
                       onChanged: (val) {
                         setSheetState(() => branchId = val);
@@ -603,7 +650,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       value: paymentMode,
                       icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       items: _paymentModes
-                          .map((m) => DropdownMenuItem<String>(value: m, child: Text(m)))
+                          .map(
+                            (m) => DropdownMenuItem<String>(
+                              value: m,
+                              child: Text(m),
+                            ),
+                          )
                           .toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -644,14 +696,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFFE5E7EB)),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF6B7280)),
+                        const Icon(
+                          Icons.calendar_month_outlined,
+                          size: 20,
+                          color: Color(0xFF6B7280),
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
@@ -704,14 +766,21 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       final val = double.tryParse(amountCtrl.text.trim()) ?? 0;
                       if (val <= 0) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Please enter a valid amount')),
+                          const SnackBar(
+                            content: Text('Please enter a valid amount'),
+                          ),
                         );
                         return;
                       }
 
                       final catObj = _categories.firstWhere(
                         (c) => c.id == categoryId,
-                        orElse: () => ExpenseCategoryItem(id: 0, name: 'Other', status: 'Active', createdAt: ''),
+                        orElse: () => ExpenseCategoryItem(
+                          id: 0,
+                          name: 'Other',
+                          status: 'Active',
+                          createdAt: '',
+                        ),
                       );
 
                       try {
@@ -740,14 +809,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         }
                       } catch (e) {
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                          ScaffoldMessenger.of(
+                            ctx,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
                         }
                       }
                     },
                     child: const Text(
-                      'Save Expense',
+                      'Save ',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -770,7 +839,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     int? branchId = e.branchId;
     int? categoryId = e.categoryId;
     if (categoryId == null && _categories.isNotEmpty) {
-      final found = _categories.where((c) => c.name.toLowerCase() == e.category.toLowerCase()).toList();
+      final found = _categories
+          .where((c) => c.name.toLowerCase() == e.category.toLowerCase())
+          .toList();
       if (found.isNotEmpty) categoryId = found.first.id;
     }
     String paymentMode = e.paymentMode.isNotEmpty ? e.paymentMode : 'Cash';
@@ -838,13 +909,25 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 20),
 
                 // Amount
-                const Text('Amount *', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Amount *',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.currency_rupee_rounded,
+                      size: 20,
+                    ),
                     filled: true,
                     fillColor: const Color(0xFFF9FAFB),
                     border: OutlineInputBorder(
@@ -856,7 +939,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 14),
 
                 // Category
-                const Text('Category', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Category',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Container(
                   decoration: BoxDecoration(
@@ -882,7 +972,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 14),
 
                 // Branch
-                const Text('Branch', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Branch',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Container(
                   decoration: BoxDecoration(
@@ -896,8 +993,16 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       isExpanded: true,
                       value: branchId,
                       items: [
-                        const DropdownMenuItem<int?>(value: null, child: Text('- None / General -')),
-                        ..._branches.map((b) => DropdownMenuItem<int?>(value: b.id, child: Text(b.name))),
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('- None / General -'),
+                        ),
+                        ..._branches.map(
+                          (b) => DropdownMenuItem<int?>(
+                            value: b.id,
+                            child: Text(b.name),
+                          ),
+                        ),
                       ],
                       onChanged: (val) => setSheetState(() => branchId = val),
                     ),
@@ -912,13 +1017,22 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Payment Mode', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                          const Text(
+                            'Payment Mode',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: Color(0xFF4B5563),
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Container(
                             decoration: BoxDecoration(
                               color: const Color(0xFFF9FAFB),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB),
+                              ),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: DropdownButtonHideUnderline(
@@ -926,10 +1040,16 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                                 isExpanded: true,
                                 value: paymentMode,
                                 items: _paymentModes
-                                    .map((m) => DropdownMenuItem<String>(value: m, child: Text(m)))
+                                    .map(
+                                      (m) => DropdownMenuItem<String>(
+                                        value: m,
+                                        child: Text(m),
+                                      ),
+                                    )
                                     .toList(),
                                 onChanged: (val) {
-                                  if (val != null) setSheetState(() => paymentMode = val);
+                                  if (val != null)
+                                    setSheetState(() => paymentMode = val);
                                 },
                               ),
                             ),
@@ -942,13 +1062,22 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Status', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                          const Text(
+                            'Status',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: Color(0xFF4B5563),
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Container(
                             decoration: BoxDecoration(
                               color: const Color(0xFFF9FAFB),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB),
+                              ),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: DropdownButtonHideUnderline(
@@ -956,11 +1085,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                                 isExpanded: true,
                                 value: status,
                                 items: const [
-                                  DropdownMenuItem(value: 'Active', child: Text('Active')),
-                                  DropdownMenuItem(value: 'Cancelled', child: Text('Cancelled')),
+                                  DropdownMenuItem(
+                                    value: 'Active',
+                                    child: Text('Active'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'Cancelled',
+                                    child: Text('Cancelled'),
+                                  ),
                                 ],
                                 onChanged: (val) {
-                                  if (val != null) setSheetState(() => status = val);
+                                  if (val != null)
+                                    setSheetState(() => status = val);
                                 },
                               ),
                             ),
@@ -973,7 +1109,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 14),
 
                 // Date Incurred
-                const Text('Date Incurred', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Date Incurred',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 InkWell(
                   onTap: () async {
@@ -994,14 +1137,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFFE5E7EB)),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF6B7280)),
+                        const Icon(
+                          Icons.calendar_month_outlined,
+                          size: 20,
+                          color: Color(0xFF6B7280),
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
@@ -1010,7 +1163,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 14),
 
                 // Description
-                const Text('Description', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Description',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: noteCtrl,
@@ -1041,14 +1201,21 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       final val = double.tryParse(amountCtrl.text.trim()) ?? 0;
                       if (val <= 0) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Please enter a valid amount')),
+                          const SnackBar(
+                            content: Text('Please enter a valid amount'),
+                          ),
                         );
                         return;
                       }
 
                       final catObj = _categories.firstWhere(
                         (c) => c.id == categoryId,
-                        orElse: () => ExpenseCategoryItem(id: 0, name: e.category, status: 'Active', createdAt: ''),
+                        orElse: () => ExpenseCategoryItem(
+                          id: 0,
+                          name: e.category,
+                          status: 'Active',
+                          createdAt: '',
+                        ),
                       );
 
                       try {
@@ -1083,7 +1250,13 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         }
                       }
                     },
-                    child: const Text('Update Expense', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                    child: const Text(
+                      'Update Expense',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1142,20 +1315,30 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     const SizedBox(width: 12),
                     const Text(
                       'Expense Details',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: e.status == 'Cancelled' ? const Color(0xFFFEE2E2) : const Color(0xFFEDE9FE),
+                    color: e.status == 'Cancelled'
+                        ? const Color(0xFFFEE2E2)
+                        : const Color(0xFFEDE9FE),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     e.status,
                     style: TextStyle(
-                      color: e.status == 'Cancelled' ? const Color(0xFFDC2626) : const Color(0xFF5B21B6),
+                      color: e.status == 'Cancelled'
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFF5B21B6),
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
                     ),
@@ -1174,7 +1357,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               ),
               child: Column(
                 children: [
-                  _detailRow('Amount', '₹${e.amount.toStringAsFixed(2)}', isBold: true, fontSize: 18),
+                  _detailRow(
+                    'Amount',
+                    '₹${e.amount.toStringAsFixed(2)}',
+                    isBold: true,
+                    fontSize: 18,
+                  ),
                   const Divider(height: 20, color: Color(0xFFE5E7EB)),
                   _detailRow('Category', e.category),
                   const SizedBox(height: 8),
@@ -1182,7 +1370,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   const SizedBox(height: 8),
                   _detailRow('Branch', e.branch.isNotEmpty ? e.branch : '-'),
                   const SizedBox(height: 8),
-                  _detailRow('Payment Mode', e.paymentMode.isNotEmpty ? e.paymentMode : '-'),
+                  _detailRow(
+                    'Payment Mode',
+                    e.paymentMode.isNotEmpty ? e.paymentMode : '-',
+                  ),
                   if (e.description.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     _detailRow('Description', e.description),
@@ -1197,7 +1388,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       side: const BorderSide(color: Color(0xFFCBD5E1)),
                     ),
                     onPressed: () => Navigator.pop(ctx),
@@ -1211,7 +1404,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF7C3AED),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     onPressed: () {
                       Navigator.pop(ctx);
@@ -1229,12 +1424,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  Widget _detailRow(String label, String value, {bool isBold = false, double fontSize = 14}) {
+  Widget _detailRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    double fontSize = 14,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF6B7280),
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
         const SizedBox(width: 12),
         Flexible(
           child: Text(
@@ -1264,7 +1471,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     if (_selectedBranchId != null) {
       final b = _branches.firstWhere(
         (x) => x.id == _selectedBranchId,
-        orElse: () => Branch(id: -1, name: '', address: '', contact: '', region: '', status: ''),
+        orElse: () => Branch(
+          id: -1,
+          name: '',
+          address: '',
+          contact: '',
+          region: '',
+          status: '',
+        ),
       );
       if (b.name.isNotEmpty) {
         branchLabel = b.name;
@@ -1282,8 +1496,17 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Expense Management Report', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-                  pw.Text(_formatDateDisplay(DateTime.now().toIso8601String()), style: const pw.TextStyle(fontSize: 12)),
+                  pw.Text(
+                    'Expense Management Report',
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    _formatDateDisplay(DateTime.now().toIso8601String()),
+                    style: const pw.TextStyle(fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -1291,21 +1514,47 @@ class ExpensesScreenState extends State<ExpensesScreen> {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Branch: $branchLabel', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
-                pw.Text('Filter Period: $_selectedPeriod', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text(
+                  'Branch: $branchLabel',
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  'Filter Period: $_selectedPeriod',
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
               ],
             ),
             pw.SizedBox(height: 6),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Total Expenses: Rs ${filteredTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13, color: PdfColors.purple900)),
-                pw.Text('Total Records: ${_filteredExpenses.length}', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text(
+                  'Total Expenses: Rs ${filteredTotal.toStringAsFixed(2)}',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 13,
+                    color: PdfColors.purple900,
+                  ),
+                ),
+                pw.Text(
+                  'Total Records: ${_filteredExpenses.length}',
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
               ],
             ),
             pw.SizedBox(height: 14),
             pw.TableHelper.fromTextArray(
-              headers: ['Date', 'Branch', 'Category', 'Amount (Rs)', 'Payment Mode', 'Status'],
+              headers: [
+                'Date',
+                'Branch',
+                'Category',
+                'Amount (Rs)',
+                'Payment Mode',
+                'Status',
+              ],
               data: _filteredExpenses.map((e) {
                 return [
                   _formatDateDisplay(e.date),
@@ -1316,11 +1565,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   e.status,
                 ];
               }).toList(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF5B2A86)),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFF5B2A86),
+              ),
               cellAlignment: pw.Alignment.centerLeft,
               rowDecoration: const pw.BoxDecoration(
-                border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
               ),
             ),
           ];
@@ -1328,17 +1584,22 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       ),
     );
 
-    final filenameSuffix = _selectedBranchId != null ? '_${branchLabel.replaceAll(' ', '_')}' : '';
+    final filenameSuffix = _selectedBranchId != null
+        ? '_${branchLabel.replaceAll(' ', '_')}'
+        : '';
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
-      name: 'expense_report${filenameSuffix}_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      name:
+          'expense_report${filenameSuffix}_${DateTime.now().millisecondsSinceEpoch}.pdf',
     );
   }
 
   // --- Excel / CSV Export ---
   Future<void> _exportExcel() async {
     final buffer = StringBuffer();
-    buffer.writeln('Date,Branch,Category,Amount,Payment Mode,Status,Description');
+    buffer.writeln(
+      'Date,Branch,Category,Amount,Payment Mode,Status,Description',
+    );
 
     for (final e in _filteredExpenses) {
       final date = _formatDateDisplay(e.date);
@@ -1369,87 +1630,290 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         shape: AppBarStyle.shape,
         backgroundColor: AppColors.primaryLight,
         foregroundColor: Colors.white,
-        title: const Text(
-          'Expense Management',
-          style: AppBarStyle.titleStyle,
-        ),
+        title: const Text('Expenses', style: AppBarStyle.titleStyle),
         actions: [
           IconButton(
-            onPressed: reload,
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _openAddCategorySheet,
+            tooltip: 'Add Category',
+            icon: const Icon(Icons.new_label_outlined),
+          ),
+          IconButton(
+            onPressed: addExpense,
+            tooltip: 'Add Expense',
+            icon: const Icon(Icons.add_circle_outline_rounded),
           ),
         ],
       ),
       body: _isLoading
           ? const LoadingView()
           : _errorMessage != null
-              ? ErrorView(message: _errorMessage!, onRetry: reload)
-              : RefreshIndicator(
-                  color: const Color(0xFF7C3AED),
-                  onRefresh: reload,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Tabs selector (Expenses & Categories ONLY)
-                        _buildTabSelector(),
-                        const SizedBox(height: 16),
-
-                        // Switch Tab View
-                        if (_selectedTab == 0) _buildExpensesTab() else _buildCategoriesTab(),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
+          ? ErrorView(message: _errorMessage!, onRetry: reload)
+          : RefreshIndicator(
+              color: const Color(0xFF7C3AED),
+              onRefresh: reload,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSearchRow(),
+                    const SizedBox(height: 14),
+                    _buildCategoryChipsRow(),
+                    const SizedBox(height: 16),
+                    _buildTotalCard(),
+                    const SizedBox(height: 18),
+                    _buildExpensesList(),
+                  ],
                 ),
+              ),
+            ),
     );
   }
 
-  // --- Top Tabs Pill Row ---
-  Widget _buildTabSelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
+  // ==========================================
+  // SEARCH BAR + FILTER BUTTON
+  // ==========================================
+  int get _activeFilterCount {
+    int n = 0;
+    if (_selectedBranchId != null) n++;
+    if (_selectedPeriod != 'All') n++;
+    if (_selectedExpenseDate != null) n++;
+    return n;
+  }
+
+  Widget _buildSearchRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  color: Colors.grey.shade500,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (_) => setState(_applyLocalFilters),
+                    decoration: const InputDecoration(
+                      hintText: 'Search expenses...',
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                if (_searchCtrl.text.isNotEmpty)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => setState(() {
+                      _searchCtrl.clear();
+                      _applyLocalFilters();
+                    }),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        InkWell(
+          onTap: _openFiltersSheet,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.filter_list_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  'Filter',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                if (_activeFilterCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$_activeFilterCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ==========================================
+  // CATEGORY VISUALS (icon + color per category)
+  // ==========================================
+  _CategoryVisual _categoryVisual(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('salary') || n.contains('wage') || n.contains('staff')) {
+      return const _CategoryVisual(Icons.person_rounded, Color(0xFF7C3AED));
+    }
+    if (n.contains('repair') ||
+        n.contains('service') ||
+        n.contains('bike') ||
+        n.contains('vehicle')) {
+      return const _CategoryVisual(Icons.build_rounded, AppColors.green);
+    }
+    if (n.contains('rent')) {
+      return const _CategoryVisual(Icons.home_rounded, AppColors.orange);
+    }
+    if (n.contains('fuel') || n.contains('petrol') || n.contains('diesel')) {
+      return const _CategoryVisual(
+        Icons.local_gas_station_rounded,
+        AppColors.blue,
+      );
+    }
+    if (n.contains('maintenance')) {
+      return const _CategoryVisual(Icons.settings_rounded, Color(0xFF92400E));
+    }
+    if (n.contains('market')) {
+      return const _CategoryVisual(Icons.campaign_rounded, Color(0xFFDB2777));
+    }
+    if (n.contains('other') || n.contains('misc')) {
+      return const _CategoryVisual(Icons.more_horiz_rounded, Color(0xFF0D9488));
+    }
+    return const _CategoryVisual(Icons.receipt_rounded, AppColors.primary);
+  }
+
+  // ==========================================
+  // CATEGORY FILTER CHIPS ROW
+  // ==========================================
+  Widget _buildCategoryChipsRow() {
+    const maxVisible = 5;
+    final activeCats = _categories.where((c) => c.status == 'Active').toList();
+    final visibleCats = activeCats.length > maxVisible
+        ? activeCats.sublist(0, maxVisible)
+        : activeCats;
+    final overflowCats = activeCats.length > maxVisible
+        ? activeCats.sublist(maxVisible)
+        : <ExpenseCategoryItem>[];
+
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
         children: [
-          Expanded(child: _tabButton(label: 'Expenses', icon: Icons.receipt_long_rounded, index: 0)),
-          Expanded(child: _tabButton(label: 'Categories', icon: Icons.category_rounded, index: 1)),
+          _categoryChip(
+            label: 'All',
+            icon: Icons.apps_rounded,
+            color: AppColors.primary,
+            selected: _selectedCategoryId == null,
+            showIcon: false,
+            onTap: () => setState(() {
+              _selectedCategoryId = null;
+              _applyLocalFilters();
+            }),
+          ),
+          const SizedBox(width: 8),
+          for (final c in visibleCats) ...[
+            Builder(
+              builder: (_) {
+                final visual = _categoryVisual(c.name);
+                return _categoryChip(
+                  label: c.name,
+                  icon: visual.icon,
+                  color: visual.color,
+                  selected: _selectedCategoryId == c.id,
+                  onTap: () => setState(() {
+                    _selectedCategoryId = _selectedCategoryId == c.id
+                        ? null
+                        : c.id;
+                    _applyLocalFilters();
+                  }),
+                );
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (overflowCats.isNotEmpty) _moreCategoriesChip(overflowCats),
         ],
       ),
     );
   }
 
-  Widget _tabButton({required String label, required IconData icon, required int index}) {
-    final isSelected = _selectedTab == index;
+  Widget _categoryChip({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool selected,
+    required VoidCallback onTap,
+    bool showIcon = true,
+  }) {
     return InkWell(
-      onTap: () {
-        setState(() => _selectedTab = index);
-      },
-      borderRadius: BorderRadius.circular(11),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
+          color: selected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.primary : const Color(0xFFE5E7EB),
+          ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : const Color(0xFF6B7280)),
-            const SizedBox(width: 6),
+            if (showIcon) ...[
+              Icon(icon, size: 15, color: selected ? Colors.white : color),
+              const SizedBox(width: 6),
+            ],
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                fontSize: 12.5,
                 fontWeight: FontWeight.w800,
-                fontSize: 13.5,
+                color: selected ? Colors.white : const Color(0xFF374151),
               ),
             ),
           ],
@@ -1458,153 +1922,246 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  // ==========================================
-  // TAB 1: EXPENSES TAB
-  // ==========================================
-  Widget _buildExpensesTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Manage and track branch-wise expenses.',
-          style: TextStyle(
-            color: Color(0xFF6B7280),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+  Widget _moreCategoriesChip(List<ExpenseCategoryItem> overflow) {
+    final isOverflowSelected =
+        _selectedCategoryId != null &&
+        overflow.any((c) => c.id == _selectedCategoryId);
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: _openManageCategories,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: isOverflowSelected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isOverflowSelected
+                ? AppColors.primary
+                : const Color(0xFFE5E7EB),
           ),
         ),
-        const SizedBox(height: 14),
-
-        // 1. Clean Search & Branch / Period Bar (At TOP)
-        _buildSearchAndPeriodBar(),
-        const SizedBox(height: 20),
-
-        // 2. Total Expense Per Month
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFE9D5FF)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x10000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'More',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: isOverflowSelected
+                    ? Colors.white
+                    : const Color(0xFF374151),
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3E8FF),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: AppColors.primary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Total Expense Per Month',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF374151),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '₹${_thisMonthExpenses.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: isOverflowSelected
+                  ? Colors.white
+                  : const Color(0xFF374151),
+            ),
+          ],
         ),
-        const SizedBox(height: 20),
-
-        // 3. Data Table / List
-        _buildExpensesTable(),
-      ],
-    );
-  }
-
-  // Summary Metrics Grid / Row
-  Widget _buildSummaryGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: [
-        _metricCard('Total Expenses', _totalExpenses, Icons.account_balance_wallet_rounded,
-            const Color(0xFFEDE9FE), AppColors.primary),
-        _metricCard('This Month', _thisMonthExpenses, Icons.calendar_month_rounded,
-            const Color(0xFFDBEAFE), AppColors.blue),
-        _metricCard('This Quarter', _thisQuarterExpenses, Icons.donut_large_rounded,
-            const Color(0xFFDCFCE7), AppColors.green),
-        _metricCard('This Year', _thisYearExpenses, Icons.trending_up_rounded,
-            const Color(0xFFFCE7F3), const Color(0xFFDB2777)),
-      ],
-    );
-  }
-
-  Widget _metricCard(String title, double amount, IconData icon, Color tint, Color iconColor) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: tint),
-        boxShadow: const [
-          BoxShadow(color: Color(0x10000000), blurRadius: 12, offset: Offset(0, 4)),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  void _openManageCategories() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (ctx, scrollController) => SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+          // Add Category now lives next to the '+' Add Expense button in the
+          // app bar, so this sheet only shows the list of existing categories.
+          child: _buildCategoriesPanel(),
+        ),
+      ),
+    );
+  }
+
+  // --- Add Category sheet, opened from the app bar (next to Add Expense) ---
+  void _openAddCategorySheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildAddCategoryPanel(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // TOTAL EXPENSES SUMMARY CARD
+  // ==========================================
+  String _periodLabel(String p) {
+    switch (p) {
+      case 'Days':
+        return 'Today';
+      case 'Week':
+        return 'This Week';
+      case 'Month':
+        return 'This Month';
+      default:
+        return 'All Time';
+    }
+  }
+
+  Widget _buildTotalCard() {
+    final total = _filteredExpenses
+        .where((e) => e.status != 'Cancelled')
+        .fold(0.0, (s, e) => s + e.amount);
+    final count = _filteredExpenses.length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE9FE),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(11)),
-            child: Icon(icon, color: iconColor, size: 19),
-          ),
-          const Spacer(),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF4B5563)),
-          ),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              amount.toStringAsFixed(2),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF111827)),
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_rounded,
+              color: AppColors.primary,
+              size: 24,
             ),
           ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Total Expenses',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF6B21A8),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '₹${total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$count Expense${count == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _periodPickerButton(),
         ],
+      ),
+    );
+  }
+
+  Widget _periodPickerButton() {
+    return PopupMenuButton<String>(
+      initialValue: _selectedPeriod,
+      onSelected: (val) => setState(() {
+        _selectedPeriod = val;
+        if (val != 'All') _selectedExpenseDate = null;
+        _applyLocalFilters();
+      }),
+      itemBuilder: (ctx) => _periodOptions
+          .map(
+            (p) =>
+                PopupMenuItem<String>(value: p, child: Text(_periodLabel(p))),
+          )
+          .toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.calendar_today_rounded,
+              size: 14,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _periodLabel(_selectedPeriod),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: AppColors.primary,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1682,31 +2239,77 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  // Clean Period / Branch / Category Filter & Action Bar
-  Widget _buildSearchAndPeriodBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 12,
-            offset: Offset(0, 2),
+  // ==========================================
+  // FILTERS BOTTOM SHEET (Branch / Period / Date / Export)
+  // ==========================================
+  void _openFiltersSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. Compact Branch + Category selectors + calendar date filter
-          Row(
-            children: [
-              Expanded(
-                flex: 4,
-                child: _buildCompactFilterDropdown<int?>(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Filters',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setSheetState(() {
+                          _selectedBranchId = null;
+                          _selectedPeriod = 'All';
+                          _selectedExpenseDate = null;
+                        });
+                        setState(_applyLocalFilters);
+                      },
+                      child: const Text('Clear all'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'BRANCH',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF6B7280),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildCompactFilterDropdown<int?>(
                   value: _selectedBranchId,
                   hint: 'All Branches',
                   icon: Icons.apartment_rounded,
@@ -1723,255 +2326,207 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     ),
                   ],
                   onChanged: (val) {
-                    setState(() {
-                      _selectedBranchId = val;
-                      _applyLocalFilters();
-                    });
+                    setSheetState(() => _selectedBranchId = val);
+                    setState(_applyLocalFilters);
                   },
                 ),
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                flex: 4,
-                child: _buildCompactFilterDropdown<int?>(
-                  value: _selectedCategoryId,
-                  hint: 'All Categories',
-                  icon: Icons.category_rounded,
-                  items: [
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text('All Categories'),
+                const SizedBox(height: 18),
+                const Text(
+                  'DATE RANGE',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF6B7280),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: _periodOptions.map((period) {
+                    final isSelected = _selectedPeriod == period;
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: period == _periodOptions.last ? 0 : 8,
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            setSheetState(() {
+                              _selectedPeriod = period;
+                              _selectedExpenseDate = null;
+                            });
+                            setState(_applyLocalFilters);
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                _periodLabel(period),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : const Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () async {
+                    await _pickExpenseFilterDate();
+                    setSheetState(() {});
+                  },
+                  onLongPress: () {
+                    _clearExpenseFilterDate();
+                    setSheetState(() {});
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 14,
                     ),
-                    ..._categories.map(
-                      (c) => DropdownMenuItem<int?>(
-                        value: c.id,
-                        child: Text(c.name),
+                    decoration: BoxDecoration(
+                      color: _selectedExpenseDate != null
+                          ? const Color(0xFFEDE9FE)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _selectedExpenseDate != null
+                            ? const Color(0xFFC4B5FD)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_month_rounded,
+                          size: 18,
+                          color: _selectedExpenseDate != null
+                              ? const Color(0xFF5B21B6)
+                              : const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _selectedExpenseDate == null
+                                ? 'Pick a specific date (long-press to clear)'
+                                : '${_selectedExpenseDate!.day.toString().padLeft(2, '0')} ${_monthShortName(_selectedExpenseDate!.month)} ${_selectedExpenseDate!.year}',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: _selectedExpenseDate != null
+                                  ? const Color(0xFF5B21B6)
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _exportPdf();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: Color(0xFFC4B5FD)),
+                          foregroundColor: const Color(0xFF5B21B6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.picture_as_pdf_rounded,
+                          size: 16,
+                        ),
+                        label: const Text('Export PDF'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _exportExcel();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: Color(0xFFC4B5FD)),
+                          foregroundColor: const Color(0xFF5B21B6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Icon(Icons.table_chart_rounded, size: 16),
+                        label: const Text('Export Excel'),
                       ),
                     ),
                   ],
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedCategoryId = val;
-                      _applyLocalFilters();
-                    });
-                  },
                 ),
-              ),
-              const SizedBox(width: 7),
-              Tooltip(
-                message: _selectedExpenseDate == null
-                    ? 'Filter by date'
-                    : 'Filtered: ${_selectedExpenseDate!.day.toString().padLeft(2, '0')}-${_selectedExpenseDate!.month.toString().padLeft(2, '0')}-${_selectedExpenseDate!.year}\nTap to change date',
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _pickExpenseFilterDate,
-                    onLongPress: _clearExpenseFilterDate,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      height: 40,
-                      width: _selectedExpenseDate == null ? 44 : 92,
-                      decoration: BoxDecoration(
-                        color: _selectedExpenseDate != null ? const Color(0xFFEDE9FE) : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _selectedExpenseDate != null ? const Color(0xFFC4B5FD) : const Color(0xFFE2E8F0),
-                        ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.calendar_month_rounded,
-                            size: 18,
-                            color: _selectedExpenseDate != null ? const Color(0xFF5B21B6) : const Color(0xFF64748B),
-                          ),
-                          if (_selectedExpenseDate != null) ...[
-                            const SizedBox(width: 5),
-                            Text(
-                              '${_selectedExpenseDate!.day.toString().padLeft(2, '0')} ${_monthShortName(_selectedExpenseDate!.month)}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF5B21B6),
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ],
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text(
+                      'Apply Filters',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14.5,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          // 2. Period Pills: All, Days (Today), Week, Month — evenly spread, same row
-          Row(
-            children: _periodOptions.map((period) {
-              final isSelected = _selectedPeriod == period;
-              final isLast = period == _periodOptions.last;
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: isLast ? 0 : 8),
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _selectedPeriod = period;
-                        _applyLocalFilters();
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF5B2A86) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF5B2A86) : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          period == 'Days' ? 'Days (Today)' : period,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.white : const Color(0xFF475569),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 12),
-
-          // 3. Export PDF / Export Excel — equal-width pair, same row
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: _exportPdf,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFC4B5FD)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.picture_as_pdf_rounded, size: 14, color: Color(0xFF5B21B6)),
-                        SizedBox(width: 5),
-                        Text(
-                          'Export PDF',
-                          style: TextStyle(
-                            color: Color(0xFF5B21B6),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  onTap: _exportExcel,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFC4B5FD)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.table_chart_rounded, size: 14, color: Color(0xFF5B21B6)),
-                        SizedBox(width: 5),
-                        Text(
-                          'Export Excel',
-                          style: TextStyle(
-                            color: Color(0xFF5B21B6),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          // 4. + Add Expense — full-width, own row
-          InkWell(
-            onTap: addExpense,
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(vertical: 11),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add, size: 16, color: Colors.white),
-                  SizedBox(width: 5),
-                  Text(
-                    'Add Expense',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // Data Table of Expenses
-  Widget _buildExpensesTable() {
+  // ==========================================
+  // EXPENSES LIST (card-style, matches target design)
+  // ==========================================
+  Widget _buildExpensesList() {
     if (_filteredExpenses.isEmpty) {
       return Container(
         width: double.infinity,
@@ -1986,17 +2541,28 @@ class ExpensesScreenState extends State<ExpensesScreen> {
             Container(
               width: 56,
               height: 56,
-              decoration: const BoxDecoration(color: Color(0xFFF3F4F6), shape: BoxShape.circle),
-              child: Icon(Icons.receipt_long_outlined, size: 26, color: Colors.grey[400]),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3F4F6),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 26,
+                color: Colors.grey[400],
+              ),
             ),
             const SizedBox(height: 14),
             const Text(
               'No expenses found',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF4B5563)),
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                color: Color(0xFF4B5563),
+              ),
             ),
             const SizedBox(height: 4),
             const Text(
-              'Try changing your search term or period filter',
+              'Try changing your search term or filters',
               style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
             ),
           ],
@@ -2005,146 +2571,173 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Expenses',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+            const Text(
+              'Expenses',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(20)),
-              child: Text('${_filteredExpenses.length}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 12)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDE9FE),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_filteredExpenses.length}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        ..._filteredExpenses.map(_expenseTile),
+        ..._filteredExpenses.map(_expenseListTile),
       ],
     );
   }
 
-  Widget _expenseTile(Expense e) {
+  Widget _expenseListTile(Expense e) {
     final isCancelled = e.status == 'Cancelled';
+    final visual = _categoryVisual(e.category);
+    final title = e.description.trim().isNotEmpty
+        ? e.description.trim()
+        : e.category;
+    final subtitle = e.branch.isNotEmpty
+        ? e.branch
+        : (e.paymentMode.isNotEmpty ? e.paymentMode : null);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 8, offset: const Offset(0, 2))],
+        border: Border.all(color: const Color(0xFFF1F1F5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () => _viewExpense(e),
+          onLongPress: () => _editExpense(e),
           child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: isCancelled ? const Color(0xFFFEE2E2) : const Color(0xFFEDE9FE),
-                        borderRadius: BorderRadius.circular(13),
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: isCancelled
+                        ? const Color(0xFFFEE2E2)
+                        : visual.color.withOpacity(0.13),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isCancelled ? Icons.cancel_rounded : visual.icon,
+                    color: isCancelled ? AppColors.red : visual.color,
+                    size: 21,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14.5,
+                          color: Color(0xFF1F2937),
+                        ),
                       ),
-                      child: Icon(
-                        isCancelled ? Icons.cancel_rounded : Icons.receipt_rounded,
-                        color: isCancelled ? AppColors.red : AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEDE9FE),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              e.category,
-                              style: const TextStyle(
-                                  color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 11),
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(_formatDateDisplay(e.date),
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
-                          const SizedBox(height: 3),
-                          Text(
-                            e.branch.isNotEmpty ? e.branch : 'No branch',
-                            style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('₹${e.amount.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-                        const SizedBox(height: 5),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isCancelled ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            e.status.isNotEmpty ? e.status : 'Active',
-                            style: TextStyle(
-                              color: isCancelled ? AppColors.red : AppColors.green,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 10.5,
-                            ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
                           ),
                         ),
                       ],
-                    ),
-                  ],
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isCancelled
+                              ? const Color(0xFFFEE2E2)
+                              : visual.color.withOpacity(0.13),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isCancelled ? 'Cancelled' : e.category,
+                          style: TextStyle(
+                            color: isCancelled ? AppColors.red : visual.color,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 10),
-                const Divider(height: 1, color: Color(0xFFF3F4F6)),
-                const SizedBox(height: 10),
-                Row(
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Icon(Icons.payments_outlined, size: 14, color: Colors.grey.shade500),
-                    const SizedBox(width: 5),
-                    Text(e.paymentMode.isNotEmpty ? e.paymentMode : '-',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: () => _viewExpense(e),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    Text(
+                      '₹${e.amount.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                        color: isCancelled
+                            ? Colors.grey.shade500
+                            : visual.color,
+                        decoration: isCancelled
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
-                      icon: const Icon(Icons.visibility_outlined, size: 15),
-                      label: const Text('View', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                     ),
-                    const SizedBox(width: 4),
-                    TextButton.icon(
-                      onPressed: () => _editExpense(e),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatDateDisplay(e.date),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w600,
                       ),
-                      icon: const Icon(Icons.edit_outlined, size: 15),
-                      label: const Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                     ),
                   ],
                 ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
               ],
             ),
           ),
@@ -2153,37 +2746,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  // ==========================================
-  // TAB 2: CATEGORIES TAB (Image 2 design)
-  // ==========================================
-  Widget _buildCategoriesTab() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 750;
-        if (isWide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 2, child: _buildAddCategoryPanel()),
-              const SizedBox(width: 18),
-              Expanded(flex: 3, child: _buildCategoriesPanel()),
-            ],
-          );
-        } else {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAddCategoryPanel(),
-              const SizedBox(height: 18),
-              _buildCategoriesPanel(),
-            ],
-          );
-        }
-      },
-    );
-  }
-
-  // Left Card: Add Category
+  // Add Category panel — opened from the app bar's Add Category icon.
   Widget _buildAddCategoryPanel() {
     return Container(
       decoration: BoxDecoration(
@@ -2191,7 +2754,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: const [
-          BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 3)),
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
         ],
       ),
       padding: const EdgeInsets.all(16),
@@ -2203,13 +2770,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.add_circle_rounded, color: AppColors.primary, size: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.add_circle_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               const Text(
                 'Add Category',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF111827)),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF111827),
+                ),
               ),
             ],
           ),
@@ -2239,7 +2817,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
               onPressed: _isAddingCategory ? null : _addCategory,
@@ -2247,7 +2827,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Icon(Icons.add, size: 18),
               label: const Text(
@@ -2269,13 +2852,28 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Categories',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+            const Text(
+              'Categories',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(20)),
-              child: Text('${_categories.length}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 12)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDE9FE),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_categories.length}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
@@ -2294,12 +2892,25 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: const BoxDecoration(color: Color(0xFFF3F4F6), shape: BoxShape.circle),
-                  child: Icon(Icons.category_outlined, size: 26, color: Colors.grey[400]),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.category_outlined,
+                    size: 26,
+                    color: Colors.grey[400],
+                  ),
                 ),
                 const SizedBox(height: 14),
-                const Text('No categories yet.',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF4B5563))),
+                const Text(
+                  'No categories yet.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
               ],
             ),
           )
@@ -2313,7 +2924,13 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 8, offset: const Offset(0, 2))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -2321,29 +2938,47 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isInactive ? const Color(0xFFFEE2E2) : const Color(0xFFEDE9FE),
+                      color: isInactive
+                          ? const Color(0xFFFEE2E2)
+                          : const Color(0xFFEDE9FE),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.label_rounded,
-                        color: isInactive ? AppColors.red : AppColors.primary, size: 20),
+                    child: Icon(
+                      Icons.label_rounded,
+                      color: isInactive ? AppColors.red : AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                        Text(
+                          cat.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
                         const SizedBox(height: 5),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: isInactive ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+                            color: isInactive
+                                ? const Color(0xFFFEE2E2)
+                                : const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
                             cat.status,
                             style: TextStyle(
-                              color: isInactive ? AppColors.red : AppColors.green,
+                              color: isInactive
+                                  ? AppColors.red
+                                  : AppColors.green,
                               fontWeight: FontWeight.w800,
                               fontSize: 10.5,
                             ),
@@ -2356,12 +2991,21 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     onPressed: () => _toggleCategoryStatus(cat),
                     style: TextButton.styleFrom(
                       backgroundColor: const Color(0xFFEEF2FF),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     child: Text(
                       cat.status == 'Active' ? 'Deactivate' : 'Activate',
-                      style: const TextStyle(color: Color(0xFF4338CA), fontWeight: FontWeight.w700, fontSize: 11.5),
+                      style: const TextStyle(
+                        color: Color(0xFF4338CA),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
+                      ),
                     ),
                   ),
                 ],

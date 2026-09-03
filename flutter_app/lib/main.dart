@@ -137,11 +137,11 @@ class _StartupSplashState extends State<StartupSplash>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFB56BFF), Color(0xFF6D27E8)],
+                          colors: [Color(0xFFFF8E6B), Color(0xFFE85427)],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFFB56BFF),
+                            color: Color(0xFFFF8E6B),
                             blurRadius: 16,
                             spreadRadius: 1,
                           ),
@@ -209,7 +209,7 @@ class _BrandMark extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF9C4DFF), Color(0xFF5318D4)],
+          colors: [Color(0xFFFF774D), Color(0xFFD44418)],
         ),
         border: Border.all(
           color: Colors.white.withOpacity(.24),
@@ -279,10 +279,10 @@ class _SplashPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF12002F),
-          Color(0xFF30006D),
-          Color(0xFF5D13B9),
-          Color(0xFF160039),
+          Color(0xFF2F0B00),
+          Color(0xFF6D1900),
+          Color(0xFFB93A13),
+          Color(0xFF390D00),
         ],
       ).createShader(rect);
     canvas.drawRect(rect, base);
@@ -297,7 +297,7 @@ class _SplashPainter extends CustomPainter {
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [
-            const Color(0xFFB24CFF).withOpacity(.22),
+            const Color(0xFFFF764C).withOpacity(.22),
             Colors.transparent,
           ],
         ).createShader(
