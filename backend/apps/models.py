@@ -135,6 +135,8 @@ class Expense(db.Model):
 
     branch = db.relationship('Branch', backref='expenses')
     expense_category = db.relationship('ExpenseCategory', backref='expenses')
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=True, index=True)
+    employee = db.relationship('Employee', backref='salary_expenses', foreign_keys=[employee_id])
 
     # `note` is the BRD's name for this field; it's the same column as the
     # pre-existing `description` so old records/routes keep working.
@@ -168,6 +170,7 @@ class Branch(db.Model):
 class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     employee_id = db.Column(db.String(50), unique=True, nullable=False)
+    basic_salary = db.Column(db.Float, default=0.0, nullable=False)
     full_name = db.Column(db.String(150), nullable=False)
     designation = db.Column(db.String(100), nullable=False)
     branch_id = db.Column(db.Integer, db.ForeignKey('branch.id'), nullable=False)

@@ -5,6 +5,7 @@ import 'branches_screen.dart';
 import 'exams_screen.dart';
 import 'expenses_screen.dart';
 import 'vouchers_screen.dart';
+import 'employees_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -29,6 +30,7 @@ class _AppShellState extends State<AppShell> {
     const ExamsScreen(),
     ExpensesScreen(key: _expenseKey),
     const VouchersScreen(),
+    EmployeesScreen(),
   ];
   }
 
@@ -72,6 +74,11 @@ class _AppShellState extends State<AppShell> {
             icon: Icon(Icons.confirmation_num_outlined),
             selectedIcon: Icon(Icons.confirmation_num),
             label: 'Vouchers',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.badge_outlined),
+            selectedIcon: Icon(Icons.badge),
+            label: 'Employees',
           ),
         ],
       ),

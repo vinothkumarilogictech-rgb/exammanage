@@ -166,6 +166,24 @@ def ensure_candidate_columns(app):
         conn.close()
 
 
+
+def ensure_employee_columns(app):
+    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
+    db_path = os.path.abspath(db_path)
+    if not os.path.exists(db_path):
+        return
+    conn = sqlite3.connect(db_path)
+    try:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(employee)").fetchall()}
+        if 'basic_salary' not in columns:
+            conn.execute("ALTER TABLE employee ADD COLUMN basic_salary FLOAT DEFAULT 0.0")
+        ecols = {row[1] for row in conn.execute("PRAGMA table_info(expense)").fetchall()}
+        if 'employee_id' not in ecols:
+            conn.execute("ALTER TABLE expense ADD COLUMN employee_id INTEGER")
+        conn.commit()
+    finally:
+        conn.close()
+
 def ensure_exam_attempt_columns(app):
     db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
     db_path = os.path.abspath(db_path)
@@ -319,8 +337,27 @@ def create_app():
     ensure_vendor_columns(app)
     ensure_customer_columns(app)
     ensure_expense_columns(app)
+    ensure_employee_columns(app)
     ensure_candidate_columns(app)
     ensure_exam_attempt_columns(app)
+
+    # SQL Server deployments need explicit additive migrations because create_all
+    # does not alter existing tables.
+    with app.app_context():
+        try:
+            from sqlalchemy import inspect, text
+            insp = inspect(db.engine)
+            if 'employee' in insp.get_table_names():
+                cols = {c['name'] for c in insp.get_columns('employee')}
+                if 'basic_salary' not in cols:
+                    db.session.execute(text("ALTER TABLE employee ADD basic_salary FLOAT NOT NULL CONSTRAINT DF_employee_basic_salary DEFAULT 0"))
+            if 'expense' in insp.get_table_names():
+                cols = {c['name'] for c in insp.get_columns('expense')}
+                if 'employee_id' not in cols:
+                    db.session.execute(text("ALTER TABLE expense ADD employee_id INT NULL"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     # Register only the four enabled workspace modules.
     from apps.branches.routes import branches_bp

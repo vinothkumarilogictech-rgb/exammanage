@@ -134,13 +134,15 @@ class Expense {
   final int id;
   final int? categoryId;
   final int? branchId;
-  final String category, description, date, branch, paymentMode, status;
+  final int? employeeId;
+  final String category, description, date, branch, paymentMode, status, employeeName;
   final double amount;
 
   Expense({
     required this.id,
     this.categoryId,
     this.branchId,
+    this.employeeId,
     required this.category,
     required this.description,
     required this.date,
@@ -148,11 +150,13 @@ class Expense {
     required this.paymentMode,
     required this.status,
     required this.amount,
+    this.employeeName = '', 
   });
 
   factory Expense.fromMap(Map<String, dynamic> m) => Expense(
         id: m['id'] ?? 0,
         categoryId: m['category_id'] is int ? m['category_id'] : int.tryParse('${m['category_id']}'),
+        employeeId: m['employee_id'] is int ? m['employee_id'] : int.tryParse('${m['employee_id']}'),
         branchId: m['branch_id'] is int ? m['branch_id'] : int.tryParse('${m['branch_id']}'),
         category: '${m['category_name'] ?? m['category'] ?? ''}',
         description: '${m['description'] ?? m['note'] ?? ''}',
@@ -161,6 +165,7 @@ class Expense {
         paymentMode: '${m['payment_mode'] ?? ''}',
         status: '${m['status'] ?? 'Active'}',
         amount: double.tryParse('${m['amount'] ?? 0}') ?? 0,
+        employeeName: '${m['employee_name'] ?? ''}',
       );
 }
 
@@ -209,3 +214,15 @@ class ExamTypeItem {
       );
 }
 
+
+
+class Employee {
+  final int id;
+  final String employeeId, fullName, designation, phone, email, address, joiningDate, status, branchName;
+  final int branchId;
+  final double basicSalary;
+  Employee({required this.id, required this.employeeId, required this.fullName, required this.designation, required this.phone, required this.email, required this.address, required this.joiningDate, required this.status, required this.branchId, required this.branchName, required this.basicSalary});
+  factory Employee.fromMap(Map<String,dynamic> m) => Employee(
+    id: m['id'] ?? 0, employeeId: '${m['employee_id'] ?? m['employee_code'] ?? ''}', fullName: '${m['full_name'] ?? m['name'] ?? ''}', designation: '${m['designation'] ?? ''}', phone: '${m['contact_number'] ?? m['phone'] ?? ''}', email: '${m['email'] ?? ''}', address: '${m['address'] ?? ''}', joiningDate: '${m['joining_date'] ?? ''}', status: '${m['status'] ?? 'Active'}', branchId: int.tryParse('${m['branch_id'] ?? 0}') ?? 0, branchName: '${m['branch_name'] ?? ''}', basicSalary: double.tryParse('${m['basic_salary'] ?? 0}') ?? 0,
+  );
+}
