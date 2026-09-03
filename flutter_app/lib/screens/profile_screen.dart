@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/auth_provider.dart';
 import '../services/dio_client.dart';
 import '../services/session_service.dart';
+
+const _orange = Color(0xFFFF7A18);
+const _orangeDark = Color(0xFFE85D04);
+const _orangeSoft = Color(0xFFFFF1E7);
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -216,7 +220,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _employeeDetails() {
     if (employee == null) {
-      return const Card(
+      return Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+        ),
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text(
@@ -400,12 +408,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   bottom: 8,
                 ),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(
-                      Icons
-                          .payments_outlined,
-                    ),
-                  ),
+                  leading: Container(width: 46, height: 46, decoration: BoxDecoration(color: _orangeSoft, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.payments_outlined, color: _orangeDark)),
                   title: Text(
                     '₹ $amount',
                     style: const TextStyle(
@@ -430,159 +433,260 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth =
-        context.watch<AuthProvider>();
-
-    final bool isAdmin =
-        auth.role != 'Employee';
+    final auth = context.watch<AuthProvider>();
+    final bool isAdmin = auth.role != 'Employee';
+    final username = auth.username.isEmpty ? 'User' : auth.username;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFFFBF7),
       appBar: AppBar(
-        title: Text(
-          isAdmin
-              ? 'Admin Profile'
-              : 'Employee Profile',
+        elevation: 0,
+        foregroundColor: Colors.white,
+        title: Text(isAdmin ? 'Admin Profile' : 'Employee Profile'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [_orangeDark, _orange, Color(0xFFFF9F43)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x55FF7A18),
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
         ),
       ),
-
       body: loading
           ? const Center(
-              child:
-                  CircularProgressIndicator(),
+              child: CircularProgressIndicator(color: _orange),
             )
-          : ListView(
-              padding:
-                  const EdgeInsets.all(20),
-
-              children: [
-                // ------------------------------------------------
-                // USER HEADER
-                // ------------------------------------------------
-
-                Card(
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.all(18),
-
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-
+          : RefreshIndicator(
+              color: _orange,
+              onRefresh: _loadProfile,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(18, 22, 18, 30),
+                children: [
+                  // Hero profile card
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [_orangeDark, _orange, Color(0xFFFFA94D)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x44FF7A18),
+                          blurRadius: 24,
+                          offset: Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          auth.username.isEmpty
-                              ? '-'
-                              : auth.username,
-
-                          style:
-                              const TextStyle(
-                            fontSize: 24,
-                            fontWeight:
-                                FontWeight.w800,
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(.20),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(.65),
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            size: 40,
+                            color: Colors.white,
                           ),
                         ),
-
-                        const SizedBox(
-                          height: 4,
-                        ),
-
-                        Text(
-                          auth.role,
-                          style:
-                              const TextStyle(
-                            fontSize: 15,
-                            color: Colors.grey,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                username,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 11,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(.18),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  auth.role,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 12),
+                  const SizedBox(height: 18),
 
-                // ------------------------------------------------
-                // ERROR
-                // ------------------------------------------------
+                  if (loadError != null)
+                    _softCard(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.red),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(loadError!)),
+                        ],
+                      ),
+                    ),
 
-                if (loadError != null)
-                  Card(
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.all(16),
+                  if (isAdmin) ...[
+                    _sectionTitle('Account Settings', Icons.settings_outlined),
+                    const SizedBox(height: 10),
+                    _actionCard(
+                      icon: Icons.admin_panel_settings_outlined,
+                      title: 'Admin Credentials',
+                      subtitle: 'Update your User ID and Password',
+                      onTap: _adminCredentials,
+                    ),
+                  ] else ...[
+                    _sectionTitle('Personal Information', Icons.badge_outlined),
+                    const SizedBox(height: 10),
+                    _employeeDetails(),
+                    _salaryHistory(),
+                  ],
 
-                      child: Text(
-                        loadError!,
-                        style:
-                            const TextStyle(
-                          color: Colors.red,
+                  const SizedBox(height: 18),
+                  _sectionTitle('Account', Icons.manage_accounts_outlined),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFFFE1CC)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x18FF7A18),
+                          blurRadius: 16,
+                          offset: Offset(0, 7),
                         ),
-                      ),
+                      ],
                     ),
-                  ),
-
-                // ------------------------------------------------
-                // ADMIN
-                // ------------------------------------------------
-
-                if (isAdmin)
-                  Card(
                     child: ListTile(
-                      leading: const Icon(
-                        Icons
-                            .admin_panel_settings_outlined,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 6,
                       ),
-
+                      leading: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: _orangeSoft,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.logout_rounded, color: _orangeDark),
+                      ),
                       title: const Text(
-                        'Change User ID / Password',
+                        'Logout',
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
-
-                      subtitle: const Text(
-                        'Update admin login credentials',
-                      ),
-
-                      trailing: const Icon(
-                        Icons.chevron_right,
-                      ),
-
-                      onTap:
-                          _adminCredentials,
+                      subtitle: const Text('Sign out from this account'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () async => auth.logout(),
                     ),
                   ),
-
-                // ------------------------------------------------
-                // EMPLOYEE
-                // ------------------------------------------------
-
-                if (!isAdmin) ...[
-                  _employeeDetails(),
-
-                  _salaryHistory(),
                 ],
-
-                const SizedBox(
-                  height: 20,
-                ),
-
-                // ------------------------------------------------
-                // LOGOUT
-                // ------------------------------------------------
-
-                FilledButton.tonalIcon(
-                  onPressed: () async {
-                    await auth.logout();
-                  },
-
-                  icon: const Icon(
-                    Icons.logout,
-                  ),
-
-                  label: const Text(
-                    'Logout',
-                  ),
-                ),
-              ],
+              ),
             ),
     );
   }
+
+  Widget _sectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: _orangeSoft,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: _orangeDark, size: 20),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+  }
+
+  Widget _softCard({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFE1CC)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x16FF7A18), blurRadius: 14, offset: Offset(0, 6)),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _actionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return _softCard(
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: _orangeSoft,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Icon(icon, color: _orangeDark),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(subtitle),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+      ),
+    );
+  }
+
 }

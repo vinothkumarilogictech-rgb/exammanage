@@ -10,7 +10,12 @@ import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
 
 class VouchersScreen extends StatefulWidget {
-  const VouchersScreen({super.key});
+  final int initialTab;
+
+  const VouchersScreen({
+    super.key,
+    this.initialTab = 0,
+  }) : assert(initialTab >= 0 && initialTab < 3);
 
   @override
   State<VouchersScreen> createState() => _VouchersScreenState();
@@ -34,7 +39,11 @@ class _VouchersScreenState extends State<VouchersScreen>
     super.initState();
     _branchContext = context.read<BranchContext>();
     _branchContext.addListener(_onBranchChanged);
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTab,
+    );
     load();
   }
 
@@ -104,14 +113,25 @@ class _VouchersScreenState extends State<VouchersScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFFFFBF7),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: AppColors.primaryLight,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFF9F43)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [BoxShadow(color: Color(0x55FF7A18), blurRadius: 24, offset: Offset(0, 8))],
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         title: const Text(
           'Voucher Management',
           style: AppBarStyle.titleStyle,
@@ -222,7 +242,7 @@ class _VouchersScreenState extends State<VouchersScreen>
             child: _VoucherQuickAction(
               icon: Icons.add_card_rounded,
               title: 'Sell Voucher',
-              gradientColors: const [Color(0xFF6D28D9), AppColors.primary],
+              gradientColors: const [Color(0xFFFF7A18), AppColors.primary],
               onTap: _showSellVoucher,
             ),
           ),
@@ -468,7 +488,7 @@ class _VouchersScreenState extends State<VouchersScreen>
               }).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
               headerDecoration: const pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFF5B2A86),
+                color: PdfColor.fromInt(0xFFE85D04),
               ),
               cellAlignment: pw.Alignment.centerLeft,
               cellStyle: const pw.TextStyle(fontSize: 8),
@@ -570,7 +590,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                             Icons.calendar_month_rounded,
                             size: 19,
                             color: selected != null
-                                ? const Color(0xFF5B21B6)
+                                ? const Color(0xFFE85D04)
                                 : const Color(0xFF64748B),
                           ),
                           const SizedBox(width: 8),
@@ -583,7 +603,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: selected != null
-                                    ? const Color(0xFF5B21B6)
+                                    ? const Color(0xFFE85D04)
                                     : const Color(0xFF475569),
                               ),
                             ),
@@ -594,7 +614,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                               child: const Icon(
                                 Icons.close_rounded,
                                 size: 18,
-                                color: Color(0xFF5B21B6),
+                                color: Color(0xFFE85D04),
                               ),
                             ),
                         ],
@@ -625,12 +645,12 @@ class _VouchersScreenState extends State<VouchersScreen>
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.picture_as_pdf_rounded, size: 15, color: Color(0xFF5B21B6)),
+                        Icon(Icons.picture_as_pdf_rounded, size: 15, color: Color(0xFFE85D04)),
                         SizedBox(width: 5),
                         Text(
                           'Export PDF',
                           style: TextStyle(
-                            color: Color(0xFF5B21B6),
+                            color: Color(0xFFE85D04),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -656,12 +676,12 @@ class _VouchersScreenState extends State<VouchersScreen>
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.table_chart_rounded, size: 15, color: Color(0xFF5B21B6)),
+                        Icon(Icons.table_chart_rounded, size: 15, color: Color(0xFFE85D04)),
                         SizedBox(width: 5),
                         Text(
                           'Export Excel',
                           style: TextStyle(
-                            color: Color(0xFF5B21B6),
+                            color: Color(0xFFE85D04),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                           ),

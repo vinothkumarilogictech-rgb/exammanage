@@ -89,18 +89,113 @@ class EmployeesScreenState extends State<EmployeesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Employees')),
-    floatingActionButton: FloatingActionButton(onPressed: () => editEmployee(), child: const Icon(Icons.add)),
-    body: loading ? const Center(child: CircularProgressIndicator()) : RefreshIndicator(
-      onRefresh: load,
-      child: employees.isEmpty ? ListView(children: [const SizedBox(height: 250), Center(child: Text('No employees in selected branch'))]) : ListView.builder(
-        padding: const EdgeInsets.all(14), itemCount: employees.length,
-        itemBuilder: (_, i) { final e = employees[i]; return Card(child: ListTile(
-          onTap: () => salaryHistory(e), leading: CircleAvatar(child: Text(e.fullName.isEmpty ? '?' : e.fullName[0].toUpperCase())),
-          title: Text(e.fullName, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${e.employeeId} • ${e.designation}\n${e.phone}'), isThreeLine: true,
-          trailing: PopupMenuButton<String>(onSelected: (v) async { if (v == 'edit') await editEmployee(e); if (v == 'delete') { final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Deactivate employee?'), content: const Text('Financial history will be preserved.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm'))])); if (ok == true) { await api.deleteEmployee(e.id); await load(); } } }, itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Edit')), PopupMenuItem(value: 'delete', child: Text('Delete / Deactivate'))]),
-        )); },
+    backgroundColor: const Color(0xFFFFFBF7),
+    appBar: AppBar(
+      elevation: 0,
+      toolbarHeight: 92,
+      backgroundColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      titleSpacing: 20,
+      title: const Text('Employees', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFFA24C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: const [BoxShadow(color: Color(0x55FF7A18), blurRadius: 26, offset: Offset(0, 9))],
+          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26)),
+        ),
       ),
+      actions: [
+        IconButton(onPressed: load, tooltip: 'Refresh', icon: const Icon(Icons.refresh_rounded, size: 25)),
+        const SizedBox(width: 10),
+      ],
     ),
+    floatingActionButton: FloatingActionButton.extended(
+      backgroundColor: const Color(0xFFE85D04),
+      foregroundColor: Colors.white,
+      elevation: 10,
+      onPressed: () => editEmployee(),
+      icon: const Icon(Icons.person_add_alt_1_rounded),
+      label: const Text('Add Employee', style: TextStyle(fontWeight: FontWeight.w800)),
+    ),
+    body: loading
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF7A18)))
+        : RefreshIndicator(
+            color: const Color(0xFFFF7A18),
+            onRefresh: load,
+            child: employees.isEmpty
+                ? ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 120),
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(30),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(color: const Color(0xFFFFE1CC)),
+                          boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, 10))],
+                        ),
+                        child: Column(children: [
+                          Container(width: 76, height: 76, decoration: BoxDecoration(color: const Color(0xFFFFE8D6), borderRadius: BorderRadius.circular(24)), child: const Icon(Icons.groups_2_rounded, color: Color(0xFFE85D04), size: 38)),
+                          const SizedBox(height: 18),
+                          const Text('No employees yet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 8),
+                          const Text('Build your team by adding the first employee to this branch.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                          const SizedBox(height: 22),
+                          FilledButton.icon(onPressed: () => editEmployee(), icon: const Icon(Icons.add), label: const Text('Add Employee')),
+                        ]),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 110),
+                    itemCount: employees.length,
+                    itemBuilder: (_, i) {
+                      final e = employees[i];
+                      final initial = e.fullName.isEmpty ? '?' : e.fullName[0].toUpperCase();
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: const Color(0xFFFFE4D0)),
+                          boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 18, offset: Offset(0, 7))],
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(22),
+                          onTap: () => salaryHistory(e),
+                          child: Padding(
+                            padding: const EdgeInsets.all(15),
+                            child: Row(children: [
+                              Container(width: 54, height: 54, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFFE8D6), Color(0xFFFFD0A8)]), borderRadius: BorderRadius.circular(18)), child: Center(child: Text(initial, style: const TextStyle(color: Color(0xFFE85D04), fontSize: 20, fontWeight: FontWeight.w900)))),
+                              const SizedBox(width: 14),
+                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(e.fullName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                                const SizedBox(height: 4),
+                                Text(e.designation, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 5),
+                                Text('${e.employeeId}  •  ${e.phone}', style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
+                              ])),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert_rounded),
+                                onSelected: (v) async {
+                                  if (v == 'edit') await editEmployee(e);
+                                  if (v == 'delete') {
+                                    final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Deactivate employee?'), content: const Text('Financial history will be preserved.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm'))]));
+                                    if (ok == true) { await api.deleteEmployee(e.id); await load(); }
+                                  }
+                                },
+                                itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Edit')), PopupMenuItem(value: 'delete', child: Text('Delete / Deactivate'))],
+                              ),
+                            ]),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
   );
 }

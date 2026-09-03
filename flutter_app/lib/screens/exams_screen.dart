@@ -616,7 +616,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       height: 42,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF6D28D9), Color(0xFF4C1D95)],
+                          colors: [Color(0xFFFF7A18), Color(0xFF9A3412)],
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -879,7 +879,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                     height: 42,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF6D28D9), Color(0xFF4C1D95)],
+                        colors: [Color(0xFFFF7A18), Color(0xFF9A3412)],
                       ),
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -975,7 +975,7 @@ class _ExamsScreenState extends State<ExamsScreen>
         child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: 18),
-          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF6D28D9), Color(0xFF4C1D95)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Add Exam Team', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
+          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFF7A18), Color(0xFF9A3412)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Add Exam Team', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
           const SizedBox(height: 22),
           _label('Team Name *'), const SizedBox(height: 6), _field(nameCtrl, 'e.g. CELPIP Partner Team', icon: Icons.groups_rounded),
           const SizedBox(height: 14), _label('Location'), const SizedBox(height: 6), _field(locationCtrl, 'Team location / service area', icon: Icons.location_on_outlined),
@@ -1032,10 +1032,10 @@ class _ExamsScreenState extends State<ExamsScreen>
       if (!all) ...[
         pw.Container(padding: const pw.EdgeInsets.all(12), decoration: pw.BoxDecoration(color: const pdf.PdfColor.fromInt(0xFFF3E8FF), borderRadius: pw.BorderRadius.circular(8)), child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [pw.Text('Team Details', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)), pw.SizedBox(height: 5), pw.Text('Team: ${team.name}'), pw.Text('Location: ${team.location.isEmpty ? '-' : team.location}'), pw.Text('Phone: ${team.phone.isEmpty ? '-' : team.phone}'), pw.Text('Exam: ${team.examTypeName.isEmpty ? '-' : team.examTypeName}'), pw.Text('Candidates: ${candidates.length}') ])),
         pw.SizedBox(height: 16), pw.Text('Assigned Candidates', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 8),
-        pw.TableHelper.fromTextArray(headers: ['Candidate','Register No.','Branch','Exam','Date','Status'], data: candidates.map((item) { final c=Map<String,dynamic>.from(item); return ['${c['name']??'-'}','${c['register_number']??'-'}','${c['branch_name']??'-'}','${c['exam_type_name']??'-'}','${c['exam_date']??'-'}','${c['status']??'-'}']; }).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFF5B2A86)), cellStyle: const pw.TextStyle(fontSize: 8)),
+        pw.TableHelper.fromTextArray(headers: ['Candidate','Register No.','Branch','Exam','Date','Status'], data: candidates.map((item) { final c=Map<String,dynamic>.from(item); return ['${c['name']??'-'}','${c['register_number']??'-'}','${c['branch_name']??'-'}','${c['exam_type_name']??'-'}','${c['exam_date']??'-'}','${c['status']??'-'}']; }).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFFE85D04)), cellStyle: const pw.TextStyle(fontSize: 8)),
       ] else ...[
         pw.Text('All Teams', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 8),
-        pw.TableHelper.fromTextArray(headers: ['Team','Location','Phone','Exam','Candidates','Status'], data: teamRows.map((t)=>[t.name,t.location.isEmpty?'-':t.location,t.phone.isEmpty?'-':t.phone,t.examTypeName.isEmpty?'-':t.examTypeName,'${t.candidateCount}',t.status]).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFF5B2A86)), cellStyle: const pw.TextStyle(fontSize: 9)),
+        pw.TableHelper.fromTextArray(headers: ['Team','Location','Phone','Exam','Candidates','Status'], data: teamRows.map((t)=>[t.name,t.location.isEmpty?'-':t.location,t.phone.isEmpty?'-':t.phone,t.examTypeName.isEmpty?'-':t.examTypeName,'${t.candidateCount}',t.status]).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFFE85D04)), cellStyle: const pw.TextStyle(fontSize: 9)),
       ],
     ]));
     final safe = (all ? 'all_teams' : team.name).replaceAll(RegExp(r'\W+'), '_');
@@ -1064,14 +1064,25 @@ class _ExamsScreenState extends State<ExamsScreen>
   Widget build(BuildContext context) {
     final controller = tabController;
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFFFFBF7),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: AppColors.primaryLight,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFF9F43)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [BoxShadow(color: Color(0x55FF7A18), blurRadius: 24, offset: Offset(0, 8))],
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         title: const Text('Exam Management',
             style: AppBarStyle.titleStyle),
         actions: [
@@ -1411,7 +1422,7 @@ class _CandidateCard extends StatelessWidget {
       case 'completed': return AppColors.green;
       case 'cancelled': return AppColors.red;
       case 'absent': return AppColors.orange;
-      case 'rescheduled': return const Color(0xFF7C3AED);
+      case 'rescheduled': return const Color(0xFFFF7A18);
       default: return AppColors.orange;
     }
   }
@@ -1488,7 +1499,7 @@ class _CandidateCard extends StatelessWidget {
                     color: const Color(0xFFEDE9FE),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.event_repeat_rounded, color: Color(0xFF7C3AED)),
+                  child: const Icon(Icons.event_repeat_rounded, color: Color(0xFFFF7A18)),
                 ),
                 title: const Text('Rescheduled', style: TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: const Text('Candidate exam was moved to another date'),
@@ -1552,7 +1563,7 @@ class _CandidateCard extends StatelessWidget {
                 if (candidate.examType.isNotEmpty)
                   Text(candidate.examType, style: const TextStyle(color: Color(0xFF4B5563), fontSize: 12)),
                 if (candidate.teamName.isNotEmpty)
-                  Text('Team: ${candidate.teamName}', style: const TextStyle(color: Color(0xFF6D28D9), fontSize: 11.5, fontWeight: FontWeight.w700)),
+                  Text('Team: ${candidate.teamName}', style: const TextStyle(color: Color(0xFFFF7A18), fontSize: 11.5, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
                 Text(
                   [

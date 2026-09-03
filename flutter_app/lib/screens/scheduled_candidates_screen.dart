@@ -511,7 +511,7 @@ class _StatusBadge extends StatelessWidget {
       textColor = const Color(0xFFD97706); // Yellow / Amber
       bgColor = const Color(0xFFFEF3C7);
     } else if (s == 'scheduled') {
-      textColor = const Color(0xFF7C3AED); // Purple
+      textColor = const Color(0xFFFF7A18); // Purple
       bgColor = const Color(0xFFEDE9FE);
     } else if (s == 'no show' || s == 'no_show' || s == 'absent') {
       textColor = const Color(0xFFEA580C); // Orange
