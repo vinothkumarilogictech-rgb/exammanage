@@ -7,7 +7,7 @@ from . import api_bp
 from .auth import authenticate, issue_tokens, verify_token, api_token_required
 from .serializers import *
 from apps.models import (db, Branch, ExamType, BranchExam, ExamSession, Candidate, ExamAttempt, ExamTeam,
-                         Expense, ExpenseCategory, ExpenseBudget)
+                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate)
 
 
 def ok(data=None, message=None, status=200):
@@ -499,13 +499,20 @@ def candidate_create():
     # Automatically create ExamAttempt so dashboard & attempts calendar track it immediately
     try:
         if c.exam_date and c.branch_id and c.exam_type_id:
+            attempt_status = {
+                'Completed': 'Completed',
+                'Absent': 'No Show',
+                'Rescheduled': 'Scheduled',
+                'Registered': 'Scheduled',
+            }.get(c.status or 'Registered', 'Scheduled')
             attempt = ExamAttempt(
                 candidate_id=c.id,
                 branch_id=c.branch_id,
                 exam_type_id=c.exam_type_id,
                 scheduled_date=str(c.exam_date),
                 original_scheduled_date=str(c.exam_date),
-                status='Scheduled',
+                status=attempt_status,
+                actual_exam_date=str(c.exam_date) if attempt_status == 'Completed' else None,
                 attempt_number=1,
             )
             db.session.add(attempt)
@@ -524,13 +531,47 @@ def candidate_update(candidate_id):
 
     d = body()
     status = str(d.get('status') or '').strip()
-    allowed = {'Absent', 'Rescheduled'}
+    allowed = {'Registered', 'Absent', 'Rescheduled', 'Completed'}
     if status not in allowed:
-        return fail('Only Absent or Rescheduled status can be selected.', 422)
+        return fail('Status must be Registered, Absent, Rescheduled, or Completed.', 422)
 
     c.status = status
+    # Keep the candidate master status and its first attempt in sync.
+    attempt = (ExamAttempt.query.filter_by(candidate_id=c.id)
+               .order_by(ExamAttempt.attempt_number.asc()).first())
+    if attempt:
+        if status == 'Completed':
+            attempt.status = 'Completed'
+            attempt.actual_exam_date = attempt.actual_exam_date or attempt.scheduled_date or c.exam_date
+        elif status == 'Absent':
+            attempt.status = 'No Show'
+        elif status == 'Rescheduled':
+            # Preserve the existing scheduled date; the dedicated reschedule
+            # workflow can move it when a new date is supplied.
+            attempt.status = 'Scheduled'
+        else:  # Registered
+            attempt.status = 'Scheduled'
+        db.session.add(attempt)
     db.session.commit()
     return ok(candidate_dict(c), 'Candidate status updated.')
+
+@api_bp.delete('/exams/candidates/<int:candidate_id>/')
+@api_token_required
+def candidate_delete(candidate_id):
+    c = Candidate.query.get(candidate_id)
+    if not c:
+        return fail('Candidate not found.', 404)
+
+    # Candidate has no delete cascade on attempts/session links, so remove
+    # dependent rows explicitly before deleting the master candidate.
+    SessionCandidate.query.filter_by(candidate_id=candidate_id).delete(synchronize_session=False)
+    ExamAttempt.query.filter_by(candidate_id=candidate_id).delete(synchronize_session=False)
+    # Vouchers may keep a nullable reference to a candidate; preserve the
+    # voucher record while clearing that optional student link.
+    Voucher.query.filter_by(student_id=candidate_id).update({'student_id': None}, synchronize_session=False)
+    db.session.delete(c)
+    db.session.commit()
+    return ok(message='Candidate deleted successfully.')
 
 @api_bp.get('/exams/attempts/')
 @api_token_required
