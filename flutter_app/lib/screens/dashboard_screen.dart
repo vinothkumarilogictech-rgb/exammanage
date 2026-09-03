@@ -12,6 +12,7 @@ import 'scheduled_candidates_screen.dart';
 import 'expenses_screen.dart';
 import 'vouchers_screen.dart';
 import 'available_vouchers_screen.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -1461,6 +1462,18 @@ class DashboardScreenState extends State<DashboardScreen> {
 
         actions: [
           IconButton(
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProfileScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.person_rounded),
+          ),
+          IconButton(
+            tooltip: 'Refresh',
             onPressed: reload,
             icon: const Icon(
               Icons.refresh_rounded,

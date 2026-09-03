@@ -53,7 +53,7 @@ class _StartupSplashState extends State<StartupSplash>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1700),
     )..forward();
 
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
@@ -146,11 +146,11 @@ class _StartupSplashState extends State<StartupSplash>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFB56BFF), Color(0xFF6D27E8)],
+                          colors: [Color(0xFFFFB74D), Color(0xFFFF6D00)],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFFB56BFF),
+                            color: Color(0xFFFF9800),
                             blurRadius: 16,
                             spreadRadius: 1,
                           ),
@@ -218,7 +218,7 @@ class _BrandMark extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF9C4DFF), Color(0xFF5318D4)],
+          colors: [Color(0xFFFFB300), Color(0xFFE65100)],
         ),
         border: Border.all(
           color: Colors.white.withOpacity(.24),
@@ -226,7 +226,7 @@ class _BrandMark extends StatelessWidget {
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x806F2AFF),
+            color: Color(0x80FF9800),
             blurRadius: 34,
             spreadRadius: 6,
           ),
@@ -288,10 +288,10 @@ class _SplashPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF12002F),
-          Color(0xFF30006D),
-          Color(0xFF5D13B9),
-          Color(0xFF160039),
+          Color(0xFF3A1600),
+          Color(0xFF7A2F00),
+          Color(0xFFE65C00),
+          Color(0xFF2A0E00),
         ],
       ).createShader(rect);
     canvas.drawRect(rect, base);
@@ -306,7 +306,7 @@ class _SplashPainter extends CustomPainter {
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [
-            const Color(0xFFB24CFF).withOpacity(.22),
+            const Color(0xFFFF9800).withOpacity(.24),
             Colors.transparent,
           ],
         ).createShader(

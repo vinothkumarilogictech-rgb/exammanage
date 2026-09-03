@@ -1565,7 +1565,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
   // Summary Metrics Grid / Row
   Widget _buildSummaryGrid() {
     return SizedBox(
-      height: 110,
+      height: 125,
       width: double.infinity,
       child: _metricCard('Total Expenses', _totalExpenses, Icons.account_balance_wallet_rounded,
           const Color(0xFFEDE9FE), AppColors.primary),
