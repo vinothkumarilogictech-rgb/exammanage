@@ -1011,8 +1011,8 @@ def _voucher_json(v):
         'student_email': student.email if student else None,
         'student_address': student.address if student else None,
         'student_id_number': student.id_number if student else None,
-        'exam_type_id': None,
-        'exam_type_name': None,
+        'exam_type_id': v.exam_type_id,
+        'exam_type_name': v.exam_type.name if v.exam_type else None,
         'branch_id': v.branch_id,
         'branch_name': v.branch.branch_name if v.branch else None,
         'issued_at': v.issued_at.isoformat() if v.issued_at else None,
@@ -1032,6 +1032,8 @@ def _voucher_history_json(h):
         'id': h.id,
         'voucher_id': h.voucher_id,
         'voucher_code': h.voucher.voucher_code if h.voucher else None,
+        'exam_type_id': h.voucher.exam_type_id if h.voucher else None,
+        'exam_type_name': h.voucher.exam_type.name if h.voucher and h.voucher.exam_type else None,
         'student_id': h.voucher_student_id,
         'student_name': h.student_name,
         'mobile': h.mobile,
@@ -1158,6 +1160,12 @@ def voucher_purchase_api():
         return fail('Quantity and purchase cost must be greater than 0.', 422)
     if codes and len(codes) != quantity:
         return fail('voucher_codes count must equal quantity.', 422)
+    exam_type_id = d.get('exam_type_id')
+    if not str(exam_type_id).isdigit():
+        return fail('Exam type is required.', 422)
+    exam = ExamType.query.get(int(exam_type_id))
+    if not exam:
+        return fail('Selected exam type not found.', 404)
     if not codes:
         prefix = str(d.get('code_prefix') or 'VCH').upper()
         import uuid
@@ -1179,15 +1187,18 @@ def voucher_purchase_api():
         cat = ExpenseCategory(name='Exam Voucher Purchase', status='Active'); db.session.add(cat); db.session.flush()
     expense = Expense(
         category=cat.name, category_id=cat.id, amount=quantity * cost,
-        description=f'Bulk exam voucher purchase - {batch.batch_number} ({quantity} vouchers)',
+        description=f'Bulk exam voucher purchase - {batch.batch_number} ({quantity} vouchers, {exam.name})',
         date_incurred=datetime.combine(batch.purchase_date, datetime.min.time()), branch_id=batch.branch_id,
         payment_mode=d.get('payment_mode') or 'Other', status='Active'
     )
     db.session.add(expense); db.session.flush(); batch.expense_id = expense.id
     for code in codes:
-        db.session.add(Voucher(voucher_code=code, batch_id=batch.id, purchase_cost=cost, selling_price=selling, branch_id=batch.branch_id, status='Available'))
+        db.session.add(Voucher(voucher_code=code, batch_id=batch.id, purchase_cost=cost, selling_price=selling,
+                                branch_id=batch.branch_id, exam_type_id=exam.id, status='Available'))
     db.session.commit()
-    return ok({'batch_id': batch.id, 'batch_number': batch.batch_number, 'quantity': quantity, 'expense_id': expense.id}, 'Voucher purchase recorded.', 201)
+    return ok({'batch_id': batch.id, 'batch_number': batch.batch_number, 'quantity': quantity,
+                'exam_type_id': exam.id, 'exam_type_name': exam.name, 'expense_id': expense.id},
+               'Voucher purchase recorded.', 201)
 
 
 @api_bp.post('/vouchers/sell/')
@@ -1276,4 +1287,3 @@ def voucher_use_api(voucher_id):
     v.used_at = datetime.utcnow()
     db.session.commit()
     return ok(_voucher_json(v), 'Voucher marked as used.')
-

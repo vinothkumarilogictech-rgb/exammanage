@@ -1459,10 +1459,6 @@ class DashboardScreenState extends State<DashboardScreen> {
 
           final currentMonthTotal =
               data['currentMonthTotal'] as int? ?? 0;
-          final currentMonthAbsent =
-              data['currentMonthAbsent'] as int? ?? 0;
-          final currentMonthRescheduled =
-              data['currentMonthRescheduled'] as int? ?? 0;
           final currentMonthExpense =
               (data['currentMonthExpense'] as num?)?.toDouble() ?? 0.0;
 
@@ -1673,49 +1669,6 @@ class DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
 
-                    // ---------------------------------------------
-                    // CURRENT MONTH ABSENT
-                    // ---------------------------------------------
-                    _KpiCard(
-                      title: 'Total Absent',
-                      value: '$currentMonthAbsent',
-                      icon: Icons.person_off_rounded,
-                      tint: const Color(0xFFFFEDD5),
-                      iconColor: const Color(0xFFEA580C),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AttendedCandidatesScreen(
-                              initialFilter: 'Today',
-                              initialStatus: 'Absent',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    // ---------------------------------------------
-                    // CURRENT MONTH RESCHEDULED
-                    // ---------------------------------------------
-                    _KpiCard(
-                      title: 'Total Rescheduled',
-                      value: '$currentMonthRescheduled',
-                      icon: Icons.event_repeat_rounded,
-                      tint: const Color(0xFFEDE9FE),
-                      iconColor: const Color(0xFF7C3AED),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AttendedCandidatesScreen(
-                              initialFilter: 'Today',
-                              initialStatus: 'Rescheduled',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
                   ],
                 ),
 
