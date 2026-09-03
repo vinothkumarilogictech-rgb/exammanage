@@ -60,7 +60,7 @@ def expense_category_dict(c):
 def expense_dict(e):
     return {'id': e.id, 'category': e.category, 'category_id': e.category_id,
             'category_name': e.expense_category.name if e.expense_category else e.category,
-            'amount': e.amount, 'description': e.description, 'note': e.note,
+            'amount': e.amount, 'employee_id': e.employee_id, 'employee_name': e.employee.full_name if e.employee else None, 'description': e.description, 'note': e.note,
             'date_incurred': iso(e.date_incurred), 'branch_id': e.branch_id,
             'branch_name': e.branch.branch_name if e.branch else None, 'payment_mode': e.payment_mode,
             'receipt_file': e.receipt_file, 'status': e.status, 'created_at': iso(e.created_at), 'updated_at': iso(e.updated_at)}
@@ -68,3 +68,25 @@ def expense_dict(e):
 def budget_dict(b):
     return {'id': b.id, 'branch_id': b.branch_id, 'category_id': b.category_id, 'period_year': b.period_year,
             'period_month': b.period_month, 'budget_amount': b.budget_amount}
+
+
+def employee_dict(e):
+    return {
+        'id': e.id, 'employee_id': e.employee_id, 'employee_code': e.employee_id,
+        'full_name': e.full_name, 'name': e.full_name, 'designation': e.designation,
+        'branch_id': e.branch_id, 'branch_name': e.branch.branch_name if e.branch else None,
+        'contact_number': e.contact_number, 'phone': e.contact_number, 'email': e.email,
+        'joining_date': iso(e.joining_date), 'address': e.address,
+        'basic_salary': e.basic_salary or 0, 'status': e.status,
+        'exit_date': iso(e.exit_date), 'exit_reason': e.exit_reason, 'exit_remarks': e.exit_remarks,
+        'created_at': iso(e.created_at), 'updated_at': iso(e.updated_at),
+    }
+
+def salary_expense_dict(e):
+    return {
+        'id': e.id, 'amount': e.amount, 'category': e.category,
+        'date_incurred': iso(e.date_incurred), 'payment_mode': e.payment_mode,
+        'description': e.description, 'status': e.status,
+        'employee_id': e.employee_id, 'employee_name': e.employee.full_name if e.employee else None,
+        'branch_id': e.branch_id, 'branch_name': e.branch.branch_name if e.branch else None,
+    }

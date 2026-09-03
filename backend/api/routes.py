@@ -7,7 +7,7 @@ from . import api_bp
 from .auth import authenticate, issue_tokens, verify_token, api_token_required
 from .serializers import *
 from apps.models import (db, Branch, ExamType, BranchExam, ExamSession, Candidate, ExamAttempt, ExamTeam,
-                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate)
+                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate, Employee)
 
 
 def ok(data=None, message=None, status=200):
@@ -654,14 +654,26 @@ def expense_create():
             date_val = datetime.strptime(str(date_val), '%Y-%m-%d')
         except Exception:
             return fail('date_incurred must be ISO date/datetime or YYYY-MM-DD.', 422)
+    branch_id = d.get('branch_id')
+    try:
+        branch_id = int(branch_id) if branch_id is not None else None
+    except (TypeError, ValueError):
+        return fail('Valid branch_id is required.', 422)
+    if not branch_id or not Branch.query.get(branch_id):
+        return fail('Branch not found.', 404)
+    employee_id = d.get('employee_id')
+    if employee_id is not None and str(employee_id).strip() != '':
+        try: employee_id = int(employee_id)
+        except (TypeError, ValueError): return fail('Invalid employee_id.', 422)
+        emp = Employee.query.get(employee_id)
+        if not emp or emp.branch_id != branch_id:
+            return fail('Employee does not belong to the selected branch.', 403)
+    else:
+        employee_id = None
     e = Expense(
-        category=cat_name,
-        category_id=category.id if category else None,
-        amount=amount,
-        description=d.get('description') or d.get('note'),
-        date_incurred=date_val,
-        branch_id=d.get('branch_id'),
-        payment_mode=d.get('payment_mode') or 'Cash',
+        category=cat_name, category_id=category.id if category else None, amount=amount,
+        description=d.get('description') or d.get('note'), date_incurred=date_val,
+        branch_id=branch_id, employee_id=employee_id, payment_mode=d.get('payment_mode') or 'Cash',
         status=d.get('status') or 'Active'
     )
     db.session.add(e)
@@ -694,8 +706,19 @@ def expense_update(expense_id):
         e.category = str(d['category']).strip()
     if 'description' in d or 'note' in d:
         e.description = d.get('description') or d.get('note')
-    if 'branch_id' in d:
-        e.branch_id = d['branch_id']
+    if 'branch_id' in d and d['branch_id'] is not None and int(d['branch_id']) != e.branch_id:
+        return fail('Expense branch cannot be changed.', 403)
+    if 'employee_id' in d:
+        eid = d.get('employee_id')
+        if eid in (None, ''):
+            e.employee_id = None
+        else:
+            try: eid = int(eid)
+            except (TypeError, ValueError): return fail('Invalid employee_id.', 422)
+            emp = Employee.query.get(eid)
+            if not emp or emp.branch_id != e.branch_id:
+                return fail('Employee does not belong to this expense branch.', 403)
+            e.employee_id = eid
     if 'payment_mode' in d and d['payment_mode']:
         e.payment_mode = d['payment_mode']
     if 'status' in d and d['status']:
@@ -774,6 +797,93 @@ def expense_summary_api():
         by_category[e.category] = (by_category.get(e.category) or 0) + (e.amount or 0)
     return ok({'total': total, 'count': len(rows), 'by_category': by_category})
 
+
+# Employee Management API
+@api_bp.get('/employees/')
+@api_token_required
+def employees():
+    bid = request.args.get('branch_id', type=int)
+    q = Employee.query
+    if bid: q = q.filter(Employee.branch_id == bid)
+    status = (request.args.get('status') or '').strip()
+    if status: q = q.filter(Employee.status == status)
+    term = (request.args.get('q') or '').strip()
+    if term:
+        like=f'%{term}%'
+        q=q.filter(or_(Employee.employee_id.ilike(like), Employee.full_name.ilike(like), Employee.designation.ilike(like), Employee.contact_number.ilike(like)))
+    return ok([employee_dict(e) for e in q.order_by(Employee.full_name.asc()).all()])
+
+@api_bp.post('/employees/')
+@api_token_required
+def employee_create():
+    d=body()
+    try: bid=int(d.get('branch_id'))
+    except (TypeError,ValueError): return fail('branch_id is required.',422)
+    branch=Branch.query.get(bid)
+    if not branch or branch.status != 'Active': return fail('Active branch not found.',404)
+    code=(d.get('employee_id') or d.get('employee_code') or '').strip()
+    name=(d.get('full_name') or d.get('name') or '').strip()
+    designation=(d.get('designation') or '').strip()
+    if not code or not name or not designation: return fail('Employee code, name and designation are required.',422)
+    if Employee.query.filter_by(employee_id=code).first(): return fail('Employee code already exists.',409)
+    try: joining=datetime.strptime(str(d.get('joining_date')), '%Y-%m-%d').date()
+    except Exception: return fail('joining_date must be YYYY-MM-DD.',422)
+    try: salary=float(d.get('basic_salary') or 0)
+    except (TypeError,ValueError): return fail('basic_salary must be numeric.',422)
+    e=Employee(employee_id=code, full_name=name, designation=designation, branch_id=bid,
+               contact_number=d.get('contact_number') or d.get('phone'), email=d.get('email'),
+               joining_date=joining, address=d.get('address'), basic_salary=salary,
+               status=d.get('status') or 'Active')
+    db.session.add(e); db.session.commit(); return ok(employee_dict(e),'Employee created.',201)
+
+@api_bp.get('/employees/<int:employee_id>/')
+@api_token_required
+def employee_get(employee_id):
+    e=Employee.query.get_or_404(employee_id)
+    bid=request.args.get('branch_id',type=int)
+    if bid and e.branch_id != bid: return fail('Employee does not belong to selected branch.',403)
+    return ok(employee_dict(e))
+
+@api_bp.put('/employees/<int:employee_id>/')
+@api_bp.patch('/employees/<int:employee_id>/')
+@api_token_required
+def employee_update(employee_id):
+    e=Employee.query.get_or_404(employee_id); d=body()
+    if d.get('branch_id') is not None and int(d['branch_id']) != e.branch_id: return fail('Employee branch cannot be changed.',403)
+    if 'employee_id' in d or 'employee_code' in d:
+        code=(d.get('employee_id') or d.get('employee_code') or '').strip()
+        if code and code != e.employee_id and Employee.query.filter_by(employee_id=code).first(): return fail('Employee code already exists.',409)
+        if code: e.employee_id=code
+    for key in ('full_name','designation','contact_number','email','address','status','exit_reason','exit_remarks'):
+        if key in d: setattr(e,key,d[key])
+    if 'joining_date' in d and d['joining_date']:
+        try:e.joining_date=datetime.strptime(str(d['joining_date'])[:10],'%Y-%m-%d').date()
+        except Exception:return fail('joining_date must be YYYY-MM-DD.',422)
+    if 'exit_date' in d and d['exit_date']:
+        try:e.exit_date=datetime.strptime(str(d['exit_date'])[:10],'%Y-%m-%d').date()
+        except Exception:return fail('exit_date must be YYYY-MM-DD.',422)
+    if 'basic_salary' in d:
+        try:e.basic_salary=float(d['basic_salary'])
+        except (TypeError,ValueError):return fail('basic_salary must be numeric.',422)
+    db.session.commit(); return ok(employee_dict(e),'Employee updated.')
+
+@api_bp.delete('/employees/<int:employee_id>/')
+@api_token_required
+def employee_delete(employee_id):
+    e=Employee.query.get_or_404(employee_id)
+    linked=Expense.query.filter(Expense.employee_id==e.id).count()
+    if linked:
+        e.status='Inactive'; db.session.commit(); return ok(employee_dict(e),'Employee has linked financial records and was marked inactive.')
+    e.status='Inactive'; db.session.commit(); return ok(employee_dict(e),'Employee deactivated successfully.')
+
+@api_bp.get('/employees/<int:employee_id>/salary-history/')
+@api_token_required
+def employee_salary_history(employee_id):
+    e=Employee.query.get_or_404(employee_id)
+    bid=request.args.get('branch_id',type=int)
+    if bid and e.branch_id != bid: return fail('Employee does not belong to selected branch.',403)
+    rows=Expense.query.filter(Expense.employee_id==e.id, Expense.branch_id==e.branch_id).order_by(Expense.date_incurred.desc()).all()
+    return ok([salary_expense_dict(x) for x in rows])
 
 # ============================================================
 # Voucher Management API

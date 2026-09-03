@@ -33,6 +33,7 @@ class ApiConfig {
   static const String teamsPath = '/exams/teams/';
   static const String examDashboardPath = '/exams/dashboard/';
   static const String expensesPath = '/expenses/';
+  static const String employeesPath = '/employees/';
   static const String expenseCategoriesPath = '/expenses/categories/';
   static const String expenseBudgetsPath = '/expenses/budgets/';
   static const String vouchersPath = '/vouchers/';

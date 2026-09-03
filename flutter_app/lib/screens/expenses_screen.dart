@@ -29,6 +29,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
   List<Expense> _filteredExpenses = [];
   List<Branch> _branches = [];
   List<ExpenseCategoryItem> _categories = [];
+  List<Employee> _employees = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -112,11 +113,13 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         api.expenses(branchId: globalBranchId),
         api.branches(),
         api.expenseCategories(),
+        api.employees(branchId: globalBranchId, status: 'Active'),
       ]);
 
       final expensesResp = results[0];
       final branchesResp = results[1];
       final categoriesResp = results[2];
+      final employeesResp = results[3];
 
       final expensesList = (expensesResp.data['data'] as List? ?? const [])
           .map((x) => Expense.fromMap(Map<String, dynamic>.from(x)))
@@ -144,6 +147,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       _branches = branchesList;
       _selectedBranchId = globalBranchId;
       _categories = categoriesList;
+      final employeesList = (employeesResp.data['data'] as List? ?? const [])
+          .map((x) => Employee.fromMap(Map<String, dynamic>.from(x)))
+          .toList();
+
+      _employees = employeesList;
 
       _calculateStats(expensesList);
       _applyLocalFilters();
@@ -427,6 +435,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     final noteCtrl = TextEditingController();
     int? branchId = globalBranchId;
     int? categoryId = _categories.isNotEmpty ? _categories.first.id : null;
+    int? employeeId;
     String paymentMode = 'Cash';
     DateTime selectedDate = DateTime.now();
 
@@ -560,6 +569,13 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+
+                if (categoryId != null && _categories.any((c) => c.id == categoryId && ['salary', 'salaries'].contains(c.name.trim().toLowerCase()))) ...[
+                  const Text('Employee', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                  const SizedBox(height: 6),
+                  Container(decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))), padding: const EdgeInsets.symmetric(horizontal: 12), child: DropdownButtonHideUnderline(child: DropdownButton<int>(isExpanded: true, value: employeeId, hint: const Text('Select Employee'), items: _employees.map((e) => DropdownMenuItem<int>(value: e.id, child: Text('${e.employeeId} - ${e.fullName}'))).toList(), onChanged: (v) => setSheetState(() => employeeId = v)))),
+                  const SizedBox(height: 14),
+                ],
 
                 const Text(
                   'Branch',
@@ -722,12 +738,19 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         orElse: () => ExpenseCategoryItem(id: 0, name: 'Other', status: 'Active', createdAt: ''),
                       );
 
+                      final isSalary = categoryId != null && _categories.any((c) => c.id == categoryId && ['salary', 'salaries'].contains(c.name.trim().toLowerCase()));
+                      if (isSalary && employeeId == null) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please select an employee for salary expense.')));
+                        return;
+                      }
+
                       try {
                         await api.createExpense({
                           'amount': val,
                           'category_id': categoryId,
                           'category': catObj.name,
                           'branch_id': branchId,
+                          'employee_id': employeeId,
                           'payment_mode': paymentMode,
                           'description': noteCtrl.text.trim(),
                           'date_incurred': selectedDate.toIso8601String(),
@@ -781,6 +804,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       final found = _categories.where((c) => c.name.toLowerCase() == e.category.toLowerCase()).toList();
       if (found.isNotEmpty) categoryId = found.first.id;
     }
+    int? employeeId = e.employeeId;
     String paymentMode = e.paymentMode.isNotEmpty ? e.paymentMode : 'Cash';
     String status = e.status.isNotEmpty ? e.status : 'Active';
     DateTime selectedDate = _parseDate(e.date) ?? DateTime.now();
@@ -888,6 +912,25 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+
+                if (categoryId != null && _categories.any((c) => c.id == categoryId && ['salary', 'salaries'].contains(c.name.trim().toLowerCase()))) ...[
+                  const Text('Employee', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        isExpanded: true,
+                        value: employeeId,
+                        hint: const Text('Select Employee'),
+                        items: _employees.map((emp) => DropdownMenuItem<int>(value: emp.id, child: Text('${emp.employeeId} - ${emp.fullName}'))).toList(),
+                        onChanged: (v) => setSheetState(() => employeeId = v),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
 
                 // Branch
                 const Text('Branch', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
@@ -1058,6 +1101,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         (c) => c.id == categoryId,
                         orElse: () => ExpenseCategoryItem(id: 0, name: e.category, status: 'Active', createdAt: ''),
                       );
+                      final isSalary = ['salary', 'salaries'].contains(catObj.name.trim().toLowerCase());
+                      if (isSalary && employeeId == null) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please select an employee for salary expense.')));
+                        return;
+                      }
 
                       try {
                         await api.updateExpense(e.id, {
@@ -1065,6 +1113,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           'category_id': categoryId,
                           'category': catObj.name,
                           'branch_id': branchId,
+                          'employee_id': employeeId,
                           'payment_mode': paymentMode,
                           'description': noteCtrl.text.trim(),
                           'date_incurred': selectedDate.toIso8601String(),
@@ -1189,6 +1238,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   _detailRow('Date', _formatDateDisplay(e.date)),
                   const SizedBox(height: 8),
                   _detailRow('Branch', e.branch.isNotEmpty ? e.branch : '-'),
+                  if (e.employeeName.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _detailRow('Employee', e.employeeName),
+                  ],
                   const SizedBox(height: 8),
                   _detailRow('Payment Mode', e.paymentMode.isNotEmpty ? e.paymentMode : '-'),
                   if (e.description.isNotEmpty) ...[
@@ -2037,6 +2090,23 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                             e.branch.isNotEmpty ? e.branch : 'No branch',
                             style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
                           ),
+                          if (e.employeeName.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Icon(Icons.person_outline_rounded, size: 13, color: Colors.grey.shade500),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    e.employeeName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),

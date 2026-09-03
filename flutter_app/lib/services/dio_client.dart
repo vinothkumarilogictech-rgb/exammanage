@@ -167,6 +167,17 @@ class DioClient {
         },
       );
 
+  Future<Response> employees({int? branchId, String? status, String? q}) => dio.get(
+        ApiConfig.employeesPath, queryParameters: {
+          if (branchId != null) 'branch_id': branchId,
+          if (status != null && status.isNotEmpty) 'status': status,
+          if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+        });
+  Future<Response> createEmployee(Map<String, dynamic> data) => dio.post(ApiConfig.employeesPath, data: data);
+  Future<Response> updateEmployee(int id, Map<String, dynamic> data) => dio.put('${ApiConfig.employeesPath}$id/', data: data);
+  Future<Response> deleteEmployee(int id) => dio.delete('${ApiConfig.employeesPath}$id/');
+  Future<Response> employeeSalaryHistory(int id, {int? branchId}) => dio.get('${ApiConfig.employeesPath}$id/salary-history/', queryParameters: {if (branchId != null) 'branch_id': branchId});
+
   Future<Response> expenseCategories() => dio.get(ApiConfig.expenseCategoriesPath);
   Future<Response> createExpenseCategory(String name) =>
       dio.post(ApiConfig.expenseCategoriesPath, data: {'name': name});
