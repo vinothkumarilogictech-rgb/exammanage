@@ -112,6 +112,36 @@ class _ExamsScreenState extends State<ExamsScreen>
     }
   }
 
+  Future<void> _deleteCandidate(Candidate candidate) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Candidate'),
+        content: Text('Are you sure you want to delete ${candidate.name}? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await api.deleteCandidate(candidate.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Candidate deleted successfully'), backgroundColor: AppColors.green),
+      );
+      reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to delete candidate: $e')));
+    }
+  }
+
   Future<List<Candidate>> loadCandidates() async {
     final r = await api.candidates();
     return (r.data['data'] as List? ?? const [])
@@ -407,6 +437,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                     DropdownMenuItem(value: 'Registered', child: Text('Registered')),
                     DropdownMenuItem(value: 'Absent', child: Text('Absent')),
                     DropdownMenuItem(value: 'Rescheduled', child: Text('Rescheduled')),
+                    DropdownMenuItem(value: 'Completed', child: Text('Completed')),
                   ],
                   onChanged: (val) {
                     if (val != null) setSheetState(() => selectedStatus = val);
@@ -977,6 +1008,70 @@ class _ExamsScreenState extends State<ExamsScreen>
     );
   }
 
+  Future<void> _showTeamDetails(ExamTeam team) async {
+    try {
+      final report = await _loadTeamReport(team);
+      if (!mounted || report == null) return;
+      final candidates = (report['candidates'] as List? ?? const [])
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          height: MediaQuery.of(ctx).size.height * .78,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+              const SizedBox(height: 16),
+              Text(team.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 5),
+              Text('${candidates.length} candidates', style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              Expanded(
+                child: candidates.isEmpty
+                    ? const Center(child: Text('No candidates assigned to this team.'))
+                    : ListView.separated(
+                        itemCount: candidates.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) {
+                          final c = candidates[i];
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))),
+                            child: Row(
+                              children: [
+                                CircleAvatar(radius: 20, backgroundColor: const Color(0xFFEDE9FE), child: Text('${c['name'] ?? '?'}'.isNotEmpty ? '${c['name'] ?? '?'}'[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900))),
+                                const SizedBox(width: 10),
+                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('${c['name'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                                  const SizedBox(height: 3),
+                                  Text('Register: ${c['register_number'] ?? '-'}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                                  Text('Branch: ${c['branch_name'] ?? '-'}  •  Date: ${c['exam_date'] ?? '-'}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                                ])),
+                                Text('${c['status'] ?? 'Registered'}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to load team candidates: $e')));
+    }
+  }
+
   Future<Map<String, dynamic>?> _loadTeamReport(ExamTeam team) async {
     try { final r = await api.teamReport(team.id); return Map<String, dynamic>.from(r.data['data'] ?? {}); }
     catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to load report: $e'))); return null; }
@@ -1184,6 +1279,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                     _CandidateCard(
                       candidate: rows[i],
                       onStatusChanged: _updateCandidateStatus,
+                      onDelete: _deleteCandidate,
                     ),
               );
             },
@@ -1229,6 +1325,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                           itemBuilder: (c, i) => _TeamCard(
                             team: rows[i],
                             onReport: () => _showTeamReportActions(rows[i]),
+                            onTap: () => _showTeamDetails(rows[i]),
                             onDelete: () async {
                               try { await api.deleteTeam(rows[i].id); reload(); }
                               catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
@@ -1264,16 +1361,24 @@ class _ExamsScreenState extends State<ExamsScreen>
 class _TeamCard extends StatelessWidget {
   final ExamTeam team;
   final VoidCallback onReport;
+  final VoidCallback onTap;
   final VoidCallback onDelete;
-  const _TeamCard({required this.team, required this.onReport, required this.onDelete});
+  const _TeamCard({required this.team, required this.onReport, required this.onTap, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
-    return Container(margin:const EdgeInsets.only(bottom:12),padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(20),border: Border.all(color: const Color(0xFFE5E7EB)),boxShadow:const[BoxShadow(color:Color(0x0D000000),blurRadius:14,offset:Offset(0,5))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(margin:const EdgeInsets.only(bottom:12),padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(20),border: Border.all(color: const Color(0xFFE5E7EB)),boxShadow:const[BoxShadow(color:Color(0x0D000000),blurRadius:14,offset:Offset(0,5))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[Container(width:48,height:48,decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFEDE9FE),Color(0xFFF5F3FF)]),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.groups_rounded,color:AppColors.primary,size:25)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(team.name,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(team.examTypeName.isEmpty?'Any exam':team.examTypeName,style:const TextStyle(fontSize:12.5,color:Color(0xFF6B7280),fontWeight:FontWeight.w600))])),PopupMenuButton<String>(onSelected:(v){if(v=='report')onReport();else if(v=='delete')onDelete();},itemBuilder:(ctx)=>const[PopupMenuItem(value:'report',child:Text('Team Report')),PopupMenuItem(value:'delete',child:Text('Delete'))])]),
       const SizedBox(height:14),Wrap(spacing:8,runSpacing:8,children:[_teamMeta(Icons.location_on_outlined,team.location.isEmpty?'Location not set':team.location),_teamMeta(Icons.phone_outlined,team.phone.isEmpty?'Phone not set':team.phone),_teamMeta(Icons.people_alt_outlined,'${team.candidateCount} candidates')]),
       const SizedBox(height:14),SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:onReport,icon:const Icon(Icons.download_rounded,size:18),label:const Text('Team Report — PDF / Excel'),style:OutlinedButton.styleFrom(foregroundColor:AppColors.primary,side:const BorderSide(color:Color(0xFFD8B4FE)),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)))))
-    ]));
+    ])),
+      ),
+    );
   }
   Widget _teamMeta(IconData icon,String text)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),decoration:BoxDecoration(color:const Color(0xFFF8FAFC),borderRadius:BorderRadius.circular(10)),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(icon,size:14,color:const Color(0xFF64748B)),const SizedBox(width:5),ConstrainedBox(constraints:const BoxConstraints(maxWidth:210),child:Text(text,style:const TextStyle(fontSize:11.5,color:Color(0xFF475569)),overflow:TextOverflow.ellipsis))]));
 }
@@ -1376,10 +1481,12 @@ class _ExamTypeCard extends StatelessWidget {
 class _CandidateCard extends StatelessWidget {
   final Candidate candidate;
   final Future<void> Function(int candidateId, String status) onStatusChanged;
+  final Future<void> Function(Candidate candidate) onDelete;
 
   const _CandidateCard({
     required this.candidate,
     required this.onStatusChanged,
+    required this.onDelete,
   });
 
   Color _statusColor(String s) {
@@ -1471,6 +1578,21 @@ class _CandidateCard extends StatelessWidget {
                 title: const Text('Rescheduled', style: TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: const Text('Candidate exam was moved to another date'),
                 onTap: () => Navigator.pop(ctx, 'Rescheduled'),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.check_circle_rounded, color: Color(0xFF059669)),
+                ),
+                title: const Text('Completed', style: TextStyle(fontWeight: FontWeight.w800)),
+                subtitle: const Text('Candidate completed the exam'),
+                onTap: () => Navigator.pop(ctx, 'Completed'),
               ),
             ],
           ),
@@ -1585,6 +1707,14 @@ class _CandidateCard extends StatelessWidget {
               status,
               style: TextStyle(color: _statusColor(status), fontSize: 10.5, fontWeight: FontWeight.w800),
             ),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Delete candidate',
+            onPressed: () => onDelete(candidate),
+            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red, size: 21),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
         ],
       ),

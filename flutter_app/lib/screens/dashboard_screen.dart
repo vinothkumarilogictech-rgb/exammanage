@@ -91,6 +91,34 @@ class DashboardScreenState extends State<DashboardScreen> {
         .where((c) => (c.status ?? '').trim().toLowerCase() == 'rescheduled')
         .length;
 
+    // ==============================================================
+    // CURRENT MONTH EXPENSE
+    // ==============================================================
+    // Use the existing Expense API/model and total only this month's
+    // active expense records.  If the expense request fails, the
+    // dashboard continues to work and shows 0.00.
+    double currentMonthExpense = 0;
+    try {
+      final expenseRes = await api.expenses();
+      final expenses = (expenseRes.data['data'] as List? ?? const [])
+          .map((e) => Expense.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+
+      for (final expense in expenses) {
+        if (expense.status.trim().toLowerCase() == 'cancelled' ||
+            expense.status.trim().toLowerCase() == 'canceled') {
+          continue;
+        }
+
+        final expenseDate = DateTime.tryParse(expense.date.trim());
+        if (expenseDate != null &&
+            expenseDate.year == now.year &&
+            expenseDate.month == now.month) {
+          currentMonthExpense += expense.amount;
+        }
+      }
+    } catch (_) {}
+
     return {
       'stats': stats,
 
@@ -124,6 +152,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       'currentMonthTotal': currentMonthTotal,
       'currentMonthAbsent': currentMonthAbsent,
       'currentMonthRescheduled': currentMonthRescheduled,
+      'currentMonthExpense': currentMonthExpense,
     };
   }
 
@@ -1377,6 +1406,8 @@ class DashboardScreenState extends State<DashboardScreen> {
               data['currentMonthAbsent'] as int? ?? 0;
           final currentMonthRescheduled =
               data['currentMonthRescheduled'] as int? ?? 0;
+          final currentMonthExpense =
+              (data['currentMonthExpense'] as num?)?.toDouble() ?? 0;
 
           /*
            * IMPORTANT:
@@ -1623,6 +1654,73 @@ class DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // =================================================
+                // TOTAL EXPENSE PER MONTH
+                // =================================================
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: const Color(0xFFE9D5FF),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 14,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3E8FF),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.account_balance_wallet_rounded,
+                          color: AppColors.primary,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Total Expense Per Month',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF374151),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '₹${currentMonthExpense.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 20),

@@ -15,7 +15,7 @@ class ApiConfig {
   /// The API itself is mounted at /api/v1.
   static const String _dartDefineUrl = String.fromEnvironment('API_SERVER_URL');
   
-  static const String baseUrl = 'https://exam.ilogicigroup.com';
+  static const String baseUrl = 'http://localhost:5001';
 
   static const String apiBasePath = '/api/v1';
   static String get apiBaseUrl => '$baseUrl$apiBasePath';
