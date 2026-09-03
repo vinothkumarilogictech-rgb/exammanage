@@ -9,6 +9,7 @@
 #include <file_selector_linux/file_selector_plugin.h>
 #include <flutter_secure_storage_linux/flutter_secure_storage_linux_plugin.h>
 #include <printing/printing_plugin.h>
+#include <public_file_saver/public_file_saver_plugin.h>
 
 void fl_register_plugins(FlPluginRegistry* registry) {
   g_autoptr(FlPluginRegistrar) file_selector_linux_registrar =
@@ -20,4 +21,7 @@ void fl_register_plugins(FlPluginRegistry* registry) {
   g_autoptr(FlPluginRegistrar) printing_registrar =
       fl_plugin_registry_get_registrar_for_plugin(registry, "PrintingPlugin");
   printing_plugin_register_with_registrar(printing_registrar);
+  g_autoptr(FlPluginRegistrar) public_file_saver_registrar =
+      fl_plugin_registry_get_registrar_for_plugin(registry, "PublicFileSaverPlugin");
+  public_file_saver_plugin_register_with_registrar(public_file_saver_registrar);
 }

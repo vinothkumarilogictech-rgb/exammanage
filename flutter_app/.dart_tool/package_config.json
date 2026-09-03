@@ -3,7 +3,7 @@
   "packages": [
     {
       "name": "archive",
-      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/archive-4.0.9",
+      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/archive-3.6.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -94,6 +94,12 @@
     {
       "name": "equatable",
       "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/equatable-2.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "excel",
+      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/excel-4.0.6",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -237,9 +243,9 @@
     },
     {
       "name": "image",
-      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/image-4.9.2",
+      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/image-4.3.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "2.15"
     },
     {
       "name": "image_picker",
@@ -435,9 +441,9 @@
     },
     {
       "name": "pdf",
-      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/pdf-3.13.0",
+      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/pdf-3.12.0",
       "packageUri": "lib/",
-      "languageVersion": "3.12"
+      "languageVersion": "2.19"
     },
     {
       "name": "pdf_widget_wrapper",
@@ -464,16 +470,10 @@
       "languageVersion": "3.0"
     },
     {
-      "name": "posix",
-      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/posix-6.5.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
       "name": "printing",
-      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/printing-5.15.0",
+      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/printing-5.14.3",
       "packageUri": "lib/",
-      "languageVersion": "3.12"
+      "languageVersion": "3.3"
     },
     {
       "name": "provider",
@@ -486,6 +486,12 @@
       "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/pub_semver-2.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "public_file_saver",
+      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/public_file_saver-1.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
     },
     {
       "name": "qr",
@@ -645,9 +651,9 @@
     },
     {
       "name": "xml",
-      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/xml-7.0.1",
+      "rootUri": "file:///C:/Users/vinot/AppData/Local/Pub/Cache/hosted/pub.dev/xml-6.6.1",
       "packageUri": "lib/",
-      "languageVersion": "3.11"
+      "languageVersion": "3.8"
     },
     {
       "name": "yaml",
