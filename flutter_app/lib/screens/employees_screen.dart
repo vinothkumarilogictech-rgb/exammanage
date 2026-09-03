@@ -44,26 +44,35 @@ class EmployeesScreenState extends State<EmployeesScreen> {
   Future<void> editEmployee([Employee? e]) async {
     final bid = branchContext.selectedBranchId;
     if (bid == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a branch from Dashboard first.'))); return; }
-    final code = TextEditingController(text: e?.employeeId ?? ''), name = TextEditingController(text: e?.fullName ?? ''), des = TextEditingController(text: e?.designation ?? ''), phone = TextEditingController(text: e?.phone ?? ''), email = TextEditingController(text: e?.email ?? ''), address = TextEditingController(text: e?.address ?? ''), salary = TextEditingController(text: e == null ? '' : e.basicSalary.toString());
+    final name = TextEditingController(text: e?.fullName ?? ''), des = TextEditingController(text: e?.designation ?? ''), phone = TextEditingController(text: e?.phone ?? ''), email = TextEditingController(text: e?.email ?? ''), address = TextEditingController(text: e?.address ?? ''), username = TextEditingController(), password = TextEditingController();
     DateTime joining = e == null ? DateTime.now() : (DateTime.tryParse(e.joiningDate) ?? DateTime.now());
     String status = e?.status ?? 'Active';
     await showModalBottomSheet(context: context, isScrollControlled: true, builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) => Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
       child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(e == null ? 'Add Employee' : 'Edit Employee', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 16), field(code, 'Employee Code *', enabled: e == null), field(name, 'Full Name *'), field(des, 'Designation *'), field(phone, 'Phone'), field(email, 'Email'), field(address, 'Address'), field(salary, 'Basic Salary', number: true),
+        const SizedBox(height: 16), field(name, 'Full Name *'), field(des, 'Designation *'), field(phone, 'Phone'), field(email, 'Email'), field(address, 'Address'), field(username, e == null ? 'Username *' : 'Username (optional)'), field(password, e == null ? 'Password *' : 'Password (optional)'),
         Container(width: double.infinity, padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)), child: Row(children: [const Icon(Icons.lock_outline, size: 18), const SizedBox(width: 8), Text(branchContext.selectedBranchName ?? 'Selected branch', style: const TextStyle(fontWeight: FontWeight.w700))])),
         const SizedBox(height: 10), ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.calendar_today), title: Text('Joining: ${joining.year}-${joining.month.toString().padLeft(2,'0')}-${joining.day.toString().padLeft(2,'0')}'), onTap: () async { final d = await showDatePicker(context: ctx, initialDate: joining, firstDate: DateTime(2000), lastDate: DateTime(2100)); if (d != null) setSheet(() => joining = d); }),
         if (e != null) DropdownButtonFormField<String>(value: status, items: const [DropdownMenuItem(value: 'Active', child: Text('Active')), DropdownMenuItem(value: 'Inactive', child: Text('Inactive'))], onChanged: (v) { if (v != null) setSheet(() => status = v); }, decoration: const InputDecoration(labelText: 'Status')),
         const SizedBox(height: 16), SizedBox(width: double.infinity, height: 50, child: FilledButton(onPressed: () async {
-          if (code.text.trim().isEmpty || name.text.trim().isEmpty || des.text.trim().isEmpty) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Code, name and designation are required.'))); return; }
-          final data = {'employee_id': code.text.trim(), 'full_name': name.text.trim(), 'designation': des.text.trim(), 'contact_number': phone.text.trim(), 'email': email.text.trim(), 'address': address.text.trim(), 'basic_salary': double.tryParse(salary.text.trim()) ?? 0, 'joining_date': '${joining.year}-${joining.month.toString().padLeft(2,'0')}-${joining.day.toString().padLeft(2,'0')}', 'status': status, 'branch_id': bid};
-          try { if (e == null) { await api.createEmployee(data); } else { data.remove('branch_id'); await api.updateEmployee(e.id, data); } if (ctx.mounted) Navigator.pop(ctx); await load(); }
+          if (name.text.trim().isEmpty || des.text.trim().isEmpty || (e == null && (username.text.trim().isEmpty || password.text.isEmpty))) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Name, designation, username and password are required.'))); return; }
+          final data = {'employee_id': 'EMP-${DateTime.now().millisecondsSinceEpoch}', 'full_name': name.text.trim(), 'designation': des.text.trim(), 'contact_number': phone.text.trim(), 'email': email.text.trim(), 'address': address.text.trim(), 'joining_date': '${joining.year}-${joining.month.toString().padLeft(2,'0')}-${joining.day.toString().padLeft(2,'0')}', 'status': status, 'branch_id': bid};
+          if (e == null) {
+            data['username'] = username.text.trim();
+            data['password'] = password.text;
+          } else {
+            data.remove('branch_id');
+            data.remove('employee_id');
+            if (username.text.trim().isNotEmpty) data['username'] = username.text.trim();
+            if (password.text.isNotEmpty) data['password'] = password.text;
+          }
+          try { if (e == null) { await api.createEmployee(data); } else { await api.updateEmployee(e.id, data); } if (ctx.mounted) Navigator.pop(ctx); await load(); }
           catch (err) { if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $err'))); }
         }, child: Text(e == null ? 'Save Employee' : 'Update Employee'))),
       ])),
     )));
-    for (final c in [code,name,des,phone,email,address,salary]) { c.dispose(); }
+    for (final c in [name,des,phone,email,address,username,password]) { c.dispose(); }
   }
 
   Future<void> salaryHistory(Employee e) async {
