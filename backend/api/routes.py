@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import request, jsonify
+from flask import request, jsonify, g
 from flask import current_app
 from sqlalchemy import func, or_
 
@@ -7,7 +7,7 @@ from . import api_bp
 from .auth import authenticate, issue_tokens, verify_token, api_token_required
 from .serializers import *
 from apps.models import (db, Branch, ExamType, BranchExam, ExamSession, Candidate, ExamAttempt, ExamTeam,
-                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate, Employee)
+                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate, Employee, EmployeeCredential)
 
 
 def ok(data=None, message=None, status=200):
@@ -37,15 +37,25 @@ def refresh():
     token = request.headers.get('Authorization', '')[7:].strip() if request.headers.get('Authorization', '').startswith('Bearer ') else ''
     data = verify_token(token, current_app.config['SECRET_KEY'], 'refresh', 7 * 24 * 60 * 60)
     if not data: return fail('Invalid or expired refresh token.', 401)
-    tokens = issue_tokens({'id': data['sub'], 'username': data.get('username', data['sub'])}, current_app.config['SECRET_KEY'])
+    identity = {
+        'id': data['sub'],
+        'username': data.get('username', data['sub']),
+        'role': data.get('role', 'Admin'),
+        'employee_id': int(data['sub']) if data.get('role') == 'Employee' and str(data.get('sub')).isdigit() else None,
+    }
+    tokens = issue_tokens(identity, current_app.config['SECRET_KEY'])
     return ok({'access': tokens['access']})
 
 @api_bp.get('/auth/me/')
 @api_token_required
 def me():
-    from flask import g
     identity = g.api_identity
-    return ok({'id': identity['sub'], 'username': identity.get('username', identity['sub'])})
+    return ok({
+        'id': identity['sub'],
+        'username': identity.get('username', identity['sub']),
+        'role': identity.get('role', 'Admin'),
+        'employee_id': identity.get('employee_id') or (int(identity['sub']) if identity.get('role') == 'Employee' and str(identity.get('sub')).isdigit() else None),
+    })
 
 @api_bp.get('/dashboard/')
 @api_token_required
@@ -590,10 +600,29 @@ def exam_dashboard():
     return ok({'scheduled':sum(a.status=='Scheduled' for a in rows),'completed':sum(a.status=='Completed' for a in rows),'cancelled':sum(a.status=='Cancelled' for a in rows),'pass':sum(a.result=='Pass' for a in rows),'fail':sum(a.result=='Fail' for a in rows),'pending':sum(a.result=='Pending' for a in rows)})
 
 # Expenses
+def _is_salary_expense(expense):
+    category = (expense.category or '').strip().lower()
+    return expense.employee_id is not None or 'salary' in category or 'payroll' in category
+
+
+def _employee_can_access_expense(expense):
+    if g.api_identity.get('role') != 'Employee':
+        return True
+    # Employee users must never see or modify employee-linked salary/payroll records.
+    return not _is_salary_expense(expense)
+
+
+# Expenses
 @api_bp.get('/expenses/')
 @api_token_required
 def expenses():
     q = Expense.query
+    if g.api_identity.get('role') == 'Employee':
+        # Hide employee-linked salary/payroll expenses from the normal expense list.
+        q = q.filter(Expense.employee_id.is_(None)).filter(
+            ~func.lower(func.coalesce(Expense.category, '')).like('%salary%'),
+            ~func.lower(func.coalesce(Expense.category, '')).like('%payroll%')
+        )
     bid = request.args.get('branch_id', type=int)
     cid = request.args.get('category_id', type=int)
     status = request.args.get('status')
@@ -636,6 +665,10 @@ def expenses():
 @api_token_required
 def expense_create():
     d = body()
+    if g.api_identity.get('role') == 'Employee':
+        requested_category = (d.get('category') or '').strip().lower()
+        if d.get('employee_id') not in (None, '') or 'salary' in requested_category or 'payroll' in requested_category:
+            return fail('Employees cannot add or manage salary records.', 403)
     amount = d.get('amount')
     try:
         amount = float(amount)
@@ -684,6 +717,8 @@ def expense_create():
 @api_token_required
 def expense_get(expense_id):
     e = Expense.query.get_or_404(expense_id)
+    if not _employee_can_access_expense(e):
+        return fail('Employees cannot access salary records.', 403)
     return ok(expense_dict(e))
 
 @api_bp.put('/expenses/<int:expense_id>/')
@@ -691,7 +726,13 @@ def expense_get(expense_id):
 @api_token_required
 def expense_update(expense_id):
     e = Expense.query.get_or_404(expense_id)
+    if not _employee_can_access_expense(e):
+        return fail('Employees cannot update salary records.', 403)
     d = body()
+    if g.api_identity.get('role') == 'Employee':
+        requested_category = (d.get('category') or '').strip().lower()
+        if d.get('employee_id') not in (None, '') or 'salary' in requested_category or 'payroll' in requested_category:
+            return fail('Employees cannot add or manage salary records.', 403)
     if 'amount' in d and d['amount'] is not None:
         try:
             e.amount = float(d['amount'])
@@ -738,6 +779,8 @@ def expense_update(expense_id):
 @api_token_required
 def expense_delete(expense_id):
     e = Expense.query.get_or_404(expense_id)
+    if not _employee_can_access_expense(e):
+        return fail('Employees cannot delete salary records.', 403)
     e.status = 'Cancelled'
     db.session.commit()
     return ok(expense_dict(e), 'Expense cancelled successfully.')
@@ -804,6 +847,9 @@ def expense_summary_api():
 def employees():
     bid = request.args.get('branch_id', type=int)
     q = Employee.query
+    if g.api_identity.get('role') == 'Employee':
+        own_id = int(g.api_identity.get('employee_id') or g.api_identity.get('sub'))
+        q = q.filter(Employee.id == own_id)
     if bid: q = q.filter(Employee.branch_id == bid)
     status = (request.args.get('status') or '').strip()
     if status: q = q.filter(Employee.status == status)
@@ -816,6 +862,8 @@ def employees():
 @api_bp.post('/employees/')
 @api_token_required
 def employee_create():
+    if g.api_identity.get('role') != 'Admin':
+        return fail('Only administrators can create employees.', 403)
     d=body()
     try: bid=int(d.get('branch_id'))
     except (TypeError,ValueError): return fail('branch_id is required.',422)
@@ -824,21 +872,33 @@ def employee_create():
     code=(d.get('employee_id') or d.get('employee_code') or '').strip()
     name=(d.get('full_name') or d.get('name') or '').strip()
     designation=(d.get('designation') or '').strip()
+    username=(d.get('username') or '').strip()
+    password=str(d.get('password') or '')
     if not code or not name or not designation: return fail('Employee code, name and designation are required.',422)
+    if not username or not password: return fail('Username and password are required for employee login.',422)
     if Employee.query.filter_by(employee_id=code).first(): return fail('Employee code already exists.',409)
+    if EmployeeCredential.query.filter_by(username=username).first(): return fail('Username already exists.',409)
     try: joining=datetime.strptime(str(d.get('joining_date')), '%Y-%m-%d').date()
     except Exception: return fail('joining_date must be YYYY-MM-DD.',422)
     try: salary=float(d.get('basic_salary') or 0)
     except (TypeError,ValueError): return fail('basic_salary must be numeric.',422)
+    from werkzeug.security import generate_password_hash
     e=Employee(employee_id=code, full_name=name, designation=designation, branch_id=bid,
                contact_number=d.get('contact_number') or d.get('phone'), email=d.get('email'),
                joining_date=joining, address=d.get('address'), basic_salary=salary,
                status=d.get('status') or 'Active')
-    db.session.add(e); db.session.commit(); return ok(employee_dict(e),'Employee created.',201)
+    db.session.add(e); db.session.flush()
+    credential=EmployeeCredential(employee_id=e.id, username=username, password_hash=generate_password_hash(password))
+    db.session.add(credential); db.session.commit()
+    return ok(employee_dict(e),'Employee created.',201)
 
 @api_bp.get('/employees/<int:employee_id>/')
 @api_token_required
 def employee_get(employee_id):
+    if g.api_identity.get('role') == 'Employee':
+        own_id = int(g.api_identity.get('employee_id') or g.api_identity.get('sub'))
+        if employee_id != own_id:
+            return fail('Employees can only access their own profile.', 403)
     e=Employee.query.get_or_404(employee_id)
     bid=request.args.get('branch_id',type=int)
     if bid and e.branch_id != bid: return fail('Employee does not belong to selected branch.',403)
@@ -848,6 +908,8 @@ def employee_get(employee_id):
 @api_bp.patch('/employees/<int:employee_id>/')
 @api_token_required
 def employee_update(employee_id):
+    if g.api_identity.get('role') != 'Admin':
+        return fail('Only administrators can update employees.', 403)
     e=Employee.query.get_or_404(employee_id); d=body()
     if d.get('branch_id') is not None and int(d['branch_id']) != e.branch_id: return fail('Employee branch cannot be changed.',403)
     if 'employee_id' in d or 'employee_code' in d:
@@ -865,11 +927,32 @@ def employee_update(employee_id):
     if 'basic_salary' in d:
         try:e.basic_salary=float(d['basic_salary'])
         except (TypeError,ValueError):return fail('basic_salary must be numeric.',422)
+    username = (d.get('username') or '').strip() if 'username' in d else None
+    password = str(d.get('password') or '') if 'password' in d else None
+    if username is not None or password is not None:
+        from werkzeug.security import generate_password_hash
+        credential = EmployeeCredential.query.filter_by(employee_id=e.id).first()
+        if username:
+            existing = EmployeeCredential.query.filter_by(username=username).first()
+            if existing and (credential is None or existing.id != credential.id):
+                return fail('Username already exists.',409)
+        if credential is None:
+            if not username or not password:
+                return fail('Username and password are required to create employee login.',422)
+            credential = EmployeeCredential(employee_id=e.id, username=username, password_hash=generate_password_hash(password))
+            db.session.add(credential)
+        else:
+            if username:
+                credential.username = username
+            if password:
+                credential.password_hash = generate_password_hash(password)
     db.session.commit(); return ok(employee_dict(e),'Employee updated.')
 
 @api_bp.delete('/employees/<int:employee_id>/')
 @api_token_required
 def employee_delete(employee_id):
+    if g.api_identity.get('role') != 'Admin':
+        return fail('Only administrators can delete employees.', 403)
     e=Employee.query.get_or_404(employee_id)
     linked=Expense.query.filter(Expense.employee_id==e.id).count()
     if linked:
@@ -879,6 +962,10 @@ def employee_delete(employee_id):
 @api_bp.get('/employees/<int:employee_id>/salary-history/')
 @api_token_required
 def employee_salary_history(employee_id):
+    if g.api_identity.get('role') == 'Employee':
+        own_id = int(g.api_identity.get('employee_id') or g.api_identity.get('sub'))
+        if employee_id != own_id:
+            return fail('Employees can only view their own salary history.', 403)
     e=Employee.query.get_or_404(employee_id)
     bid=request.args.get('branch_id',type=int)
     if bid and e.branch_id != bid: return fail('Employee does not belong to selected branch.',403)
