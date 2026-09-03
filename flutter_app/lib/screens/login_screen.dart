@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen>
   final pass = TextEditingController(text: '1234');
 
   bool obscure = true;
+  bool adminMode = true;
   bool userFocused = false;
   bool passFocused = false;
   late final AnimationController _animation;
@@ -39,7 +40,11 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _login(AuthProvider auth) async {
     FocusScope.of(context).unfocus();
-    await auth.login(user.text.trim(), pass.text);
+    await auth.login(
+      user.text.trim(),
+      pass.text,
+      adminMode: adminMode,
+    );
   }
 
   @override
@@ -153,8 +158,52 @@ class _LoginScreenState extends State<LoginScreen>
                   letterSpacing: 2.2,
                 ),
               ),
+              SizedBox(height: veryCompact ? 12 : compact ? 15 : 20),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2ECFB),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _loginTypeButton(
+                        label: 'Admin',
+                        icon: Icons.admin_panel_settings_rounded,
+                        selected: adminMode,
+                        onTap: () {
+                          if (!adminMode) {
+                            setState(() {
+                              adminMode = true;
+                              auth.error = null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: _loginTypeButton(
+                        label: 'User',
+                        icon: Icons.person_rounded,
+                        selected: !adminMode,
+                        onTap: () {
+                          if (adminMode) {
+                            setState(() {
+                              adminMode = false;
+                              auth.error = null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               SizedBox(height: veryCompact ? 15 : compact ? 20 : 28),
-              _label('Username'),
+              _label(adminMode ? 'Admin Username' : 'Username'),
               const SizedBox(height: 7),
               _input(
                 controller: user,
@@ -232,6 +281,41 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _loginTypeButton({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: selected ? const Color(0xFF7027D6) : Colors.transparent,
+      borderRadius: BorderRadius.circular(11),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(11),
+        onTap: onTap,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? Colors.white : const Color(0xFF6B6680),
+            ),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : const Color(0xFF6B6680),
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
       ),
     );

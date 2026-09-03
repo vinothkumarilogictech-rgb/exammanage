@@ -9,6 +9,7 @@ import '../services/dio_client.dart';
 import '../widgets/common.dart';
 import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final bool openAddOnStart;
@@ -554,7 +555,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       value: categoryId,
                       hint: const Text('Select Category'),
                       icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      items: _categories.map((c) {
+                      items: _categories.where((c) => context.read<AuthProvider>().role != 'Employee' || !['salary','salaries'].contains(c.name.trim().toLowerCase())).map((c) {
                         return DropdownMenuItem<int>(
                           value: c.id,
                           child: Text(c.name),
@@ -901,7 +902,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     child: DropdownButton<int?>(
                       isExpanded: true,
                       value: categoryId,
-                      items: _categories.map((c) {
+                      items: _categories.where((c) => context.read<AuthProvider>().role != 'Employee' || !['salary','salaries'].contains(c.name.trim().toLowerCase())).map((c) {
                         return DropdownMenuItem<int?>(
                           value: c.id,
                           child: Text(c.name),
@@ -1481,7 +1482,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       child: Row(
         children: [
           Expanded(child: _tabButton(label: 'Expenses', icon: Icons.receipt_long_rounded, index: 0)),
-          Expanded(child: _tabButton(label: 'Categories', icon: Icons.category_rounded, index: 1)),
+          if (context.read<AuthProvider>().role != 'Employee') Expanded(child: _tabButton(label: 'Categories', icon: Icons.category_rounded, index: 1)),
         ],
       ),
     );

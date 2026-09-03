@@ -173,6 +173,7 @@ class DioClient {
           if (status != null && status.isNotEmpty) 'status': status,
           if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
         });
+  Future<Response> employee(int id) => dio.get('${ApiConfig.employeesPath}$id/');
   Future<Response> createEmployee(Map<String, dynamic> data) => dio.post(ApiConfig.employeesPath, data: data);
   Future<Response> updateEmployee(int id, Map<String, dynamic> data) => dio.put('${ApiConfig.employeesPath}$id/', data: data);
   Future<Response> deleteEmployee(int id) => dio.delete('${ApiConfig.employeesPath}$id/');
