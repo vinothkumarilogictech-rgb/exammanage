@@ -11,6 +11,8 @@ import '../app_theme.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
+import '../providers/branch_context.dart';
+import 'package:provider/provider.dart';
 
 class AttendedCandidatesScreen extends StatefulWidget {
   final String? initialFilter;
@@ -37,20 +39,37 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
   String searchQuery = '';
 
   late Future<Map<String, dynamic>> future;
+  late final BranchContext _branchContext;
 
   @override
   void initState() {
     super.initState();
+    _branchContext = context.read<BranchContext>();
+    _branchContext.addListener(_onBranchChanged);
     filter = widget.initialFilter ?? 'Month';
     statusFilter = widget.initialStatus;
     future = load();
+  }
+
+  void _onBranchChanged() {
+    if (!mounted) return;
+    setState(() {
+      future = load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _branchContext.removeListener(_onBranchChanged);
+    super.dispose();
   }
 
   Future<Map<String, dynamic>> load() async {
     // Attendance History is based on the candidates that were registered
     // with an Exam Date. A candidate should appear here immediately after
     // being added, regardless of whether an ExamAttempt is completed.
-    final r = await api.candidates();
+    await _branchContext.ensureLoaded();
+    final r = await api.candidates(branchId: _branchContext.selectedBranchId);
     final candidates = (r.data['data'] as List? ?? [])
         .map((e) => Map<String, dynamic>.from(e))
         .toList();

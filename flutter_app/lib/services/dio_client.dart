@@ -126,12 +126,13 @@ class DioClient {
         },
       );
 
-  Future<Response> teams({String? q, int? examTypeId, String? status}) => dio.get(
+  Future<Response> teams({String? q, int? examTypeId, String? status, int? branchId}) => dio.get(
         ApiConfig.teamsPath,
         queryParameters: {
           if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
           if (examTypeId != null) 'exam_type_id': examTypeId,
           if (status != null && status.isNotEmpty) 'status': status,
+          if (branchId != null) 'branch_id': branchId,
         },
       );
   Future<Response> createTeam(Map<String, dynamic> data) => dio.post(ApiConfig.teamsPath, data: data);
@@ -204,9 +205,6 @@ class DioClient {
 
   Future<Response> updateCandidateStatus(int id, String status) =>
       dio.patch('${ApiConfig.candidatesPath}$id/', data: {'status': status});
-
-  Future<Response> deleteCandidate(int id) =>
-      dio.delete('${ApiConfig.candidatesPath}$id/');
 
   Future<Response> createSession(Map<String, dynamic> data) =>
       dio.post(ApiConfig.sessionsPath, data: data);

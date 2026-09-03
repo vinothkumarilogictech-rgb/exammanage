@@ -4,6 +4,8 @@ import '../app_theme.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
+import '../providers/branch_context.dart';
+import 'package:provider/provider.dart';
 import 'attended_candidates_screen.dart';
 import 'branches_screen.dart';
 import 'scheduled_candidates_screen.dart';
@@ -19,15 +21,33 @@ class DashboardScreenState extends State<DashboardScreen> {
   final api = DioClient();
 
   late Future<Map<String, dynamic>> future;
+  late final BranchContext _branchContext;
 
   @override
   void initState() {
     super.initState();
+    _branchContext = context.read<BranchContext>();
+    _branchContext.addListener(_onBranchChanged);
     future = load();
   }
 
+  void _onBranchChanged() {
+    if (!mounted) return;
+    setState(() {
+      future = load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _branchContext.removeListener(_onBranchChanged);
+    super.dispose();
+  }
+
   Future<Map<String, dynamic>> load() async {
-    final r = await api.dashboard();
+    await _branchContext.ensureLoaded();
+    final branchId = _branchContext.selectedBranchId;
+    final r = await api.dashboard(branchId: branchId);
 
     final data = Map<String, dynamic>.from(
       r.data['data'] ?? {},
@@ -41,7 +61,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
     List<Candidate> allCandidates = [];
     try {
-      final candRes = await api.candidates();
+      final candRes = await api.candidates(branchId: branchId);
       allCandidates = (candRes.data['data'] as List? ?? [])
           .map((e) => Candidate.fromMap(Map<String, dynamic>.from(e)))
           .toList();
@@ -91,30 +111,17 @@ class DashboardScreenState extends State<DashboardScreen> {
         .where((c) => (c.status ?? '').trim().toLowerCase() == 'rescheduled')
         .length;
 
-    // ==============================================================
-    // CURRENT MONTH EXPENSE
-    // ==============================================================
-    // Use the existing Expense API/model and total only this month's
-    // active expense records.  If the expense request fails, the
-    // dashboard continues to work and shows 0.00.
     double currentMonthExpense = 0;
     try {
-      final expenseRes = await api.expenses();
-      final expenses = (expenseRes.data['data'] as List? ?? const [])
-          .map((e) => Expense.fromMap(Map<String, dynamic>.from(e)))
-          .toList();
-
-      for (final expense in expenses) {
-        if (expense.status.trim().toLowerCase() == 'cancelled' ||
-            expense.status.trim().toLowerCase() == 'canceled') {
-          continue;
-        }
-
-        final expenseDate = DateTime.tryParse(expense.date.trim());
-        if (expenseDate != null &&
-            expenseDate.year == now.year &&
-            expenseDate.month == now.month) {
-          currentMonthExpense += expense.amount;
+      final expenseRes = await api.expenses(branchId: branchId, status: 'Active');
+      final expenses = expenseRes.data['data'] as List? ?? const [];
+      for (final raw in expenses) {
+        final e = Map<String, dynamic>.from(raw);
+        final amount = double.tryParse('${e['amount'] ?? 0}') ?? 0;
+        final dateRaw = '${e['date_incurred'] ?? ''}';
+        final d = DateTime.tryParse(dateRaw);
+        if (d != null && d.year == now.year && d.month == now.month) {
+          currentMonthExpense += amount;
         }
       }
     } catch (_) {}
@@ -153,6 +160,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       'currentMonthAbsent': currentMonthAbsent,
       'currentMonthRescheduled': currentMonthRescheduled,
       'currentMonthExpense': currentMonthExpense,
+      'selectedBranchId': branchId,
     };
   }
 
@@ -1351,6 +1359,55 @@ class DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildBranchSelector() {
+    final branchContext = context.watch<BranchContext>();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int?>(
+          isExpanded: true,
+          value: branchContext.selectedBranchId,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          hint: const Text('Select Branch'),
+          items: [
+...branchContext.branches.map(
+              (b) => DropdownMenuItem<int?>(
+                value: b.id,
+                child: Row(
+                  children: [
+                    const Icon(Icons.business_rounded, color: AppColors.primary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        b.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          onChanged: (id) => branchContext.selectBranch(id),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1407,7 +1464,7 @@ class DashboardScreenState extends State<DashboardScreen> {
           final currentMonthRescheduled =
               data['currentMonthRescheduled'] as int? ?? 0;
           final currentMonthExpense =
-              (data['currentMonthExpense'] as num?)?.toDouble() ?? 0;
+              (data['currentMonthExpense'] as num?)?.toDouble() ?? 0.0;
 
           /*
            * IMPORTANT:
@@ -1509,6 +1566,12 @@ class DashboardScreenState extends State<DashboardScreen> {
 
               children: [
 
+                // =================================================
+                // GLOBAL BRANCH SELECTOR
+                // =================================================
+                _buildBranchSelector(),
+
+                const SizedBox(height: 16),
 
                 // =================================================
                 // KPI CARDS
@@ -1661,19 +1724,16 @@ class DashboardScreenState extends State<DashboardScreen> {
                 // =================================================
                 // TOTAL EXPENSE PER MONTH
                 // =================================================
-
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: const Color(0xFFE9D5FF),
-                    ),
+                    border: Border.all(color: const Color(0xFFE9D5FF)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: Colors.black.withOpacity(.05),
                         blurRadius: 14,
                         offset: const Offset(0, 5),
                       ),
@@ -1682,8 +1742,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                   child: Row(
                     children: [
                       Container(
-                        width: 52,
-                        height: 52,
+                        width: 54,
+                        height: 54,
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3E8FF),
                           borderRadius: BorderRadius.circular(16),
@@ -1702,16 +1762,16 @@ class DashboardScreenState extends State<DashboardScreen> {
                             const Text(
                               'Total Expense Per Month',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF374151),
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Text(
                               '₹${currentMonthExpense.toStringAsFixed(2)}',
                               style: const TextStyle(
-                                fontSize: 28,
+                                fontSize: 27,
                                 fontWeight: FontWeight.w900,
                                 color: AppColors.primary,
                               ),

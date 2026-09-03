@@ -1,7 +1,9 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../app_theme.dart';
+import '../providers/branch_context.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
@@ -295,6 +297,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                           ),
                         );
 
+                        await context.read<BranchContext>().refreshBranches();
                         reload();
                       }
                     }
@@ -585,6 +588,7 @@ class BranchesScreenState extends State<BranchesScreen> {
           ),
         );
 
+        await context.read<BranchContext>().refreshBranches();
         reload();
       }
     } catch (e) {
@@ -765,7 +769,8 @@ class BranchesScreenState extends State<BranchesScreen> {
                                 ),
                               );
 
-                              reload();
+                              await context.read<BranchContext>().refreshBranches();
+        reload();
                             }
                           }
                         } catch (e) {
@@ -1203,7 +1208,8 @@ class BranchesScreenState extends State<BranchesScreen> {
                     return RefreshIndicator(
                       color: _purple,
                       onRefresh: () async {
-                        reload();
+                        await context.read<BranchContext>().refreshBranches();
+        reload();
                         await future;
                       },
                       child: ListView.builder(

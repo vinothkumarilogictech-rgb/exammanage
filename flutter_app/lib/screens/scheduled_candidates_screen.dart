@@ -3,6 +3,8 @@ import '../app_theme.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
+import '../providers/branch_context.dart';
+import 'package:provider/provider.dart';
 
 class ScheduledCandidatesScreen extends StatefulWidget {
   final String title;
@@ -26,15 +28,30 @@ class _ScheduledCandidatesScreenState extends State<ScheduledCandidatesScreen> {
   String searchQuery = '';
   String selectedBranch = 'All';
   String selectedStatus = 'All';
+  late final BranchContext _branchContext;
 
   @override
   void initState() {
     super.initState();
+    _branchContext = context.read<BranchContext>();
+    _branchContext.addListener(_onBranchChanged);
     future = load();
   }
 
+  void _onBranchChanged() {
+    if (!mounted) return;
+    reload();
+  }
+
+  @override
+  void dispose() {
+    _branchContext.removeListener(_onBranchChanged);
+    super.dispose();
+  }
+
   Future<List<Candidate>> load() async {
-    final res = await api.candidates();
+    await _branchContext.ensureLoaded();
+    final res = await api.candidates(branchId: _branchContext.selectedBranchId);
     final all = (res.data['data'] as List? ?? [])
         .map((e) => Candidate.fromMap(Map<String, dynamic>.from(e)))
         .toList();

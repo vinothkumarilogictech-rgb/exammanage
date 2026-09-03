@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/branch_context.dart';
 import 'screens/login_screen.dart';
 import 'screens/app_shell.dart';
 
@@ -11,7 +12,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final auth = AuthProvider();
   await auth.checkSession();
-  runApp(ChangeNotifierProvider.value(value: auth, child: const OfficeApp()));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: auth),
+        ChangeNotifierProvider(create: (_) => BranchContext()),
+      ],
+      child: const OfficeApp(),
+    ),
+  );
 }
 
 class OfficeApp extends StatelessWidget {

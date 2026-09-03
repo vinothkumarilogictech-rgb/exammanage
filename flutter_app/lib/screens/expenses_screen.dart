@@ -7,6 +7,8 @@ import '../app_theme.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
+import '../providers/branch_context.dart';
+import 'package:provider/provider.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final bool openAddOnStart;
@@ -65,10 +67,13 @@ class ExpensesScreenState extends State<ExpensesScreen> {
   ];
 
   bool _opened = false;
+  late final BranchContext _branchContext;
 
   @override
   void initState() {
     super.initState();
+    _branchContext = context.read<BranchContext>();
+    _branchContext.addListener(_onBranchChanged);
     _loadInitialData();
   }
 
@@ -81,8 +86,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     }
   }
 
+  void _onBranchChanged() {
+    if (!mounted) return;
+    _loadInitialData();
+  }
+
   @override
   void dispose() {
+    _branchContext.removeListener(_onBranchChanged);
     _searchCtrl.dispose();
     _newCategoryCtrl.dispose();
     super.dispose();
@@ -95,8 +106,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     });
 
     try {
+      await _branchContext.ensureLoaded();
+      final globalBranchId = _branchContext.selectedBranchId;
       final results = await Future.wait([
-        api.expenses(),
+        api.expenses(branchId: globalBranchId),
         api.branches(),
         api.expenseCategories(),
       ]);
@@ -129,6 +142,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
       _allExpenses = expensesList;
       _branches = branchesList;
+      _selectedBranchId = globalBranchId;
       _categories = categoriesList;
 
       _calculateStats(expensesList);
@@ -404,9 +418,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
   // --- Add Expense Modal ---
   Future<void> addExpense() async {
+    final globalBranchId = _branchContext.selectedBranchId;
+    if (globalBranchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a branch from Dashboard before adding an expense.')));
+      return;
+    }
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
-    int? branchId = _branches.isNotEmpty ? _branches.first.id : null;
+    int? branchId = globalBranchId;
     int? categoryId = _categories.isNotEmpty ? _categories.first.id : null;
     String paymentMode = 'Cash';
     DateTime selectedDate = DateTime.now();
@@ -542,41 +561,30 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Branch Dropdown
                 const Text(
                   'Branch',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF4B5563),
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563)),
                 ),
                 const SizedBox(height: 6),
                 Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF9FAFB),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFE5E7EB)),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int?>(
-                      isExpanded: true,
-                      value: branchId,
-                      hint: const Text('All / Select Branch'),
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      items: [
-                        const DropdownMenuItem<int?>(
-                          value: null,
-                          child: Text('- None / General -'),
-                        ),
-                        ..._branches.map((b) => DropdownMenuItem<int?>(value: b.id, child: Text(b.name))),
-                      ],
-                      onChanged: (val) {
-                        setSheetState(() => branchId = val);
-                      },
-                    ),
-                  ),
+                  child: Row(children: [
+                    const Icon(Icons.business_rounded, size: 20, color: Color(0xFF6B7280)),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(
+                      _branches.where((b) => b.id == globalBranchId).isNotEmpty
+                          ? _branches.firstWhere((b) => b.id == globalBranchId).name
+                          : 'Selected Branch',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    )),
+                    const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
+                  ]),
                 ),
                 const SizedBox(height: 14),
 
@@ -1479,65 +1487,8 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         _buildSearchAndPeriodBar(),
         const SizedBox(height: 20),
 
-        // 2. Total Expense Per Month
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFE9D5FF)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x10000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3E8FF),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: AppColors.primary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Total Expense Per Month',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF374151),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '₹${_thisMonthExpenses.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        // 2. Summary Metric Cards
+        _buildSummaryGrid(),
         const SizedBox(height: 20),
 
         // 3. Data Table / List
@@ -1614,7 +1565,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     required String hint,
     required IconData icon,
     required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?> onChanged,
+    required ValueChanged<T?>? onChanged,
   }) {
     return Container(
       height: 40,
@@ -1722,7 +1673,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                     ),
                   ],
-                  onChanged: (val) {
+                  onChanged: _branchContext.selectedBranchId != null
+                      ? null
+                      : (val) {
                     setState(() {
                       _selectedBranchId = val;
                       _applyLocalFilters();
