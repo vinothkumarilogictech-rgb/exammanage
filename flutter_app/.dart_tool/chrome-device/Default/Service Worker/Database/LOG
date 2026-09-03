@@ -1,3 +1,2 @@
-2026/09/03-08:15:52.461 50e8 Reusing MANIFEST C:\Users\vinot\AppData\Local\Temp\flutter_tools.4136cd9e\flutter_tools_chrome_device.59725f8d\Default\Service Worker\Database/MANIFEST-000001
-2026/09/03-08:15:52.463 50e8 Recovering log #3
-2026/09/03-08:15:52.463 50e8 Reusing old log C:\Users\vinot\AppData\Local\Temp\flutter_tools.4136cd9e\flutter_tools_chrome_device.59725f8d\Default\Service Worker\Database/000003.log 
+2026/09/03-13:29:25.775 6c58 Creating DB C:\Users\vinot\AppData\Local\Temp\flutter_tools.a53103a3\flutter_tools_chrome_device.781abb1\Default\Service Worker\Database since it was missing.
+2026/09/03-13:29:25.793 6c58 Reusing MANIFEST C:\Users\vinot\AppData\Local\Temp\flutter_tools.a53103a3\flutter_tools_chrome_device.781abb1\Default\Service Worker\Database/MANIFEST-000001

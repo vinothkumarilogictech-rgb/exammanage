@@ -7,6 +7,8 @@ import '../app_theme.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
+import '../providers/branch_context.dart';
+import 'package:provider/provider.dart';
 
 class ExamsScreen extends StatefulWidget {
   final int initialIndex;
@@ -23,6 +25,7 @@ class _ExamsScreenState extends State<ExamsScreen>
   late Future<List<Candidate>> candidates;
   late Future<List<ExamTeam>> teams;
   TabController? _tabController;
+  late final BranchContext _branchContext;
 
   TabController get tabController {
     return _tabController ??= TabController(length: 3, vsync: this, initialIndex: widget.initialIndex < 0 ? 0 : (widget.initialIndex > 2 ? 2 : widget.initialIndex))
@@ -34,6 +37,8 @@ class _ExamsScreenState extends State<ExamsScreen>
   @override
   void initState() {
     super.initState();
+    _branchContext = context.read<BranchContext>();
+    _branchContext.addListener(_onBranchChanged);
     _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialIndex < 0 ? 0 : (widget.initialIndex > 2 ? 2 : widget.initialIndex))
       ..addListener(() {
         if (mounted) setState(() {});
@@ -41,8 +46,14 @@ class _ExamsScreenState extends State<ExamsScreen>
     reload();
   }
 
+  void _onBranchChanged() {
+    if (!mounted) return;
+    reload();
+  }
+
   @override
   void dispose() {
+    _branchContext.removeListener(_onBranchChanged);
     _tabController?.dispose();
     super.dispose();
   }
@@ -80,14 +91,15 @@ class _ExamsScreenState extends State<ExamsScreen>
   }
 
   Future<List<ExamSession>> loadSessions() async {
-    final r = await api.sessions();
+    await _branchContext.ensureLoaded();
+    final r = await api.sessions(branchId: _branchContext.selectedBranchId);
     return (r.data['data'] as List? ?? const [])
         .map((x) => ExamSession.fromMap(Map<String, dynamic>.from(x)))
         .toList();
   }
 
   Future<List<ExamTeam>> loadTeams() async {
-    final r = await api.teams(status: 'Active');
+    final r = await api.teams(status: 'Active', branchId: _branchContext.selectedBranchId);
     return (r.data['data'] as List? ?? const [])
         .map((x) => ExamTeam.fromMap(Map<String, dynamic>.from(x)))
         .toList();
@@ -112,38 +124,9 @@ class _ExamsScreenState extends State<ExamsScreen>
     }
   }
 
-  Future<void> _deleteCandidate(Candidate candidate) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Candidate'),
-        content: Text('Are you sure you want to delete ${candidate.name}? This cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await api.deleteCandidate(candidate.id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Candidate deleted successfully'), backgroundColor: AppColors.green),
-      );
-      reload();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to delete candidate: $e')));
-    }
-  }
-
   Future<List<Candidate>> loadCandidates() async {
-    final r = await api.candidates();
+    await _branchContext.ensureLoaded();
+    final r = await api.candidates(branchId: _branchContext.selectedBranchId);
     return (r.data['data'] as List? ?? const [])
         .map((x) => Candidate.fromMap(Map<String, dynamic>.from(x)))
         .toList();
@@ -152,6 +135,26 @@ class _ExamsScreenState extends State<ExamsScreen>
   // ================================================================
   // HELPER WIDGETS FOR DIALOGS
   // ================================================================
+
+  Widget _fixedBranchField(int branchId, List<Map<String, dynamic>> branches) {
+    final match = branches.where((b) => b['id'] == branchId).toList();
+    final name = match.isNotEmpty ? '${match.first['branch_name'] ?? ''}' : 'Selected Branch';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(children: [
+        const Icon(Icons.business_rounded, size: 20, color: Color(0xFF6B7280)),
+        const SizedBox(width: 10),
+        Expanded(child: Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
+        const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
+      ]),
+    );
+  }
 
   Widget _label(String text) => Text(
         text,
@@ -223,6 +226,14 @@ class _ExamsScreenState extends State<ExamsScreen>
   // ================================================================
 
   Future<void> _showAddCandidateDialog() async {
+    final globalBranchId = _branchContext.selectedBranchId;
+    if (globalBranchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please select a branch from Dashboard before adding a candidate.'),
+      ));
+      return;
+    }
+
     if (_branchesList.isEmpty || _examTypesList.isEmpty) {
       await _loadLookups();
     }
@@ -232,7 +243,7 @@ class _ExamsScreenState extends State<ExamsScreen>
     List<Map<String, dynamic>> examTypesList = List.from(_examTypesList);
     List<ExamTeam> teamsList = [];
     try {
-      final tr = await api.teams(status: 'Active');
+      final tr = await api.teams(status: 'Active', branchId: globalBranchId);
       teamsList = (tr.data['data'] as List? ?? const [])
           .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
           .toList();
@@ -265,6 +276,9 @@ class _ExamsScreenState extends State<ExamsScreen>
       for (final b in branchesList)
         if (b['id'] != null) b['id']: b,
     }.values.toList();
+    if (globalBranchId != null) {
+      branchesList = branchesList.where((b) => b['id'] == globalBranchId).toList();
+    }
     examTypesList = {
       for (final e in examTypesList)
         if (e['id'] != null) e['id']: e,
@@ -273,7 +287,7 @@ class _ExamsScreenState extends State<ExamsScreen>
       for (final t in teamsList) t.id: t,
     }.values.toList();
 
-    int? selectedBranchId = branchesList.isNotEmpty ? branchesList.first['id'] as int? : null;
+    int? selectedBranchId = globalBranchId ?? (branchesList.isNotEmpty ? branchesList.first['id'] as int? : null);
     int? selectedExamTypeId = examTypesList.isNotEmpty ? examTypesList.first['id'] as int? : null;
     List<ExamTeam> teamsForSelectedExam() => teamsList
         .where((t) => t.examTypeId == null || selectedExamTypeId == null || t.examTypeId == selectedExamTypeId)
@@ -355,24 +369,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                 const SizedBox(height: 14),
                 _label('Branch'),
                 const SizedBox(height: 6),
-                _dropdown<int>(
-                  value: selectedBranchId,
-                  hint: 'Select branch',
-                  items: branchesList
-                      .map((b) => DropdownMenuItem<int>(
-                            value: b['id'],
-                            child: Row(
-                              children: [
-                                const Icon(Icons.business_rounded, size: 18, color: Color(0xFF6B7280)),
-                                const SizedBox(width: 8),
-                                Text('${b['branch_name'] ?? ''}'),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (val) =>
-                      setSheetState(() => selectedBranchId = val),
-                ),
+                _fixedBranchField(globalBranchId, branchesList),
                 const SizedBox(height: 14),
                 _label('Exam Type'),
                 const SizedBox(height: 6),
@@ -437,7 +434,6 @@ class _ExamsScreenState extends State<ExamsScreen>
                     DropdownMenuItem(value: 'Registered', child: Text('Registered')),
                     DropdownMenuItem(value: 'Absent', child: Text('Absent')),
                     DropdownMenuItem(value: 'Rescheduled', child: Text('Rescheduled')),
-                    DropdownMenuItem(value: 'Completed', child: Text('Completed')),
                   ],
                   onChanged: (val) {
                     if (val != null) setSheetState(() => selectedStatus = val);
@@ -538,6 +534,11 @@ class _ExamsScreenState extends State<ExamsScreen>
   // ================================================================
 
   Future<void> _showAddSessionDialog() async {
+    final globalBranchId = _branchContext.selectedBranchId;
+    if (globalBranchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a branch from Dashboard before adding an exam session.')));
+      return;
+    }
     if (_branchesList.isEmpty || _examTypesList.isEmpty) {
       await _loadLookups();
     }
@@ -565,7 +566,10 @@ class _ExamsScreenState extends State<ExamsScreen>
       } catch (_) {}
     }
 
-    int? selectedBranchId = branchesList.isNotEmpty ? branchesList.first['id'] : null;
+    if (globalBranchId != null) {
+      branchesList = branchesList.where((b) => b['id'] == globalBranchId).toList();
+    }
+    int? selectedBranchId = globalBranchId ?? (branchesList.isNotEmpty ? branchesList.first['id'] : null);
     int? selectedExamTypeId = examTypesList.isNotEmpty ? examTypesList.first['id'] : null;
     final dateCtrl = TextEditingController(
       text: DateTime.now().toIso8601String().split('T').first,
@@ -627,28 +631,10 @@ class _ExamsScreenState extends State<ExamsScreen>
                 ),
                 const SizedBox(height: 20),
 
-                // Branch
+                // Branch is controlled globally from Dashboard.
                 _label('Branch'),
                 const SizedBox(height: 6),
-                _dropdown<int>(
-                  value: selectedBranchId,
-                  hint: 'Select branch',
-                  items: branchesList
-                      .map((b) => DropdownMenuItem<int>(
-                            value: b['id'],
-                            child: Row(
-                              children: [
-                                const Icon(Icons.business_rounded, size: 18, color: Color(0xFF6B7280)),
-                                const SizedBox(width: 8),
-                                Text('${b['branch_name'] ?? ''}', overflow: TextOverflow.ellipsis),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (val) =>
-                      setSheetState(() => selectedBranchId = val),
-                ),
-
+                _fixedBranchField(globalBranchId, branchesList),
                 const SizedBox(height: 14),
 
                 // Exam Type
@@ -970,6 +956,11 @@ class _ExamsScreenState extends State<ExamsScreen>
   }
 
   Future<void> _showAddTeamDialog() async {
+    final globalBranchId = _branchContext.selectedBranchId;
+    if (globalBranchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a branch from Dashboard before adding a team.')));
+      return;
+    }
     if (_examTypesList.isEmpty) await _loadLookups();
     final nameCtrl = TextEditingController();
     final locationCtrl = TextEditingController();
@@ -997,7 +988,7 @@ class _ExamsScreenState extends State<ExamsScreen>
             onPressed: () async {
               if (nameCtrl.text.trim().isEmpty) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Team name is required'))); return; }
               try {
-                await api.createTeam({'name': nameCtrl.text.trim(), 'location': locationCtrl.text.trim(), 'phone': phoneCtrl.text.trim(), 'exam_type_id': selectedExamTypeId, 'status': 'Active'});
+                await api.createTeam({'name': nameCtrl.text.trim(), 'location': locationCtrl.text.trim(), 'phone': phoneCtrl.text.trim(), 'branch_id': globalBranchId, 'exam_type_id': selectedExamTypeId, 'status': 'Active'});
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team added successfully!'), backgroundColor: AppColors.green)); reload(); }
               } catch (e) { if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'))); }
@@ -1006,70 +997,6 @@ class _ExamsScreenState extends State<ExamsScreen>
         ])),
       )),
     );
-  }
-
-  Future<void> _showTeamDetails(ExamTeam team) async {
-    try {
-      final report = await _loadTeamReport(team);
-      if (!mounted || report == null) return;
-      final candidates = (report['candidates'] as List? ?? const [])
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      await showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (ctx) => Container(
-          height: MediaQuery.of(ctx).size.height * .78,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
-              const SizedBox(height: 16),
-              Text(team.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 5),
-              Text('${candidates.length} candidates', style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
-              const SizedBox(height: 14),
-              Expanded(
-                child: candidates.isEmpty
-                    ? const Center(child: Text('No candidates assigned to this team.'))
-                    : ListView.separated(
-                        itemCount: candidates.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) {
-                          final c = candidates[i];
-                          return Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))),
-                            child: Row(
-                              children: [
-                                CircleAvatar(radius: 20, backgroundColor: const Color(0xFFEDE9FE), child: Text('${c['name'] ?? '?'}'.isNotEmpty ? '${c['name'] ?? '?'}'[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900))),
-                                const SizedBox(width: 10),
-                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text('${c['name'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                                  const SizedBox(height: 3),
-                                  Text('Register: ${c['register_number'] ?? '-'}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
-                                  Text('Branch: ${c['branch_name'] ?? '-'}  •  Date: ${c['exam_date'] ?? '-'}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
-                                ])),
-                                Text('${c['status'] ?? 'Registered'}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary)),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to load team candidates: $e')));
-    }
   }
 
   Future<Map<String, dynamic>?> _loadTeamReport(ExamTeam team) async {
@@ -1279,7 +1206,6 @@ class _ExamsScreenState extends State<ExamsScreen>
                     _CandidateCard(
                       candidate: rows[i],
                       onStatusChanged: _updateCandidateStatus,
-                      onDelete: _deleteCandidate,
                     ),
               );
             },
@@ -1325,7 +1251,6 @@ class _ExamsScreenState extends State<ExamsScreen>
                           itemBuilder: (c, i) => _TeamCard(
                             team: rows[i],
                             onReport: () => _showTeamReportActions(rows[i]),
-                            onTap: () => _showTeamDetails(rows[i]),
                             onDelete: () async {
                               try { await api.deleteTeam(rows[i].id); reload(); }
                               catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
@@ -1361,24 +1286,16 @@ class _ExamsScreenState extends State<ExamsScreen>
 class _TeamCard extends StatelessWidget {
   final ExamTeam team;
   final VoidCallback onReport;
-  final VoidCallback onTap;
   final VoidCallback onDelete;
-  const _TeamCard({required this.team, required this.onReport, required this.onTap, required this.onDelete});
+  const _TeamCard({required this.team, required this.onReport, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(margin:const EdgeInsets.only(bottom:12),padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(20),border: Border.all(color: const Color(0xFFE5E7EB)),boxShadow:const[BoxShadow(color:Color(0x0D000000),blurRadius:14,offset:Offset(0,5))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    return Container(margin:const EdgeInsets.only(bottom:12),padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(20),border: Border.all(color: const Color(0xFFE5E7EB)),boxShadow:const[BoxShadow(color:Color(0x0D000000),blurRadius:14,offset:Offset(0,5))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[Container(width:48,height:48,decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFEDE9FE),Color(0xFFF5F3FF)]),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.groups_rounded,color:AppColors.primary,size:25)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(team.name,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(team.examTypeName.isEmpty?'Any exam':team.examTypeName,style:const TextStyle(fontSize:12.5,color:Color(0xFF6B7280),fontWeight:FontWeight.w600))])),PopupMenuButton<String>(onSelected:(v){if(v=='report')onReport();else if(v=='delete')onDelete();},itemBuilder:(ctx)=>const[PopupMenuItem(value:'report',child:Text('Team Report')),PopupMenuItem(value:'delete',child:Text('Delete'))])]),
       const SizedBox(height:14),Wrap(spacing:8,runSpacing:8,children:[_teamMeta(Icons.location_on_outlined,team.location.isEmpty?'Location not set':team.location),_teamMeta(Icons.phone_outlined,team.phone.isEmpty?'Phone not set':team.phone),_teamMeta(Icons.people_alt_outlined,'${team.candidateCount} candidates')]),
       const SizedBox(height:14),SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:onReport,icon:const Icon(Icons.download_rounded,size:18),label:const Text('Team Report — PDF / Excel'),style:OutlinedButton.styleFrom(foregroundColor:AppColors.primary,side:const BorderSide(color:Color(0xFFD8B4FE)),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)))))
-    ])),
-      ),
-    );
+    ]));
   }
   Widget _teamMeta(IconData icon,String text)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),decoration:BoxDecoration(color:const Color(0xFFF8FAFC),borderRadius:BorderRadius.circular(10)),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(icon,size:14,color:const Color(0xFF64748B)),const SizedBox(width:5),ConstrainedBox(constraints:const BoxConstraints(maxWidth:210),child:Text(text,style:const TextStyle(fontSize:11.5,color:Color(0xFF475569)),overflow:TextOverflow.ellipsis))]));
 }
@@ -1481,12 +1398,10 @@ class _ExamTypeCard extends StatelessWidget {
 class _CandidateCard extends StatelessWidget {
   final Candidate candidate;
   final Future<void> Function(int candidateId, String status) onStatusChanged;
-  final Future<void> Function(Candidate candidate) onDelete;
 
   const _CandidateCard({
     required this.candidate,
     required this.onStatusChanged,
-    required this.onDelete,
   });
 
   Color _statusColor(String s) {
@@ -1578,21 +1493,6 @@ class _CandidateCard extends StatelessWidget {
                 title: const Text('Rescheduled', style: TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: const Text('Candidate exam was moved to another date'),
                 onTap: () => Navigator.pop(ctx, 'Rescheduled'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDCFCE7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.check_circle_rounded, color: Color(0xFF059669)),
-                ),
-                title: const Text('Completed', style: TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: const Text('Candidate completed the exam'),
-                onTap: () => Navigator.pop(ctx, 'Completed'),
               ),
             ],
           ),
@@ -1707,14 +1607,6 @@ class _CandidateCard extends StatelessWidget {
               status,
               style: TextStyle(color: _statusColor(status), fontSize: 10.5, fontWeight: FontWeight.w800),
             ),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            tooltip: 'Delete candidate',
-            onPressed: () => onDelete(candidate),
-            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red, size: 21),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
         ],
       ),

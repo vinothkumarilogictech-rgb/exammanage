@@ -6,6 +6,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../app_theme.dart';
 import '../services/dio_client.dart';
+import '../providers/branch_context.dart';
+import 'package:provider/provider.dart';
 
 class VouchersScreen extends StatefulWidget {
   const VouchersScreen({super.key});
@@ -25,27 +27,38 @@ class _VouchersScreenState extends State<VouchersScreen>
   List<Map<String, dynamic>> history = [];
   List<Map<String, dynamic>> _filteredHistory = [];
   DateTime? _selectedHistoryDate;
+  late final BranchContext _branchContext;
 
   @override
   void initState() {
     super.initState();
+    _branchContext = context.read<BranchContext>();
+    _branchContext.addListener(_onBranchChanged);
     _tabs = TabController(length: 3, vsync: this);
+    load();
+  }
+
+  void _onBranchChanged() {
+    if (!mounted) return;
     load();
   }
 
   @override
   void dispose() {
+    _branchContext.removeListener(_onBranchChanged);
     _tabs.dispose();
     super.dispose();
   }
 
   Future<void> load() async {
+    await _branchContext.ensureLoaded();
+    final branchId = _branchContext.selectedBranchId;
     if (mounted) setState(() => loading = true);
     try {
       final results = await Future.wait([
-        api.voucherDashboard(),
-        api.vouchers(),
-        api.voucherHistory(),
+        api.voucherDashboard(branchId: branchId),
+        api.vouchers(branchId: branchId),
+        api.voucherHistory(branchId: branchId),
       ]);
       stats = Map<String, dynamic>.from(results[0].data['data'] ?? {});
       vouchers = (results[1].data['data'] as List? ?? [])
@@ -945,6 +958,11 @@ class _VouchersScreenState extends State<VouchersScreen>
   // ================================================================
 
   Future<void> _showPurchase() async {
+    final globalBranchId = _branchContext.selectedBranchId;
+    if (globalBranchId == null) {
+      _toast('Please select a branch from Dashboard before purchasing vouchers.', error: true);
+      return;
+    }
     final q = TextEditingController();
     final c = TextEditingController();
     final s = TextEditingController();
@@ -980,6 +998,7 @@ class _VouchersScreenState extends State<VouchersScreen>
               try {
                 await api.purchaseVouchers({
                   'quantity': qty,
+                  'branch_id': globalBranchId,
                   'cost_per_voucher': cost,
                   'selling_price': sell,
                   'supplier': supplier.text.trim(),
