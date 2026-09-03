@@ -27,9 +27,9 @@ class BranchesScreenState extends State<BranchesScreen> {
   late Future<List<Branch>> future;
   bool opened = false;
 
-  static const Color _purple = Color(0xFF6D28D9);
-  static const Color _purpleDark = Color(0xFF4C1D95);
-  static const Color _purpleSoft = Color(0xFFF3EEFF);
+  static const Color _purple = Color(0xFFFF7A18);
+  static const Color _purpleDark = Color(0xFF9A3412);
+  static const Color _purpleSoft = Color(0xFFFFF1E6);
   static const Color _pageBg = Color(0xFFF7F5FC);
 
   @override
@@ -1048,8 +1048,19 @@ class BranchesScreenState extends State<BranchesScreen> {
         scrolledUnderElevation: 0,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: AppColors.primaryLight,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFF9F43)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [BoxShadow(color: Color(0x55FF7A18), blurRadius: 24, offset: Offset(0, 8))],
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         title: const Text(
           'Branch Management',
           style: AppBarStyle.titleStyle,
@@ -1884,8 +1895,8 @@ class BranchesScreenState extends State<BranchesScreen> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             colors: [
-              Color(0xFF7C3AED),
-              Color(0xFF5B21B6),
+              Color(0xFFFF7A18),
+              Color(0xFFE85D04),
             ],
           ),
           borderRadius: BorderRadius.circular(16),

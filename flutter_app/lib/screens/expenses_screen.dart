@@ -479,7 +479,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       height: 42,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                          colors: [Color(0xFFFF7A18), Color(0xFFE85D04)],
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -720,7 +720,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   height: 52,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF7C3AED),
+                      backgroundColor: const Color(0xFFFF7A18),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -853,7 +853,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                       child: const Icon(
                         Icons.edit_note_rounded,
-                        color: Color(0xFF4338CA),
+                        color: Color(0xFFE85D04),
                         size: 24,
                       ),
                     ),
@@ -1084,7 +1084,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   height: 52,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF4338CA),
+                      backgroundColor: const Color(0xFFE85D04),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -1193,7 +1193,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                       child: const Icon(
                         Icons.receipt_long_rounded,
-                        color: Color(0xFF5B21B6),
+                        color: Color(0xFFE85D04),
                         size: 22,
                       ),
                     ),
@@ -1271,7 +1271,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 Expanded(
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF7C3AED),
+                      backgroundColor: const Color(0xFFFF7A18),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
@@ -1379,7 +1379,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 ];
               }).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF5B2A86)),
+              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFE85D04)),
               cellAlignment: pw.Alignment.centerLeft,
               rowDecoration: const pw.BoxDecoration(
                 border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
@@ -1423,14 +1423,25 @@ class ExpensesScreenState extends State<ExpensesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFFFFBF7),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: AppColors.primaryLight,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFF9F43)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [BoxShadow(color: Color(0x55FF7A18), blurRadius: 24, offset: Offset(0, 8))],
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         title: const Text(
           'Expense Management',
           style: AppBarStyle.titleStyle,
@@ -1448,7 +1459,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
           : _errorMessage != null
               ? ErrorView(message: _errorMessage!, onRetry: reload)
               : RefreshIndicator(
-                  color: const Color(0xFF7C3AED),
+                  color: const Color(0xFFFF7A18),
                   onRefresh: reload,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -1553,23 +1564,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
   // Summary Metrics Grid / Row
   Widget _buildSummaryGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: [
-        _metricCard('Total Expenses', _totalExpenses, Icons.account_balance_wallet_rounded,
-            const Color(0xFFEDE9FE), AppColors.primary),
-        _metricCard('This Month', _thisMonthExpenses, Icons.calendar_month_rounded,
-            const Color(0xFFDBEAFE), AppColors.blue),
-        _metricCard('This Quarter', _thisQuarterExpenses, Icons.donut_large_rounded,
-            const Color(0xFFDCFCE7), AppColors.green),
-        _metricCard('This Year', _thisYearExpenses, Icons.trending_up_rounded,
-            const Color(0xFFFCE7F3), const Color(0xFFDB2777)),
-      ],
+    return SizedBox(
+      height: 110,
+      width: double.infinity,
+      child: _metricCard('Total Expenses', _totalExpenses, Icons.account_balance_wallet_rounded,
+          const Color(0xFFEDE9FE), AppColors.primary),
     );
   }
 
@@ -1791,7 +1790,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           Icon(
                             Icons.calendar_month_rounded,
                             size: 18,
-                            color: _selectedExpenseDate != null ? const Color(0xFF5B21B6) : const Color(0xFF64748B),
+                            color: _selectedExpenseDate != null ? const Color(0xFFE85D04) : const Color(0xFF64748B),
                           ),
                           if (_selectedExpenseDate != null) ...[
                             const SizedBox(width: 5),
@@ -1799,7 +1798,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                               '${_selectedExpenseDate!.day.toString().padLeft(2, '0')} ${_monthShortName(_selectedExpenseDate!.month)}',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF5B21B6),
+                                color: Color(0xFFE85D04),
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -1835,10 +1834,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF5B2A86) : const Color(0xFFF8FAFC),
+                        color: isSelected ? const Color(0xFFE85D04) : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF5B2A86) : const Color(0xFFE2E8F0),
+                          color: isSelected ? const Color(0xFFE85D04) : const Color(0xFFE2E8F0),
                         ),
                       ),
                       child: FittedBox(
@@ -1882,12 +1881,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.picture_as_pdf_rounded, size: 14, color: Color(0xFF5B21B6)),
+                        Icon(Icons.picture_as_pdf_rounded, size: 14, color: Color(0xFFE85D04)),
                         SizedBox(width: 5),
                         Text(
                           'Export PDF',
                           style: TextStyle(
-                            color: Color(0xFF5B21B6),
+                            color: Color(0xFFE85D04),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -1914,12 +1913,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.table_chart_rounded, size: 14, color: Color(0xFF5B21B6)),
+                        Icon(Icons.table_chart_rounded, size: 14, color: Color(0xFFE85D04)),
                         SizedBox(width: 5),
                         Text(
                           'Export Excel',
                           style: TextStyle(
-                            color: Color(0xFF5B21B6),
+                            color: Color(0xFFE85D04),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -1943,12 +1942,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 11),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                  colors: [Color(0xFFFF7A18), Color(0xFFE85D04)],
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                    color: const Color(0xFFFF7A18).withValues(alpha: 0.3),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -2385,7 +2384,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     ),
                     child: Text(
                       cat.status == 'Active' ? 'Deactivate' : 'Activate',
-                      style: const TextStyle(color: Color(0xFF4338CA), fontWeight: FontWeight.w700, fontSize: 11.5),
+                      style: const TextStyle(color: Color(0xFFE85D04), fontWeight: FontWeight.w700, fontSize: 11.5),
                     ),
                   ),
                 ],
