@@ -1245,7 +1245,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // MODAL: TOMORROW'S CANDIDATES (section heading tap)
+  // MODAL: TOMORROW'S EXAM (section heading tap)
   // ─────────────────────────────────────────────────────────────────────────
   void _showTomorrowCandidatesModal(List<TomorrowBranchCandidates> tomorrow, DashboardStats stats) {
     showModalBottomSheet(
@@ -1265,7 +1265,7 @@ class DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.groups_rounded,
               iconColor: const Color(0xFFE11D48),
               iconBg: const Color(0xFFFFE4E6),
-              title: "Tomorrow's Candidates",
+              title: "Tomorrow's Exam",
               subtitle: prettyDate(stats.tomorrow),
             ),
             const Divider(height: 1),
@@ -1356,7 +1356,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text("Total Tomorrow's Candidates", style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFE85D04))),
+                              const Text("Total Tomorrow's Exam", style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFE85D04))),
                               Text('${stats.tomorrowCandidates}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Color(0xFFE85D04))),
                             ],
                           ),
@@ -1456,7 +1456,7 @@ class DashboardScreenState extends State<DashboardScreen> {
         ),
 
         title: const Text(
-          'Exam Dashboard',
+          'Dashboard',
           style: AppBarStyle.titleStyle,
         ),
 
@@ -1654,11 +1654,11 @@ class DashboardScreenState extends State<DashboardScreen> {
                     ),
 
                     // ---------------------------------------------
-                    // TODAY'S CANDIDATES
+                    // TODAY'S EXAM
                     // ---------------------------------------------
 
                     _KpiCard(
-                      title: "Today's Candidates",
+                      title: "Today's Exam",
                       value: '${stats.todayCandidates}',
                       icon: Icons.groups_rounded,
                       tint: const Color(0xFFDCFCE7),
@@ -1668,7 +1668,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => ScheduledCandidatesScreen(
-                              title: "Today's Candidates",
+                              title: "Today's Exam",
                               date: stats.today,
                               isToday: true,
                             ),
@@ -1678,11 +1678,11 @@ class DashboardScreenState extends State<DashboardScreen> {
                     ),
 
                     // ---------------------------------------------
-                    // TOMORROW'S CANDIDATES
+                    // TOMORROW'S EXAM
                     // ---------------------------------------------
 
                     _KpiCard(
-                      title: "Tomorrow's Candidates",
+                      title: "Tomorrow's Exam",
                       value: '${stats.tomorrowCandidates}',
                       icon: Icons.event_available_rounded,
                       tint: const Color(0xFFFFE4E6),
@@ -1692,7 +1692,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => ScheduledCandidatesScreen(
-                              title: "Tomorrow's Candidates",
+                              title: "Tomorrow's Exam",
                               date: stats.tomorrow,
                               isToday: false,
                             ),
@@ -1877,11 +1877,11 @@ class DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
 
                 // =================================================
-                // TODAY'S CANDIDATES
+                // TODAY'S EXAM
                 // =================================================
 
                 _SectionCard(
-                  title: "Today's Candidates",
+                  title: "Today's Exam",
                   icon: Icons.groups_rounded,
                   action: 'View All',
                   onTap: () {
@@ -1889,7 +1889,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => ScheduledCandidatesScreen(
-                          title: "Today's Candidates",
+                          title: "Today's Exam",
                           date: stats.today,
                           isToday: true,
                         ),
@@ -1908,11 +1908,11 @@ class DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
 
                 // =================================================
-                // TOMORROW'S CANDIDATES
+                // TOMORROW'S EXAM
                 // =================================================
 
                 _SectionCard(
-                  title: "Tomorrow's Candidates",
+                  title: "Tomorrow's Exam",
                   icon: Icons.event_available_rounded,
                   action: 'View All',
                   onTap: () {
@@ -1920,7 +1920,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => ScheduledCandidatesScreen(
-                          title: "Tomorrow's Candidates",
+                          title: "Tomorrow's Exam",
                           date: stats.tomorrow,
                           isToday: false,
                         ),
@@ -1961,7 +1961,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
-                                    "Total Tomorrow's Candidates",
+                                    "Total Tomorrow's Exam",
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       color: Color(0xFFE85D04),
@@ -2837,7 +2837,7 @@ class _ExamRow extends StatelessWidget {
 }
 
 // ================================================================
-// TOMORROW'S CANDIDATES ROW
+// TOMORROW'S EXAM ROW
 // ================================================================
 
 class _TomorrowRow extends StatelessWidget {

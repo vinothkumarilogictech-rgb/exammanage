@@ -202,7 +202,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                   const SizedBox(width: 13),
                   const Expanded(
                     child: Text(
-                      'Add New Branch',
+                      'Add',
                       style: TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.w900,
@@ -264,7 +264,7 @@ class BranchesScreenState extends State<BranchesScreen> {
               const SizedBox(height: 25),
 
               _gradientButton(
-                label: 'Save Branch',
+                label: 'Save',
                 icon: Icons.add_business_rounded,
                 onPressed: () async {
                   if (name.text.trim().isEmpty) {
@@ -1062,7 +1062,7 @@ class BranchesScreenState extends State<BranchesScreen> {
           ),
         ),
         title: const Text(
-          'Branch Management',
+          'Branch',
           style: AppBarStyle.titleStyle,
         ),
         actions: [

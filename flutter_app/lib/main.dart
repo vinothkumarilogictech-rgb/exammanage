@@ -203,6 +203,9 @@ class RootScreen extends StatelessWidget {
   }
 }
 
+/// Brand mark: the same swoosh "i" used on the login screen (angled flag
+/// top, curved stem, hook tail, offset dot), drawn with CustomPaint and
+/// filled white on top of the orange gradient disc.
 class _BrandMark extends StatelessWidget {
   final double size;
 
@@ -232,42 +235,55 @@ class _BrandMark extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Text(
-            'i',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 78,
-              height: .9,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Positioned(
-            top: size * .20,
-            right: size * .20,
-            child: Row(
-              children: [
-                _dot(size * .075),
-                SizedBox(width: size * .035),
-                _dot(size * .055),
-              ],
-            ),
-          ),
-        ],
+      padding: EdgeInsets.all(size * .17),
+      child: CustomPaint(
+        size: Size(size, size),
+        painter: _SwooshIPainter(),
       ),
     );
   }
+}
 
-  Widget _dot(double value) => Container(
-        width: value,
-        height: value,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white,
-        ),
-      );
+/// Hand-traced swoosh "i" path (angled flag top, curved stem, hook tail,
+/// offset dot) - same shape used on the login screen's logo badge.
+class _SwooshIPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const boxW = 44.0;
+    const boxH = 92.0;
+    final scale = (size.width / boxW) < (size.height / boxH)
+        ? size.width / boxW
+        : size.height / boxH;
+    final dx = (size.width - boxW * scale) / 2;
+    final dy = (size.height - boxH * scale) / 2;
+
+    canvas.save();
+    canvas.translate(dx, dy);
+    canvas.scale(scale);
+
+    final paint = Paint()..color = Colors.white;
+
+    // Dot of the "i"
+    canvas.drawCircle(const Offset(25, 10), 8, paint);
+
+    // Stem + curled hook tail, traced as one continuous outline
+    final path = Path()
+      ..moveTo(28, 24)
+      ..lineTo(13, 32)
+      ..cubicTo(9, 40, 7, 55, 7, 68)
+      ..cubicTo(7, 81, 12, 91, 23, 91)
+      ..cubicTo(33, 91, 41, 85, 38, 75)
+      ..cubicTo(36, 81, 29, 84, 22, 80)
+      ..cubicTo(29, 78, 32, 68, 32, 55)
+      ..cubicTo(32, 44, 30, 32, 28, 24)
+      ..close();
+
+    canvas.drawPath(path, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _SplashBackground extends StatelessWidget {
