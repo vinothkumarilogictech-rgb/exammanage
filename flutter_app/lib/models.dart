@@ -127,9 +127,36 @@ class ExamTeam {
 }
 
 class Candidate {
-  final int id; final String name,email,phone,registerNumber,status,branch,examType,date,teamName;
-  Candidate({required this.id,required this.name,required this.email,required this.phone,required this.registerNumber,required this.status,required this.branch,required this.examType,required this.date,required this.teamName});
-  factory Candidate.fromMap(Map<String,dynamic> m)=>Candidate(id:m['id']??0,name:'${m['name']??''}',email:'${m['email']??''}',phone:'${m['phone']??''}',registerNumber:'${m['register_number']??''}',status:'${m['status']??''}',branch:'${m['branch_name']??''}',examType:'${m['exam_type_name']??''}',date:'${m['exam_date']??''}',teamName:'${m['team_name']??''}');
+  final int id;
+  final String name, email, phone, registerNumber, status, branch, examType, date, teamName, remarks;
+
+  Candidate({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.phone,
+    required this.registerNumber,
+    required this.status,
+    required this.branch,
+    required this.examType,
+    required this.date,
+    required this.teamName,
+    required this.remarks,
+  });
+
+  factory Candidate.fromMap(Map<String, dynamic> m) => Candidate(
+    id: int.tryParse('${m['id'] ?? 0}') ?? 0,
+    name: '${m['name'] ?? ''}',
+    email: '${m['email'] ?? ''}',
+    phone: '${m['phone'] ?? ''}',
+    registerNumber: '${m['register_number'] ?? ''}',
+    status: '${m['status'] ?? ''}',
+    branch: '${m['branch_name'] ?? ''}',
+    examType: '${m['exam_type_name'] ?? ''}',
+    date: '${m['exam_date'] ?? ''}',
+    teamName: '${m['team_name'] ?? ''}',
+    remarks: '${m['remarks'] ?? m['reason_note'] ?? ''}',
+  );
 }
 
 class Expense {
