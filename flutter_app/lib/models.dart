@@ -1,8 +1,9 @@
 class DashboardStats {
-  final int totalBranches, todayExams, todayCandidates, tomorrowCandidates, totalAttendedCandidates;
+  final int totalBranches, totalExams, todayExams, todayCandidates, tomorrowCandidates, totalAttendedCandidates;
   final String today, tomorrow;
   DashboardStats({
     required this.totalBranches,
+    required this.totalExams,
     required this.todayExams,
     required this.todayCandidates,
     required this.tomorrowCandidates,
@@ -12,6 +13,7 @@ class DashboardStats {
   });
   factory DashboardStats.fromMap(Map<String, dynamic> m) => DashboardStats(
     totalBranches: int.tryParse('${m['total_branches'] ?? 0}') ?? 0,
+    totalExams: int.tryParse('${m['total_exams'] ?? 0}') ?? 0,
     todayExams: int.tryParse('${m['today_exams'] ?? 0}') ?? 0,
     todayCandidates: int.tryParse('${m['today_candidates'] ?? 0}') ?? 0,
     tomorrowCandidates: int.tryParse('${m['tomorrow_candidates'] ?? 0}') ?? 0,
