@@ -221,6 +221,92 @@ class _ExamsScreenState extends State<ExamsScreen>
         ),
       );
 
+  Widget _formSectionCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFEFEFEF)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, size: 14, color: color),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF6B7280),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...children,
+          ],
+        ),
+      );
+
+  Widget _statusChip({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool selected,
+    required VoidCallback onTap,
+  }) =>
+      Expanded(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: selected ? color.withOpacity(0.12) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? color : const Color(0xFFE5E7EB),
+                width: selected ? 1.4 : 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(icon, size: 18, color: selected ? color : const Color(0xFF9CA3AF)),
+                const SizedBox(height: 5),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? color : const Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
   // ================================================================
   // ADD CANDIDATE DIALOG
   // ================================================================
@@ -339,150 +425,214 @@ class _ExamsScreenState extends State<ExamsScreen>
                 Row(
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
+                      width: 46,
+                      height: 46,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF059669), Color(0xFF047857)],
+                          colors: [Color(0xFF10B981), Color(0xFF047857)],
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x33059669), blurRadius: 14, offset: Offset(0, 6)),
+                        ],
                       ),
                       child: const Icon(Icons.person_add_rounded,
-                          color: Colors.white, size: 22),
+                          color: Colors.white, size: 23),
                     ),
                     const SizedBox(width: 12),
-                    const Text('Add Candidate',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w900)),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                _label('Full Name *'),
-                const SizedBox(height: 6),
-                _field(nameCtrl, 'Enter candidate name',
-                    icon: Icons.person_outline_rounded),
-                const SizedBox(height: 14),
-                _label('Register Number'),
-                const SizedBox(height: 6),
-                _field(regNumCtrl, 'Register number',
-                    icon: Icons.badge_outlined),
-                const SizedBox(height: 14),
-                _label('Branch'),
-                const SizedBox(height: 6),
-                _fixedBranchField(globalBranchId, branchesList),
-                const SizedBox(height: 14),
-                _label('Exam Type'),
-                const SizedBox(height: 6),
-                _dropdown<int>(
-                  value: selectedExamTypeId,
-                  hint: 'Select exam type',
-                  items: examTypesList
-                      .map((e) => DropdownMenuItem<int>(
-                            value: e['id'],
-                            child: Row(
-                              children: [
-                                const Icon(Icons.school_rounded, size: 18, color: Color(0xFF6B7280)),
-                                const SizedBox(width: 8),
-                                Text('${e['name'] ?? ''}'),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (val) {
-                    setSheetState(() {
-                      selectedExamTypeId = val;
-                      // Do not auto-assign a team when the exam changes.
-                      selectedTeamId = null;
-                    });
-                  },
-                ),
-                const SizedBox(height: 14),
-                _label('Team'),
-                const SizedBox(height: 6),
-                _dropdown<int>(
-                  // -1 is a UI-only sentinel for the optional "Not Assigned" choice.
-                  // It lets the dropdown have a visible item while the API receives null.
-                  value: selectedTeamId ?? -1,
-                  hint: 'Select team (optional)',
-                  items: [
-                    const DropdownMenuItem<int>(
-                      value: -1,
-                      child: Row(children: [
-                        Icon(Icons.person_outline_rounded, size: 18, color: Color(0xFF6B7280)),
-                        SizedBox(width: 8),
-                        Expanded(child: Text('Not Assigned')),
-                      ]),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Add',
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+                          SizedBox(height: 2),
+                          Text('Register a new exam candidate',
+                              style: TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                     ),
-                    ...teamsForSelectedExam().map((t) => DropdownMenuItem<int>(
-                          value: t.id,
+                    InkWell(
+                      onTap: () => Navigator.pop(ctx),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF6B7280)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+
+                _formSectionCard(
+                  title: 'CANDIDATE DETAILS',
+                  icon: Icons.badge_rounded,
+                  color: const Color(0xFF059669),
+                  children: [
+                    _label('Full Name *'),
+                    const SizedBox(height: 6),
+                    _field(nameCtrl, 'Enter candidate name',
+                        icon: Icons.person_outline_rounded),
+                    const SizedBox(height: 14),
+                    _label('Register Number'),
+                    const SizedBox(height: 6),
+                    _field(regNumCtrl, 'Register number',
+                        icon: Icons.badge_outlined),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                _formSectionCard(
+                  title: 'EXAM ASSIGNMENT',
+                  icon: Icons.school_rounded,
+                  color: AppColors.primary,
+                  children: [
+                    _label('Branch'),
+                    const SizedBox(height: 6),
+                    _fixedBranchField(globalBranchId, branchesList),
+                    const SizedBox(height: 14),
+                    _label('Exam Type'),
+                    const SizedBox(height: 6),
+                    _dropdown<int>(
+                      value: selectedExamTypeId,
+                      hint: 'Select exam type',
+                      items: examTypesList
+                          .map((e) => DropdownMenuItem<int>(
+                                value: e['id'],
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.school_rounded, size: 18, color: Color(0xFF6B7280)),
+                                    const SizedBox(width: 8),
+                                    Text('${e['name'] ?? ''}'),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        setSheetState(() {
+                          selectedExamTypeId = val;
+                          // Do not auto-assign a team when the exam changes.
+                          selectedTeamId = null;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    _label('Team'),
+                    const SizedBox(height: 6),
+                    _dropdown<int>(
+                      // -1 is a UI-only sentinel for the optional "Not Assigned" choice.
+                      // It lets the dropdown have a visible item while the API receives null.
+                      value: selectedTeamId ?? -1,
+                      hint: 'Select team (optional)',
+                      items: [
+                        const DropdownMenuItem<int>(
+                          value: -1,
                           child: Row(children: [
-                            const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF6B7280)),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(t.name, overflow: TextOverflow.ellipsis)),
+                            Icon(Icons.person_outline_rounded, size: 18, color: Color(0xFF6B7280)),
+                            SizedBox(width: 8),
+                            Expanded(child: Text('Not Assigned')),
                           ]),
-                        )),
+                        ),
+                        ...teamsForSelectedExam().map((t) => DropdownMenuItem<int>(
+                              value: t.id,
+                              child: Row(children: [
+                                const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF6B7280)),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(t.name, overflow: TextOverflow.ellipsis)),
+                              ]),
+                            )),
+                      ],
+                      onChanged: (val) => setSheetState(() => selectedTeamId = val == null || val == -1 ? null : val),
+                    ),
+                    const SizedBox(height: 14),
+                    _label('Exam Date'),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: dateCtrl,
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        hintText: 'Select date',
+                        prefixIcon: const Icon(Icons.calendar_today_rounded, size: 19),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE5E7EB))),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE5E7EB))),
+                      ),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: DateTime.now(),
+                          // Candidate exam dates are unrestricted: past, today and future are allowed.
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          dateCtrl.text =
+                              '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                        }
+                      },
+                    ),
                   ],
-                  onChanged: (val) => setSheetState(() => selectedTeamId = val == null || val == -1 ? null : val),
                 ),
                 const SizedBox(height: 14),
-                _label('Status'),
-                const SizedBox(height: 6),
-                _dropdown<String>(
-                  value: selectedStatus,
-                  hint: 'Select status',
-                  items: const [
-                    DropdownMenuItem(value: 'Registered', child: Text('Registered')),
-                    DropdownMenuItem(value: 'Absent', child: Text('Absent')),
-                    DropdownMenuItem(value: 'Rescheduled', child: Text('Rescheduled')),
+
+                _formSectionCard(
+                  title: 'STATUS',
+                  icon: Icons.flag_rounded,
+                  color: const Color(0xFF7C3AED),
+                  children: [
+                    Row(
+                      children: [
+                        _statusChip(
+                          label: 'Registered',
+                          icon: Icons.check_circle_rounded,
+                          color: const Color(0xFF059669),
+                          selected: selectedStatus == 'Registered',
+                          onTap: () => setSheetState(() => selectedStatus = 'Registered'),
+                        ),
+                        const SizedBox(width: 10),
+                        _statusChip(
+                          label: 'Absent',
+                          icon: Icons.person_off_rounded,
+                          color: const Color(0xFFEA580C),
+                          selected: selectedStatus == 'Absent',
+                          onTap: () => setSheetState(() => selectedStatus = 'Absent'),
+                        ),
+                        const SizedBox(width: 10),
+                        _statusChip(
+                          label: 'Rescheduled',
+                          icon: Icons.event_repeat_rounded,
+                          color: const Color(0xFF7C3AED),
+                          selected: selectedStatus == 'Rescheduled',
+                          onTap: () => setSheetState(() => selectedStatus = 'Rescheduled'),
+                        ),
+                      ],
+                    ),
                   ],
-                  onChanged: (val) {
-                    if (val != null) setSheetState(() => selectedStatus = val);
-                  },
-                ),
-                const SizedBox(height: 14),
-                _label('Exam Date'),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: dateCtrl,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: 'Select date',
-                    suffixIcon: const Icon(Icons.calendar_today_rounded),
-                    filled: true,
-                    fillColor: const Color(0xFFF9FAFB),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide:
-                            const BorderSide(color: Color(0xFFE5E7EB))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide:
-                            const BorderSide(color: Color(0xFFE5E7EB))),
-                  ),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: DateTime.now(),
-                      // Candidate exam dates are unrestricted: past, today and future are allowed.
-                      firstDate: DateTime(1900),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      dateCtrl.text =
-                          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                    }
-                  },
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 52,
-                  child: FilledButton(
+                  child: FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF059669),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
                     ),
+                    icon: const Icon(Icons.person_add_alt_1_rounded, size: 19),
                     onPressed: () async {
                       if (nameCtrl.text.trim().isEmpty) {
                         ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
@@ -516,7 +666,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                         }
                       }
                     },
-                    child: const Text('Add Candidate',
+                    label: const Text('Add',
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w800)),
                   ),
@@ -887,7 +1037,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                   ),
                   const SizedBox(width: 12),
                   const Text(
-                    'Add New Exam Type',
+                    'Add',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                 ],
@@ -945,7 +1095,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       }
                     }
                   },
-                  child: const Text('Add Exam Type', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  child: const Text('Add', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                 ),
               ),
             ],
@@ -975,7 +1125,7 @@ class _ExamsScreenState extends State<ExamsScreen>
         child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: 18),
-          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFF7A18), Color(0xFF9A3412)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Add Exam Team', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
+          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFF7A18), Color(0xFF9A3412)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Add', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
           const SizedBox(height: 22),
           _label('Team Name *'), const SizedBox(height: 6), _field(nameCtrl, 'e.g. CELPIP Partner Team', icon: Icons.groups_rounded),
           const SizedBox(height: 14), _label('Location'), const SizedBox(height: 6), _field(locationCtrl, 'Team location / service area', icon: Icons.location_on_outlined),
@@ -992,7 +1142,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team added successfully!'), backgroundColor: AppColors.green)); reload(); }
               } catch (e) { if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'))); }
-            }, icon: const Icon(Icons.add_rounded), label: const Text('Add Team', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            }, icon: const Icon(Icons.add_rounded), label: const Text('Add', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
           )),
         ])),
       )),
@@ -1083,7 +1233,7 @@ class _ExamsScreenState extends State<ExamsScreen>
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
           ),
         ),
-        title: const Text('Exam Management',
+        title: const Text('Exam',
             style: AppBarStyle.titleStyle),
         actions: [
           IconButton(
@@ -1153,7 +1303,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       FilledButton.icon(
                         onPressed: _showAddExamTypeDialog,
                         icon: const Icon(Icons.add),
-                        label: const Text('Add Exam Type'),
+                        label: const Text('Add'),
                         style: FilledButton.styleFrom(
                             backgroundColor: AppColors.primary),
                       ),
@@ -1202,7 +1352,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       FilledButton.icon(
                         onPressed: _showAddCandidateDialog,
                         icon: const Icon(Icons.add),
-                        label: const Text('Add Candidate'),
+                        label: const Text('Add'),
                         style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF059669)),
                       ),
@@ -1254,7 +1404,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                           const SizedBox(height: 12),
                           Text('No teams added yet', style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.w700)),
                           const SizedBox(height: 16),
-                          FilledButton.icon(onPressed: _showAddTeamDialog, icon: const Icon(Icons.add), label: const Text('Add Team'), style: FilledButton.styleFrom(backgroundColor: AppColors.primary)),
+                          FilledButton.icon(onPressed: _showAddTeamDialog, icon: const Icon(Icons.add), label: const Text('Add'), style: FilledButton.styleFrom(backgroundColor: AppColors.primary)),
                         ]))
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),

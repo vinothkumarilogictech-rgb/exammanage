@@ -133,7 +133,7 @@ class _VouchersScreenState extends State<VouchersScreen>
           ),
         ),
         title: const Text(
-          'Voucher Management',
+          'Voucher',
           style: AppBarStyle.titleStyle,
         ),
         actions: [
@@ -241,7 +241,7 @@ class _VouchersScreenState extends State<VouchersScreen>
           Expanded(
             child: _VoucherQuickAction(
               icon: Icons.add_card_rounded,
-              title: 'Sell Voucher',
+              title: 'Sell',
               gradientColors: const [Color(0xFFFF7A18), AppColors.primary],
               onTap: _showSellVoucher,
             ),
@@ -1084,7 +1084,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Bulk Voucher Purchase', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                          Text('Bulk Purchase', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
                           SizedBox(height: 2),
                           Text('Add new voucher stock for a specific exam',
                               style: TextStyle(fontSize: 11.5, color: Colors.white70)),
@@ -1176,7 +1176,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                       icon: saving
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.check_circle_outline),
-                      label: Text(saving ? 'Saving Purchase...' : 'Save Purchase'),
+                      label: Text(saving ? 'Saving...' : 'Save'),
                     ),
                   ),
                 ],
@@ -1392,7 +1392,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                       ),
                       const SizedBox(width: 12),
                       const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Sell Voucher', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                        Text('Sell', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
                         SizedBox(height: 2),
                         Text('Create a voucher sale with its own student record',
                             style: TextStyle(fontSize: 11.5, color: Colors.white70)),
@@ -1506,7 +1506,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                               }
                             },
                       icon: saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle_outline),
-                      label: Text(saving ? 'Saving Sale...' : 'Sell Voucher'),
+                      label: Text(saving ? 'Saving...' : 'Sell'),
                     ),
                   ),
                 ],
