@@ -42,6 +42,7 @@ def candidate_dict(c):
             'branch_name': c.branch.branch_name if c.branch else None, 'exam_type_id': c.exam_type_id,
             'exam_type_name': c.exam_type.name if c.exam_type else None, 'team_id': c.team_id,
             'team_name': c.team.name if c.team else None, 'team_location': c.team.location if c.team else None,
+            'remarks': c.reason_note or '',
             'created_at': iso(c.created_at)}
 
 def attempt_dict(a):

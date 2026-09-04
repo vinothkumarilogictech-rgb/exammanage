@@ -550,6 +550,7 @@ def candidate_create():
         team_id=d.get('team_id'),
         exam_date=d.get('exam_date'),
         status=d.get('status') or 'Registered',
+        reason_note=(d.get('remarks') or d.get('reason_note') or '').strip() or None,
     )
     if c.team_id:
         team = ExamTeam.query.get(int(c.team_id))
@@ -605,28 +606,42 @@ def candidate_update(candidate_id):
     d = body()
     status = str(d.get('status') or '').strip()
     allowed = {'Registered', 'Absent', 'Rescheduled', 'Completed'}
-    if status not in allowed:
-        return fail('Status must be Registered, Absent, Rescheduled, or Completed.', 422)
 
-    c.status = status
-    # Keep the candidate master status and its first attempt in sync.
-    attempt = (ExamAttempt.query.filter_by(candidate_id=c.id)
-               .order_by(ExamAttempt.attempt_number.asc()).first())
-    if attempt:
-        if status == 'Completed':
-            attempt.status = 'Completed'
-            attempt.actual_exam_date = attempt.actual_exam_date or attempt.scheduled_date or c.exam_date
-        elif status == 'Absent':
-            attempt.status = 'No Show'
-        elif status == 'Rescheduled':
-            # Preserve the existing scheduled date; the dedicated reschedule
-            # workflow can move it when a new date is supplied.
-            attempt.status = 'Scheduled'
-        else:  # Registered
-            attempt.status = 'Scheduled'
-        db.session.add(attempt)
+    # Profile/remarks edits are also allowed from the candidate details page.
+    # Status remains optional for those updates.
+    if status:
+        if status not in allowed:
+            return fail('Status must be Registered, Absent, Rescheduled, or Completed.', 422)
+        c.status = status
+
+    for field in ('name', 'email', 'phone', 'register_number'):
+        if field in d:
+            value = (d.get(field) or '').strip()
+            if field == 'name' and not value:
+                return fail('Candidate name is required.', 422)
+            setattr(c, field, value or None)
+
+    if 'remarks' in d or 'reason_note' in d:
+        c.reason_note = (d.get('remarks') if 'remarks' in d else d.get('reason_note') or '').strip() or None
+
+    # Keep the candidate master status and its first attempt in sync when the
+    # caller actually changes status.
+    if status:
+        attempt = (ExamAttempt.query.filter_by(candidate_id=c.id)
+                   .order_by(ExamAttempt.attempt_number.asc()).first())
+        if attempt:
+            if status == 'Completed':
+                attempt.status = 'Completed'
+                attempt.actual_exam_date = attempt.actual_exam_date or attempt.scheduled_date or c.exam_date
+            elif status == 'Absent':
+                attempt.status = 'No Show'
+            elif status == 'Rescheduled':
+                attempt.status = 'Scheduled'
+            else:  # Registered
+                attempt.status = 'Scheduled'
+            db.session.add(attempt)
     db.session.commit()
-    return ok(candidate_dict(c), 'Candidate status updated.')
+    return ok(candidate_dict(c), 'Candidate updated.')
 
 @api_bp.delete('/exams/candidates/<int:candidate_id>/')
 @api_token_required
