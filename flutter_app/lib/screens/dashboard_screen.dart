@@ -8,7 +8,6 @@ import '../providers/branch_context.dart';
 import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'attended_candidates_screen.dart';
-import 'branches_screen.dart';
 import 'scheduled_candidates_screen.dart';
 import 'expenses_screen.dart';
 import 'vouchers_screen.dart';
@@ -120,6 +119,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     // Financial/voucher summaries are admin-only. Do not request these
     // datasets for employee/user sessions.
     double currentMonthExpense = 0;
+    double previousMonthExpense = 0;
     Map<String, dynamic> voucherStats = {};
     if (isAdmin) {
       try {
@@ -128,6 +128,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       } catch (_) {}
 
       try {
+        final prevMonthDate = DateTime(now.year, now.month - 1, 1);
         final expenseRes = await api.expenses(branchId: branchId, status: 'Active');
         final expenses = expenseRes.data['data'] as List? ?? const [];
         for (final raw in expenses) {
@@ -137,6 +138,8 @@ class DashboardScreenState extends State<DashboardScreen> {
           final d = DateTime.tryParse(dateRaw);
           if (d != null && d.year == now.year && d.month == now.month) {
             currentMonthExpense += amount;
+          } else if (d != null && d.year == prevMonthDate.year && d.month == prevMonthDate.month) {
+            previousMonthExpense += amount;
           }
         }
       } catch (_) {}
@@ -176,6 +179,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       'currentMonthAbsent': currentMonthAbsent,
       'currentMonthRescheduled': currentMonthRescheduled,
       'currentMonthExpense': currentMonthExpense,
+      'previousMonthExpense': previousMonthExpense,
       'voucherStats': voucherStats,
       'selectedBranchId': branchId,
     };
@@ -1517,10 +1521,14 @@ class DashboardScreenState extends State<DashboardScreen> {
               data['currentMonthTotal'] as int? ?? 0;
           final currentMonthExpense =
               (data['currentMonthExpense'] as num?)?.toDouble() ?? 0.0;
+          final previousMonthExpense =
+              (data['previousMonthExpense'] as num?)?.toDouble() ?? 0.0;
           final voucherStats =
               Map<String, dynamic>.from(data['voucherStats'] ?? {});
           final totalProfit =
               double.tryParse('${voucherStats['realized_profit'] ?? 0}') ?? 0.0;
+          final salesRevenue =
+              double.tryParse('${voucherStats['sales_revenue'] ?? 0}') ?? 0.0;
           final availableVouchers =
               int.tryParse('${voucherStats['available'] ?? 0}') ?? 0;
 
@@ -1643,80 +1651,42 @@ class DashboardScreenState extends State<DashboardScreen> {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.45,
                   children: [
-                    if (isAdmin) ...[
                     // ---------------------------------------------
-                    // TOTAL BRANCHES (ADMIN ONLY)
+                    // TOTAL EXAMS - FIRST
                     // ---------------------------------------------
-
                     _KpiCard(
-                      title: 'Total Branches',
-                      value: '${stats.totalBranches}',
-                      icon: Icons.business_rounded,
-                      tint: const Color(0xFFFFE8D6),
-                      iconColor: Color(0xFFE85D04),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const BranchesScreen(),
-                          ),
-                        );
-                      },
+                      title: 'Total Exams',
+                      value: '${stats.totalExams}',
+                      icon: Icons.menu_book_rounded,
+                      tint: const Color(0xFFE0E7FF),
+                      iconColor: const Color(0xFF4F46E5),
                     ),
-                    ],
 
                     // ---------------------------------------------
                     // TODAY'S EXAM
                     // ---------------------------------------------
-
                     _KpiCard(
                       title: "Today's Exam",
                       value: '${stats.todayCandidates}',
                       icon: Icons.groups_rounded,
                       tint: const Color(0xFFDCFCE7),
                       iconColor: AppColors.green,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ScheduledCandidatesScreen(
-                              title: "Today's Exam",
-                              date: stats.today,
-                              isToday: true,
-                            ),
-                          ),
-                        );
-                      },
                     ),
 
                     // ---------------------------------------------
-                    // TOMORROW'S EXAM
+                    // NEXT DAY EXAM
                     // ---------------------------------------------
-
                     _KpiCard(
-                      title: "Tomorrow's Exam",
+                      title: 'Next Day Exam',
                       value: '${stats.tomorrowCandidates}',
                       icon: Icons.event_available_rounded,
                       tint: const Color(0xFFFFE4E6),
                       iconColor: const Color(0xFFE11D48),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ScheduledCandidatesScreen(
-                              title: "Tomorrow's Exam",
-                              date: stats.tomorrow,
-                              isToday: false,
-                            ),
-                          ),
-                        );
-                      },
                     ),
 
                     // ---------------------------------------------
-                    // TOTAL ATTENDED CANDIDATES
+                    // TOTAL CANDIDATES
                     // ---------------------------------------------
-
                     _KpiCard(
                       title: 'Total Candidates',
                       value: '$currentMonthTotal',
@@ -1732,270 +1702,124 @@ class DashboardScreenState extends State<DashboardScreen> {
                         );
                       },
                     ),
-
                   ],
                 ),
-
                 const SizedBox(height: 20),
 
                 // =================================================
                 // FINANCE & VOUCHER KPI CARDS (ADMIN ONLY)
                 // =================================================
                 if (isAdmin) ...[
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.45,
-                  children: [
-                    _KpiCard(
-                      title: 'Total Profit',
-                      value: '₹${totalProfit.toStringAsFixed(2)}',
-                      icon: Icons.trending_up_rounded,
-                      tint: const Color(0xFFDCFCE7),
-                      iconColor: AppColors.green,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const VouchersScreen(initialTab: 1),
-                          ),
-                        );
-                      },
-                    ),
-                    _KpiCard(
-                      title: 'Available Voucher',
-                      value: '$availableVouchers',
-                      icon: Icons.confirmation_num_rounded,
-                      tint: const Color(0xFFFFE8D6),
-                      iconColor: Color(0xFFE85D04),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AvailableVouchersScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // =================================================
-                // TOTAL EXPENSES
-                // =================================================
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFFFD8BF)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.05),
-                        blurRadius: 14,
-                        offset: const Offset(0, 5),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.45,
+                    children: [
+                      _KpiCard(
+                        title: 'Total Profit',
+                        value: '₹${totalProfit.toStringAsFixed(2)}',
+                        icon: Icons.trending_up_rounded,
+                        tint: const Color(0xFFDCFCE7),
+                        iconColor: AppColors.green,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const VouchersScreen(initialTab: 1),
+                            ),
+                          );
+                        },
+                      ),
+                      _KpiCard(
+                        title: 'Available Voucher',
+                        value: '$availableVouchers',
+                        icon: Icons.confirmation_num_rounded,
+                        tint: const Color(0xFFFFE8D6),
+                        iconColor: const Color(0xFFE85D04),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AvailableVouchersScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _KpiCard(
+                        title: 'Total Expenses',
+                        value: '₹${currentMonthExpense.toStringAsFixed(2)}',
+                        icon: Icons.account_balance_wallet_rounded,
+                        tint: const Color(0xFFFFE8D6),
+                        iconColor: const Color(0xFFE85D04),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ExpensesScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _KpiCard(
+                        title: 'Sales',
+                        value: '₹${salesRevenue.toStringAsFixed(2)}',
+                        icon: Icons.payments_rounded,
+                        tint: const Color(0xFFD1FAE5),
+                        iconColor: const Color(0xFF059669),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const VouchersScreen(initialTab: 1),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ExpensesScreen(),
-                          ),
-                        );
-                      },
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 54,
-                            height: 54,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF0E6),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Icon(
-                              Icons.account_balance_wallet_rounded,
-                              color: Color(0xFFE85D04),
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Total Expenses',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF374151),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '₹${currentMonthExpense.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 27,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFFE85D04),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
-                        ],
-                      ),
-                    ),
+
+                  const SizedBox(height: 20),
+
+                  // =================================================
+                  // DASHBOARD GRAPHICAL REPRESENTATION
+                  // =================================================
+                  _DashboardMetricsChart(
+                    currentExpense: currentMonthExpense,
+                    previousExpense: previousMonthExpense,
+                    profit: totalProfit,
+                    sales: salesRevenue,
+                    onExpensesTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ExpensesScreen(),
+                        ),
+                      );
+                    },
+                    onProfitTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VouchersScreen(initialTab: 1),
+                        ),
+                      );
+                    },
+                    onSalesTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VouchersScreen(initialTab: 1),
+                        ),
+                      );
+                    },
                   ),
-                ),
 
-                const SizedBox(height: 20),
-
+                  const SizedBox(height: 20),
                 ],
 
-                // =================================================
-                // BRANCH OVERVIEW
-                // =================================================
-
-                _SectionCard(
-                  title: 'Branch Overview',
-                  icon: Icons.location_on_rounded,
-                  action: 'View All',
-                  child: branches.isEmpty
-                      ? const _EmptyText(
-                          'No active exam branches for today or tomorrow',
-                        )
-                      : Column(
-                          children: branches.map(
-                            (branch) {
-                              return _BranchRow(
-                                branch: branch,
-                              );
-                            },
-                          ).toList(),
-                        ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // =================================================
-                // TODAY'S EXAM
-                // =================================================
-
-                _SectionCard(
-                  title: "Today's Exam",
-                  icon: Icons.groups_rounded,
-                  action: 'View All',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ScheduledCandidatesScreen(
-                          title: "Today's Exam",
-                          date: stats.today,
-                          isToday: true,
-                        ),
-                      ),
-                    );
-                  },
-                  child: todayCandidates.isEmpty
-                      ? const _EmptyText('No candidates scheduled for today')
-                      : Column(
-                          children: todayCandidates
-                              .map((c) => _CandidateRow(candidate: c))
-                              .toList(),
-                        ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // =================================================
-                // TOMORROW'S EXAM
-                // =================================================
-
-                _SectionCard(
-                  title: "Tomorrow's Exam",
-                  icon: Icons.event_available_rounded,
-                  action: 'View All',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ScheduledCandidatesScreen(
-                          title: "Tomorrow's Exam",
-                          date: stats.tomorrow,
-                          isToday: false,
-                        ),
-                      ),
-                    );
-                  },
-                  trailing: Text(
-                    prettyDate(stats.tomorrow),
-                    style: const TextStyle(
-                      color: Color(0xFFE85D04),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                  child: tomorrowCandidates.isEmpty
-                      ? const _EmptyText('No candidates scheduled for tomorrow')
-                      : Column(
-                          children: [
-                            ...tomorrowCandidates.map((c) => _CandidateRow(candidate: c)),
-
-                            const SizedBox(height: 8),
-
-                            // -----------------------------------
-                            // TOTAL
-                            // -----------------------------------
-
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFE8D6),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    "Total Tomorrow's Exam",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFFE85D04),
-                                    ),
-                                  ),
-                                  Text(
-                                    '${tomorrowCandidates.length > stats.tomorrowCandidates ? tomorrowCandidates.length : stats.tomorrowCandidates}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 18,
-                                      color: Color(0xFFE85D04),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
               ],
             ),
           );
@@ -2152,6 +1976,271 @@ class _QuickActionCard extends StatelessWidget {
 // ================================================================
 // KPI CARD
 // ================================================================
+
+class _DashboardMetricsChart extends StatelessWidget {
+  final double currentExpense;
+  final double previousExpense;
+  final double profit;
+  final double sales;
+  final VoidCallback? onExpensesTap;
+  final VoidCallback? onProfitTap;
+  final VoidCallback? onSalesTap;
+
+  const _DashboardMetricsChart({
+    required this.currentExpense,
+    required this.previousExpense,
+    required this.profit,
+    required this.sales,
+    this.onExpensesTap,
+    this.onProfitTap,
+    this.onSalesTap,
+  });
+
+  static const double _barAreaHeight = 110;
+  static const double _maxBarHeight = 64;
+
+  String _money(double value) {
+    // Compact Indian-style formatting so a big figure never forces a
+    // smaller one's label to overflow or shrink to nothing.
+    if (value >= 10000000) return '₹${(value / 10000000).toStringAsFixed(2)}Cr';
+    if (value >= 100000) return '₹${(value / 100000).toStringAsFixed(2)}L';
+    if (value >= 1000) return '₹${(value / 1000).toStringAsFixed(1)}K';
+    return '₹${value.toStringAsFixed(0)}';
+  }
+
+  Widget _miniBar({required double value, required double maxValue, required Color color, required String label}) {
+    final ratio = (value / maxValue).clamp(0.0, 1.0);
+    // Always keep a visible sliver so a ₹0 month still reads as "zero".
+    final barHeight = 6 + (ratio * (_maxBarHeight - 6));
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _money(value),
+              maxLines: 1,
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: color),
+            ),
+          ),
+          const SizedBox(height: 6),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            height: barHeight,
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 32),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color, color.withOpacity(.55)],
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF6B7280)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _singleBar({required double value, required Color color, required IconData icon}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            _money(value),
+            maxLines: 1,
+            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: color),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: _maxBarHeight,
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 52),
+          alignment: Alignment.bottomCenter,
+          padding: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color, color.withOpacity(.55)],
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: Colors.white, size: 16),
+        ),
+      ],
+    );
+  }
+
+  Widget _groupBox({
+    required String title,
+    required Color accent,
+    required Widget child,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withOpacity(.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: accent),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(height: _barAreaHeight, child: child),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final expenseMax = currentExpense > previousExpense ? currentExpense : previousExpense;
+    final safeExpenseMax = expenseMax <= 0 ? 1.0 : expenseMax;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFFFE1CF)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Dashboard Overview',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Expenses vs last month, plus profit and sales — tap a box for details',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(height: 16),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ---------------------------------------------------
+                // EXPENSES — previous month vs this month, grouped
+                // ---------------------------------------------------
+                Expanded(
+                  flex: 5,
+                  child: _groupBox(
+                    title: 'Expenses',
+                    accent: const Color(0xFFE85D04),
+                    onTap: onExpensesTap,
+                    child: Row(
+                      children: [
+                        _miniBar(
+                          value: previousExpense,
+                          maxValue: safeExpenseMax,
+                          color: const Color(0xFFFDBA74),
+                          label: 'Last mo.',
+                        ),
+                        const SizedBox(width: 8),
+                        _miniBar(
+                          value: currentExpense,
+                          maxValue: safeExpenseMax,
+                          color: const Color(0xFFE85D04),
+                          label: 'This mo.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // ---------------------------------------------------
+                // PROFIT — single current total
+                // ---------------------------------------------------
+                Expanded(
+                  flex: 3,
+                  child: _groupBox(
+                    title: 'Profit',
+                    accent: const Color(0xFF16A34A),
+                    onTap: onProfitTap,
+                    child: Center(
+                      child: _singleBar(
+                        value: profit,
+                        color: const Color(0xFF16A34A),
+                        icon: Icons.trending_up_rounded,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // ---------------------------------------------------
+                // SALES — single current total
+                // ---------------------------------------------------
+                Expanded(
+                  flex: 3,
+                  child: _groupBox(
+                    title: 'Sales',
+                    accent: const Color(0xFF059669),
+                    onTap: onSalesTap,
+                    child: Center(
+                      child: _singleBar(
+                        value: sales,
+                        color: const Color(0xFF059669),
+                        icon: Icons.payments_rounded,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _KpiCard extends StatelessWidget {
   final String title;

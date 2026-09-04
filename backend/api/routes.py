@@ -214,6 +214,7 @@ def dashboard():
 
     stats = {
         'total_branches': branches_q.count(),
+        'total_exams': ExamType.query.count(),
         'today_exams': len(today_exams),
         'today_candidates': len(set().union(*today_candidates_by_branch.values())) if today_candidates_by_branch else 0,
         'tomorrow_candidates': sum(x['candidate_count'] for x in tomorrow_candidates),
