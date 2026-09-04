@@ -7,7 +7,8 @@ from . import api_bp
 from .auth import authenticate, issue_tokens, verify_token, api_token_required
 from .serializers import *
 from apps.models import (db, Branch, ExamType, BranchExam, ExamSession, Candidate, ExamAttempt, ExamTeam,
-                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate, Employee, EmployeeCredential)
+                         Expense, ExpenseCategory, ExpenseBudget, Voucher, VoucherPurchaseInvoice, VoucherPurchaseInvoiceItem,
+                         SessionCandidate, Employee, EmployeeCredential)
 
 
 def ok(data=None, message=None, status=200):
@@ -839,6 +840,206 @@ def expense_summary_api():
     for e in rows:
         by_category[e.category] = (by_category.get(e.category) or 0) + (e.amount or 0)
     return ok({'total': total, 'count': len(rows), 'by_category': by_category})
+
+
+def _parse_voucher_invoice_date(value):
+    if not value:
+        return datetime.utcnow().date()
+    try:
+        return datetime.fromisoformat(str(value)).date()
+    except Exception:
+        try:
+            return datetime.strptime(str(value), '%Y-%m-%d').date()
+        except Exception:
+            raise ValueError('invoice_date must be YYYY-MM-DD.')
+
+
+def _voucher_invoice_items(raw_items):
+    if not isinstance(raw_items, list) or not raw_items:
+        raise ValueError('At least one invoice item is required.')
+    parsed = []
+    subtotal = discount_total = tax_total = total = 0.0
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            raise ValueError('Each invoice item must be an object.')
+        try:
+            exam_id = int(raw.get('exam_type_id'))
+            quantity = int(raw.get('quantity') or 0)
+            unit_price = float(raw.get('unit_price') or 0)
+            discount = float(raw.get('discount') or 0)
+            tax = float(raw.get('tax') or 0)
+        except (TypeError, ValueError):
+            raise ValueError('Invalid exam, quantity, price, discount, or tax.')
+        if not ExamType.query.get(exam_id):
+            raise ValueError(f'Exam type {exam_id} was not found.')
+        if quantity <= 0:
+            raise ValueError('Quantity must be greater than 0.')
+        if unit_price < 0 or discount < 0 or tax < 0:
+            raise ValueError('Price, discount, and tax cannot be negative.')
+        line_subtotal = quantity * unit_price
+        line_total = line_subtotal - discount + tax
+        if line_total < 0:
+            raise ValueError('Item total cannot be negative.')
+        subtotal += line_subtotal
+        discount_total += discount
+        tax_total += tax
+        total += line_total
+        parsed.append({
+            'exam_type_id': exam_id,
+            'quantity': quantity,
+            'unit_price': unit_price,
+            'discount': discount,
+            'tax': tax,
+            'total_amount': line_total,
+        })
+    return parsed, subtotal, discount_total, tax_total, total
+
+
+def _save_voucher_purchase_invoice(inv, d):
+    try:
+        branch_id = int(d.get('branch_id'))
+    except (TypeError, ValueError):
+        raise ValueError('A valid branch is required.')
+    if not Branch.query.get(branch_id):
+        raise LookupError('Branch not found.')
+    supplier = str(d.get('supplier') or '').strip()
+    if not supplier:
+        raise ValueError('Supplier is required.')
+    invoice_date = _parse_voucher_invoice_date(d.get('invoice_date'))
+    items, subtotal, discount, tax, total = _voucher_invoice_items(d.get('items'))
+    try:
+        paid = float(d.get('paid_amount') or 0)
+    except (TypeError, ValueError):
+        raise ValueError('Paid amount must be numeric.')
+    if paid < 0 or paid > total:
+        raise ValueError('Paid amount must be between 0 and the invoice total.')
+    balance = max(0.0, total - paid)
+    payment_status = str(d.get('payment_status') or '').strip()
+    if payment_status not in ('Pending', 'Partial', 'Paid'):
+        payment_status = 'Paid' if balance <= 0 and total > 0 else ('Partial' if paid > 0 else 'Pending')
+    inv.supplier = supplier
+    inv.invoice_date = invoice_date
+    inv.branch_id = branch_id
+    inv.payment_status = payment_status
+    inv.payment_mode = str(d.get('payment_mode') or '').strip() or None
+    inv.payment_reference = str(d.get('payment_reference') or '').strip() or None
+    inv.subtotal = subtotal
+    inv.discount = discount
+    inv.tax = tax
+    inv.total_amount = total
+    inv.paid_amount = paid
+    inv.balance_amount = balance
+    inv.notes = str(d.get('notes') or '').strip() or None
+    inv.status = str(d.get('status') or 'Active') if str(d.get('status') or 'Active') in ('Active', 'Cancelled') else 'Active'
+    inv.items.clear()
+    for item in items:
+        inv.items.append(VoucherPurchaseInvoiceItem(**item))
+    return inv
+
+
+# Voucher Purchase Invoices
+@api_bp.get('/expenses/invoices/')
+@api_token_required
+def voucher_purchase_invoices():
+    if g.api_identity.get('role') == 'Employee':
+        return fail('Employees cannot access voucher purchase invoices.', 403)
+    q = VoucherPurchaseInvoice.query
+    bid = request.args.get('branch_id', type=int)
+    status = (request.args.get('status') or '').strip()
+    term = (request.args.get('q') or '').strip()
+    if bid:
+        q = q.filter(VoucherPurchaseInvoice.branch_id == bid)
+    if status in ('Active', 'Cancelled'):
+        q = q.filter(VoucherPurchaseInvoice.status == status)
+    if term:
+        like = f'%{term}%'
+        q = q.filter(or_(VoucherPurchaseInvoice.invoice_number.ilike(like),
+                         VoucherPurchaseInvoice.supplier.ilike(like),
+                         VoucherPurchaseInvoice.payment_reference.ilike(like)))
+    rows = q.order_by(VoucherPurchaseInvoice.invoice_date.desc(), VoucherPurchaseInvoice.id.desc()).all()
+    return ok([voucher_purchase_invoice_dict(x) for x in rows])
+
+
+@api_bp.get('/expenses/invoices/<int:invoice_id>/')
+@api_token_required
+def voucher_purchase_invoice_get(invoice_id):
+    if g.api_identity.get('role') == 'Employee':
+        return fail('Employees cannot access voucher purchase invoices.', 403)
+    return ok(voucher_purchase_invoice_dict(VoucherPurchaseInvoice.query.get_or_404(invoice_id)))
+
+
+@api_bp.post('/expenses/invoices/')
+@api_token_required
+def voucher_purchase_invoice_create():
+    if g.api_identity.get('role') == 'Employee':
+        return fail('Employees cannot create voucher purchase invoices.', 403)
+    d = body()
+    inv = VoucherPurchaseInvoice(
+        invoice_number=f"TEMP-{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}",
+        supplier='-',
+    )
+    try:
+        _save_voucher_purchase_invoice(inv, d)
+    except LookupError as e:
+        db.session.rollback()
+        return fail(str(e), 404)
+    except ValueError as e:
+        db.session.rollback()
+        return fail(str(e), 422)
+    db.session.add(inv)
+    db.session.flush()
+    inv.invoice_number = str(d.get('invoice_number') or '').strip() or f'VPI-{datetime.utcnow().year}-{inv.id:05d}'
+    duplicate = VoucherPurchaseInvoice.query.filter(
+        VoucherPurchaseInvoice.invoice_number == inv.invoice_number,
+        VoucherPurchaseInvoice.id != inv.id
+    ).first()
+    if duplicate:
+        db.session.rollback()
+        return fail('Invoice number already exists.', 409)
+    db.session.commit()
+    return ok(voucher_purchase_invoice_dict(inv), 'Invoice created.', 201)
+
+
+@api_bp.put('/expenses/invoices/<int:invoice_id>/')
+@api_bp.patch('/expenses/invoices/<int:invoice_id>/')
+@api_token_required
+def voucher_purchase_invoice_update(invoice_id):
+    if g.api_identity.get('role') == 'Employee':
+        return fail('Employees cannot update voucher purchase invoices.', 403)
+    inv = VoucherPurchaseInvoice.query.get_or_404(invoice_id)
+    if inv.status == 'Cancelled':
+        return fail('Cancelled invoices cannot be edited.', 409)
+    d = body()
+    requested_number = str(d.get('invoice_number') or inv.invoice_number).strip()
+    try:
+        _save_voucher_purchase_invoice(inv, d)
+    except LookupError as e:
+        db.session.rollback()
+        return fail(str(e), 404)
+    except ValueError as e:
+        db.session.rollback()
+        return fail(str(e), 422)
+    inv.invoice_number = requested_number or inv.invoice_number
+    duplicate = VoucherPurchaseInvoice.query.filter(
+        VoucherPurchaseInvoice.invoice_number == inv.invoice_number,
+        VoucherPurchaseInvoice.id != inv.id
+    ).first()
+    if duplicate:
+        db.session.rollback()
+        return fail('Invoice number already exists.', 409)
+    db.session.commit()
+    return ok(voucher_purchase_invoice_dict(inv), 'Invoice updated.')
+
+
+@api_bp.delete('/expenses/invoices/<int:invoice_id>/')
+@api_token_required
+def voucher_purchase_invoice_delete(invoice_id):
+    if g.api_identity.get('role') == 'Employee':
+        return fail('Employees cannot delete voucher purchase invoices.', 403)
+    inv = VoucherPurchaseInvoice.query.get_or_404(invoice_id)
+    inv.status = 'Cancelled'
+    db.session.commit()
+    return ok(voucher_purchase_invoice_dict(inv), 'Invoice cancelled successfully.')
 
 
 # Employee Management API

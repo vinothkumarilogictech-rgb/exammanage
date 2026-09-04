@@ -46,6 +46,7 @@ class ApiConfig {
   static const String employeesPath = '/employees/';
   static const String expenseCategoriesPath = '/expenses/categories/';
   static const String expenseBudgetsPath = '/expenses/budgets/';
+  static const String expenseInvoicesPath = '/expenses/invoices/';
   static const String vouchersPath = '/vouchers/';
   static const String voucherDashboardPath = '/vouchers/dashboard/';
   static const String voucherPurchasePath = '/vouchers/purchase/';

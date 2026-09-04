@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'invoice_tab.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final bool openAddOnStart;
@@ -22,7 +23,7 @@ class ExpensesScreen extends StatefulWidget {
 class ExpensesScreenState extends State<ExpensesScreen> {
   final api = DioClient();
 
-  // Tab: 0 = Expenses, 1 = Categories
+  // Tab: 0 = Expenses, 1 = Categories, 2 = Invoices
   int _selectedTab = 0;
 
   // Expenses state
@@ -1636,12 +1637,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Tabs selector (Expenses & Categories ONLY)
+                        // Tabs selector
                         _buildTabSelector(),
                         const SizedBox(height: 16),
 
                         // Switch Tab View
-                        if (_selectedTab == 0) _buildExpensesTab() else _buildCategoriesTab(),
+                        if (_selectedTab == 0) _buildExpensesTab()
+                        else if (_selectedTab == 1) _buildCategoriesTab()
+                        else const VoucherPurchaseInvoicesTab(),
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -1663,6 +1666,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         children: [
           Expanded(child: _tabButton(label: 'Expenses', icon: Icons.receipt_long_rounded, index: 0)),
           if (context.read<AuthProvider>().role != 'Employee') Expanded(child: _tabButton(label: 'Categories', icon: Icons.category_rounded, index: 1)),
+          if (context.read<AuthProvider>().role != 'Employee') Expanded(child: _tabButton(label: 'Invoices', icon: Icons.request_quote_rounded, index: 2)),
         ],
       ),
     );
