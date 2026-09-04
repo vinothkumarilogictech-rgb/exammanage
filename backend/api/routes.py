@@ -7,8 +7,7 @@ from . import api_bp
 from .auth import authenticate, issue_tokens, verify_token, api_token_required
 from .serializers import *
 from apps.models import (db, Branch, ExamType, BranchExam, ExamSession, Candidate, ExamAttempt, ExamTeam,
-                         Expense, ExpenseCategory, ExpenseBudget, Voucher, VoucherPurchaseInvoice, VoucherPurchaseInvoiceItem,
-                         SessionCandidate, Employee, EmployeeCredential)
+                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate, Employee, EmployeeCredential)
 
 
 def ok(data=None, message=None, status=200):
@@ -24,6 +23,28 @@ def fail(message, status=400, errors=None):
 
 def body():
     return request.get_json(silent=True) or {}
+
+
+def _employee_branch_id():
+    """Return the authenticated employee's assigned branch, if applicable."""
+    if g.api_identity.get('role') != 'Employee':
+        return None
+    try:
+        employee_id = int(g.api_identity.get('employee_id') or g.api_identity.get('sub'))
+    except (TypeError, ValueError):
+        return None
+    employee = Employee.query.get(employee_id)
+    return employee.branch_id if employee else None
+
+
+def _employee_branch_required(requested_branch_id=None):
+    """Resolve branch for employee requests; never allow another branch."""
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is None:
+        return requested_branch_id
+    if requested_branch_id is not None and int(requested_branch_id) != int(own_branch_id):
+        return None
+    return own_branch_id
 
 @api_bp.post('/auth/login/')
 def login():
@@ -65,7 +86,9 @@ def dashboard():
     from collections import defaultdict
     from datetime import date, timedelta
 
-    branch_id = request.args.get('branch_id', type=int)
+    branch_id = _employee_branch_required(request.args.get('branch_id', type=int))
+    if g.api_identity.get('role') == 'Employee' and branch_id is None:
+        return fail('Employee is not assigned to a branch.', 403)
     today = date.today()
     tomorrow = today + timedelta(days=1)
     today_str = today.strftime('%Y-%m-%d')
@@ -216,7 +239,9 @@ def attended_history():
          .join(Branch, ExamAttempt.branch_id == Branch.id)
          .filter(ExamAttempt.status == 'Completed'))
 
-    branch_id = request.args.get('branch_id', type=int)
+    branch_id = _employee_branch_required(request.args.get('branch_id', type=int))
+    if g.api_identity.get('role') == 'Employee' and branch_id is None:
+        return fail('Employees can only access their assigned branch.', 403)
     exam_type_id = request.args.get('exam_type_id', type=int)
     date_value = (request.args.get('date') or '').strip()
     month_value = (request.args.get('month') or '').strip()  # YYYY-MM
@@ -277,6 +302,9 @@ def attended_history():
 def branches():
     q = (request.args.get('q') or '').strip(); status = request.args.get('status')
     query = Branch.query
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None:
+        query = query.filter(Branch.id == own_branch_id)
     if q: query = query.filter(or_(Branch.branch_name.ilike(f'%{q}%'), Branch.region.ilike(f'%{q}%'), Branch.address.ilike(f'%{q}%')))
     if status in ('Active','Inactive'): query = query.filter_by(status=status)
     return ok([branch_dict(x) for x in query.order_by(Branch.branch_name.asc()).all()])
@@ -284,6 +312,8 @@ def branches():
 @api_bp.post('/branches/')
 @api_token_required
 def branch_create():
+    if g.api_identity.get('role') != 'Admin':
+        return fail('Only administrators can manage branches.', 403)
     d = body(); name = (d.get('branch_name') or d.get('name') or '').strip()
     if not name: return fail('Branch name is required.', 422)
     if Branch.query.filter(func.lower(Branch.branch_name) == name.lower()).first(): return fail('Branch already exists.', 409)
@@ -293,11 +323,16 @@ def branch_create():
 @api_bp.get('/branches/<int:branch_id>/')
 @api_token_required
 def branch_get(branch_id):
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and branch_id != own_branch_id:
+        return fail('Employees can only access their assigned branch.', 403)
     b = Branch.query.get_or_404(branch_id); return ok(branch_dict(b))
 
 @api_bp.put('/branches/<int:branch_id>/')
 @api_token_required
 def branch_update(branch_id):
+    if g.api_identity.get('role') != 'Admin':
+        return fail('Only administrators can manage branches.', 403)
     b = Branch.query.get_or_404(branch_id); d = body()
     if 'branch_name' in d or 'name' in d: b.branch_name = (d.get('branch_name') or d.get('name') or '').strip()
     for f in ('address','contact_info','region','status'):
@@ -308,6 +343,8 @@ def branch_update(branch_id):
 @api_bp.delete('/branches/<int:branch_id>/')
 @api_token_required
 def branch_delete(branch_id):
+    if g.api_identity.get('role') != 'Admin':
+        return fail('Only administrators can manage branches.', 403)
     b = Branch.query.get_or_404(branch_id)
     try:
         BranchExam.query.filter_by(branch_id=branch_id).delete()
@@ -326,6 +363,8 @@ def branch_delete(branch_id):
 @api_bp.patch('/branches/<int:branch_id>/')
 @api_token_required
 def branch_patch_status(branch_id):
+    if g.api_identity.get('role') != 'Admin':
+        return fail('Only administrators can manage branches.', 403)
     b = Branch.query.get_or_404(branch_id)
     d = body()
     if 'status' in d and d['status']:
@@ -354,7 +393,9 @@ def exam_type_create():
 @api_token_required
 def branch_mappings():
     q=BranchExam.query
-    branch_id=request.args.get('branch_id',type=int)
+    branch_id=_employee_branch_required(request.args.get('branch_id',type=int))
+    if g.api_identity.get('role') == 'Employee' and branch_id is None:
+        return fail('Employees can only access their assigned branch.', 403)
     if branch_id: q=q.filter_by(branch_id=branch_id)
     return ok([branch_exam_dict(x) for x in q.order_by(BranchExam.id.desc()).all()])
 
@@ -363,6 +404,9 @@ def branch_mappings():
 def branch_mapping_create():
     d=body(); bid=d.get('branch_id'); eid=d.get('exam_type_id')
     if not bid or not eid: return fail('branch_id and exam_type_id are required.',422)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and int(bid) != int(own_branch_id):
+        return fail('Employees can only use their assigned branch.', 403)
     if not Branch.query.get(int(bid)) or not ExamType.query.get(int(eid)): return fail('Branch or exam type not found.',404)
     if BranchExam.query.filter_by(branch_id=int(bid),exam_type_id=int(eid)).first(): return fail('Mapping already exists.',409)
     x=BranchExam(branch_id=int(bid),exam_type_id=int(eid),status=d.get('status') or 'Active'); db.session.add(x); db.session.commit(); return ok(branch_exam_dict(x),'Mapping created.',201)
@@ -371,7 +415,9 @@ def branch_mapping_create():
 @api_token_required
 def exam_sessions():
     q=ExamSession.query
-    bid=request.args.get('branch_id',type=int); status=request.args.get('status')
+    bid=_employee_branch_required(request.args.get('branch_id',type=int)); status=request.args.get('status')
+    if g.api_identity.get('role') == 'Employee' and bid is None:
+        return fail('Employees can only access their assigned branch.', 403)
     if bid: q=q.join(BranchExam).filter(BranchExam.branch_id==bid)
     if status: q=q.filter(ExamSession.status==status)
     return ok([session_dict(x) for x in q.order_by(ExamSession.exam_date.asc()).all()])
@@ -384,7 +430,11 @@ def exam_session_create():
     if missing: return fail('Required fields are missing.',422,missing)
     try: exam_date=datetime.strptime(str(d['exam_date']),'%Y-%m-%d').date()
     except ValueError: return fail('exam_date must be YYYY-MM-DD.',422)
-    if not BranchExam.query.get(int(d['branch_exam_id'])): return fail('Branch exam mapping not found.',404)
+    mapping = BranchExam.query.get(int(d['branch_exam_id']))
+    if not mapping: return fail('Branch exam mapping not found.',404)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and mapping.branch_id != own_branch_id:
+        return fail('Employees can only create sessions for their assigned branch.', 403)
     s=ExamSession(branch_exam_id=int(d['branch_exam_id']),exam_date=exam_date,start_time=d['start_time'],end_time=d['end_time'],fee=float(d.get('fee') or 0),seat_capacity=int(d.get('seat_capacity') or 0),status=d.get('status') or 'Scheduled')
     db.session.add(s); db.session.commit(); return ok(session_dict(s),'Session created.',201)
 
@@ -467,7 +517,9 @@ def exam_team_report(team_id):
 @api_bp.get('/exams/candidates/')
 @api_token_required
 def candidates():
-    q=Candidate.query; term=(request.args.get('q') or '').strip(); bid=request.args.get('branch_id',type=int)
+    q=Candidate.query; term=(request.args.get('q') or '').strip(); bid=_employee_branch_required(request.args.get('branch_id',type=int))
+    if g.api_identity.get('role') == 'Employee' and bid is None:
+        return fail('Employees can only access their assigned branch.', 403)
     if term: q=q.filter(or_(Candidate.name.ilike(f'%{term}%'),Candidate.email.ilike(f'%{term}%'),Candidate.register_number.ilike(f'%{term}%')))
     if bid: q=q.filter(Candidate.branch_id==bid)
     team_id=request.args.get('team_id',type=int)
@@ -481,6 +533,12 @@ def candidate_create():
     name = (d.get('name') or '').strip()
     if not name:
         return fail('Candidate name is required.', 422)
+    own_branch_id = _employee_branch_id()
+    requested_branch_id = d.get('branch_id')
+    if own_branch_id is not None:
+        if requested_branch_id in (None, '') or int(requested_branch_id) != int(own_branch_id):
+            return fail('Employees can only add candidates to their assigned branch.', 403)
+        d['branch_id'] = own_branch_id
     c = Candidate(
         name=name,
         email=(d.get('email') or '').strip() or None,
@@ -539,6 +597,9 @@ def candidate_update(candidate_id):
     c = Candidate.query.get(candidate_id)
     if not c:
         return fail('Candidate not found.', 404)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and c.branch_id != own_branch_id:
+        return fail('Employees can only access candidates in their assigned branch.', 403)
 
     d = body()
     status = str(d.get('status') or '').strip()
@@ -572,6 +633,9 @@ def candidate_delete(candidate_id):
     c = Candidate.query.get(candidate_id)
     if not c:
         return fail('Candidate not found.', 404)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and c.branch_id != own_branch_id:
+        return fail('Employees can only access candidates in their assigned branch.', 403)
 
     # Candidate has no delete cascade on attempts/session links, so remove
     # dependent rows explicitly before deleting the master candidate.
@@ -587,7 +651,9 @@ def candidate_delete(candidate_id):
 @api_bp.get('/exams/attempts/')
 @api_token_required
 def attempts():
-    q=ExamAttempt.query; bid=request.args.get('branch_id',type=int); status=request.args.get('status')
+    q=ExamAttempt.query; bid=_employee_branch_required(request.args.get('branch_id',type=int)); status=request.args.get('status')
+    if g.api_identity.get('role') == 'Employee' and bid is None:
+        return fail('Employees can only access their assigned branch.', 403)
     if bid: q=q.filter(ExamAttempt.branch_id==bid)
     if status: q=q.filter(ExamAttempt.status==status)
     return ok([attempt_dict(x) for x in q.order_by(ExamAttempt.scheduled_date.desc()).all()])
@@ -595,7 +661,9 @@ def attempts():
 @api_bp.get('/exams/dashboard/')
 @api_token_required
 def exam_dashboard():
-    bid=request.args.get('branch_id',type=int); q=ExamAttempt.query
+    bid=_employee_branch_required(request.args.get('branch_id',type=int)); q=ExamAttempt.query
+    if g.api_identity.get('role') == 'Employee' and bid is None:
+        return fail('Employees can only access their assigned branch.', 403)
     if bid:q=q.filter(ExamAttempt.branch_id==bid)
     rows=q.all()
     return ok({'scheduled':sum(a.status=='Scheduled' for a in rows),'completed':sum(a.status=='Completed' for a in rows),'cancelled':sum(a.status=='Cancelled' for a in rows),'pass':sum(a.result=='Pass' for a in rows),'fail':sum(a.result=='Fail' for a in rows),'pending':sum(a.result=='Pending' for a in rows)})
@@ -624,7 +692,9 @@ def expenses():
             ~func.lower(func.coalesce(Expense.category, '')).like('%salary%'),
             ~func.lower(func.coalesce(Expense.category, '')).like('%payroll%')
         )
-    bid = request.args.get('branch_id', type=int)
+    bid = _employee_branch_required(request.args.get('branch_id', type=int))
+    if g.api_identity.get('role') == 'Employee' and bid is None:
+        return fail('Employees can only access their assigned branch.', 403)
     cid = request.args.get('category_id', type=int)
     status = request.args.get('status')
     payment_mode = (request.args.get('payment_mode') or '').strip()
@@ -689,6 +759,11 @@ def expense_create():
         except Exception:
             return fail('date_incurred must be ISO date/datetime or YYYY-MM-DD.', 422)
     branch_id = d.get('branch_id')
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None:
+        if branch_id in (None, '') or int(branch_id) != int(own_branch_id):
+            return fail('Employees can only add expenses to their assigned branch.', 403)
+        branch_id = own_branch_id
     try:
         branch_id = int(branch_id) if branch_id is not None else None
     except (TypeError, ValueError):
@@ -718,6 +793,9 @@ def expense_create():
 @api_token_required
 def expense_get(expense_id):
     e = Expense.query.get_or_404(expense_id)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and e.branch_id != own_branch_id:
+        return fail('Employees can only access expenses in their assigned branch.', 403)
     if not _employee_can_access_expense(e):
         return fail('Employees cannot access salary records.', 403)
     return ok(expense_dict(e))
@@ -727,6 +805,9 @@ def expense_get(expense_id):
 @api_token_required
 def expense_update(expense_id):
     e = Expense.query.get_or_404(expense_id)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and e.branch_id != own_branch_id:
+        return fail('Employees can only access expenses in their assigned branch.', 403)
     if not _employee_can_access_expense(e):
         return fail('Employees cannot update salary records.', 403)
     d = body()
@@ -780,6 +861,9 @@ def expense_update(expense_id):
 @api_token_required
 def expense_delete(expense_id):
     e = Expense.query.get_or_404(expense_id)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and e.branch_id != own_branch_id:
+        return fail('Employees can only access expenses in their assigned branch.', 403)
     if not _employee_can_access_expense(e):
         return fail('Employees cannot delete salary records.', 403)
     e.status = 'Cancelled'
@@ -830,7 +914,9 @@ def expense_budgets():
 @api_bp.get('/expenses/summary/')
 @api_token_required
 def expense_summary_api():
-    bid = request.args.get('branch_id', type=int)
+    bid = _employee_branch_required(request.args.get('branch_id', type=int))
+    if g.api_identity.get('role') == 'Employee' and bid is None:
+        return fail('Employees can only access their assigned branch.', 403)
     q = Expense.query.filter(Expense.status == 'Active')
     if bid:
         q = q.filter(Expense.branch_id == bid)
@@ -840,206 +926,6 @@ def expense_summary_api():
     for e in rows:
         by_category[e.category] = (by_category.get(e.category) or 0) + (e.amount or 0)
     return ok({'total': total, 'count': len(rows), 'by_category': by_category})
-
-
-def _parse_voucher_invoice_date(value):
-    if not value:
-        return datetime.utcnow().date()
-    try:
-        return datetime.fromisoformat(str(value)).date()
-    except Exception:
-        try:
-            return datetime.strptime(str(value), '%Y-%m-%d').date()
-        except Exception:
-            raise ValueError('invoice_date must be YYYY-MM-DD.')
-
-
-def _voucher_invoice_items(raw_items):
-    if not isinstance(raw_items, list) or not raw_items:
-        raise ValueError('At least one invoice item is required.')
-    parsed = []
-    subtotal = discount_total = tax_total = total = 0.0
-    for raw in raw_items:
-        if not isinstance(raw, dict):
-            raise ValueError('Each invoice item must be an object.')
-        try:
-            exam_id = int(raw.get('exam_type_id'))
-            quantity = int(raw.get('quantity') or 0)
-            unit_price = float(raw.get('unit_price') or 0)
-            discount = float(raw.get('discount') or 0)
-            tax = float(raw.get('tax') or 0)
-        except (TypeError, ValueError):
-            raise ValueError('Invalid exam, quantity, price, discount, or tax.')
-        if not ExamType.query.get(exam_id):
-            raise ValueError(f'Exam type {exam_id} was not found.')
-        if quantity <= 0:
-            raise ValueError('Quantity must be greater than 0.')
-        if unit_price < 0 or discount < 0 or tax < 0:
-            raise ValueError('Price, discount, and tax cannot be negative.')
-        line_subtotal = quantity * unit_price
-        line_total = line_subtotal - discount + tax
-        if line_total < 0:
-            raise ValueError('Item total cannot be negative.')
-        subtotal += line_subtotal
-        discount_total += discount
-        tax_total += tax
-        total += line_total
-        parsed.append({
-            'exam_type_id': exam_id,
-            'quantity': quantity,
-            'unit_price': unit_price,
-            'discount': discount,
-            'tax': tax,
-            'total_amount': line_total,
-        })
-    return parsed, subtotal, discount_total, tax_total, total
-
-
-def _save_voucher_purchase_invoice(inv, d):
-    try:
-        branch_id = int(d.get('branch_id'))
-    except (TypeError, ValueError):
-        raise ValueError('A valid branch is required.')
-    if not Branch.query.get(branch_id):
-        raise LookupError('Branch not found.')
-    supplier = str(d.get('supplier') or '').strip()
-    if not supplier:
-        raise ValueError('Supplier is required.')
-    invoice_date = _parse_voucher_invoice_date(d.get('invoice_date'))
-    items, subtotal, discount, tax, total = _voucher_invoice_items(d.get('items'))
-    try:
-        paid = float(d.get('paid_amount') or 0)
-    except (TypeError, ValueError):
-        raise ValueError('Paid amount must be numeric.')
-    if paid < 0 or paid > total:
-        raise ValueError('Paid amount must be between 0 and the invoice total.')
-    balance = max(0.0, total - paid)
-    payment_status = str(d.get('payment_status') or '').strip()
-    if payment_status not in ('Pending', 'Partial', 'Paid'):
-        payment_status = 'Paid' if balance <= 0 and total > 0 else ('Partial' if paid > 0 else 'Pending')
-    inv.supplier = supplier
-    inv.invoice_date = invoice_date
-    inv.branch_id = branch_id
-    inv.payment_status = payment_status
-    inv.payment_mode = str(d.get('payment_mode') or '').strip() or None
-    inv.payment_reference = str(d.get('payment_reference') or '').strip() or None
-    inv.subtotal = subtotal
-    inv.discount = discount
-    inv.tax = tax
-    inv.total_amount = total
-    inv.paid_amount = paid
-    inv.balance_amount = balance
-    inv.notes = str(d.get('notes') or '').strip() or None
-    inv.status = str(d.get('status') or 'Active') if str(d.get('status') or 'Active') in ('Active', 'Cancelled') else 'Active'
-    inv.items.clear()
-    for item in items:
-        inv.items.append(VoucherPurchaseInvoiceItem(**item))
-    return inv
-
-
-# Voucher Purchase Invoices
-@api_bp.get('/expenses/invoices/')
-@api_token_required
-def voucher_purchase_invoices():
-    if g.api_identity.get('role') == 'Employee':
-        return fail('Employees cannot access voucher purchase invoices.', 403)
-    q = VoucherPurchaseInvoice.query
-    bid = request.args.get('branch_id', type=int)
-    status = (request.args.get('status') or '').strip()
-    term = (request.args.get('q') or '').strip()
-    if bid:
-        q = q.filter(VoucherPurchaseInvoice.branch_id == bid)
-    if status in ('Active', 'Cancelled'):
-        q = q.filter(VoucherPurchaseInvoice.status == status)
-    if term:
-        like = f'%{term}%'
-        q = q.filter(or_(VoucherPurchaseInvoice.invoice_number.ilike(like),
-                         VoucherPurchaseInvoice.supplier.ilike(like),
-                         VoucherPurchaseInvoice.payment_reference.ilike(like)))
-    rows = q.order_by(VoucherPurchaseInvoice.invoice_date.desc(), VoucherPurchaseInvoice.id.desc()).all()
-    return ok([voucher_purchase_invoice_dict(x) for x in rows])
-
-
-@api_bp.get('/expenses/invoices/<int:invoice_id>/')
-@api_token_required
-def voucher_purchase_invoice_get(invoice_id):
-    if g.api_identity.get('role') == 'Employee':
-        return fail('Employees cannot access voucher purchase invoices.', 403)
-    return ok(voucher_purchase_invoice_dict(VoucherPurchaseInvoice.query.get_or_404(invoice_id)))
-
-
-@api_bp.post('/expenses/invoices/')
-@api_token_required
-def voucher_purchase_invoice_create():
-    if g.api_identity.get('role') == 'Employee':
-        return fail('Employees cannot create voucher purchase invoices.', 403)
-    d = body()
-    inv = VoucherPurchaseInvoice(
-        invoice_number=f"TEMP-{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}",
-        supplier='-',
-    )
-    try:
-        _save_voucher_purchase_invoice(inv, d)
-    except LookupError as e:
-        db.session.rollback()
-        return fail(str(e), 404)
-    except ValueError as e:
-        db.session.rollback()
-        return fail(str(e), 422)
-    db.session.add(inv)
-    db.session.flush()
-    inv.invoice_number = str(d.get('invoice_number') or '').strip() or f'VPI-{datetime.utcnow().year}-{inv.id:05d}'
-    duplicate = VoucherPurchaseInvoice.query.filter(
-        VoucherPurchaseInvoice.invoice_number == inv.invoice_number,
-        VoucherPurchaseInvoice.id != inv.id
-    ).first()
-    if duplicate:
-        db.session.rollback()
-        return fail('Invoice number already exists.', 409)
-    db.session.commit()
-    return ok(voucher_purchase_invoice_dict(inv), 'Invoice created.', 201)
-
-
-@api_bp.put('/expenses/invoices/<int:invoice_id>/')
-@api_bp.patch('/expenses/invoices/<int:invoice_id>/')
-@api_token_required
-def voucher_purchase_invoice_update(invoice_id):
-    if g.api_identity.get('role') == 'Employee':
-        return fail('Employees cannot update voucher purchase invoices.', 403)
-    inv = VoucherPurchaseInvoice.query.get_or_404(invoice_id)
-    if inv.status == 'Cancelled':
-        return fail('Cancelled invoices cannot be edited.', 409)
-    d = body()
-    requested_number = str(d.get('invoice_number') or inv.invoice_number).strip()
-    try:
-        _save_voucher_purchase_invoice(inv, d)
-    except LookupError as e:
-        db.session.rollback()
-        return fail(str(e), 404)
-    except ValueError as e:
-        db.session.rollback()
-        return fail(str(e), 422)
-    inv.invoice_number = requested_number or inv.invoice_number
-    duplicate = VoucherPurchaseInvoice.query.filter(
-        VoucherPurchaseInvoice.invoice_number == inv.invoice_number,
-        VoucherPurchaseInvoice.id != inv.id
-    ).first()
-    if duplicate:
-        db.session.rollback()
-        return fail('Invoice number already exists.', 409)
-    db.session.commit()
-    return ok(voucher_purchase_invoice_dict(inv), 'Invoice updated.')
-
-
-@api_bp.delete('/expenses/invoices/<int:invoice_id>/')
-@api_token_required
-def voucher_purchase_invoice_delete(invoice_id):
-    if g.api_identity.get('role') == 'Employee':
-        return fail('Employees cannot delete voucher purchase invoices.', 403)
-    inv = VoucherPurchaseInvoice.query.get_or_404(invoice_id)
-    inv.status = 'Cancelled'
-    db.session.commit()
-    return ok(voucher_purchase_invoice_dict(inv), 'Invoice cancelled successfully.')
 
 
 # Employee Management API

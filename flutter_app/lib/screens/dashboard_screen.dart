@@ -5,6 +5,7 @@ import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
 import '../providers/branch_context.dart';
+import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'attended_candidates_screen.dart';
 import 'branches_screen.dart';
@@ -49,6 +50,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<Map<String, dynamic>> load() async {
+    final isAdmin = context.read<AuthProvider>().role.trim().toLowerCase() == 'admin';
     await _branchContext.ensureLoaded();
     final branchId = _branchContext.selectedBranchId;
     final r = await api.dashboard(branchId: branchId);
@@ -115,26 +117,30 @@ class DashboardScreenState extends State<DashboardScreen> {
         .where((c) => (c.status ?? '').trim().toLowerCase() == 'rescheduled')
         .length;
 
+    // Financial/voucher summaries are admin-only. Do not request these
+    // datasets for employee/user sessions.
     double currentMonthExpense = 0;
     Map<String, dynamic> voucherStats = {};
-    try {
-      final voucherRes = await api.voucherDashboard(branchId: branchId);
-      voucherStats = Map<String, dynamic>.from(voucherRes.data['data'] ?? {});
-    } catch (_) {}
+    if (isAdmin) {
+      try {
+        final voucherRes = await api.voucherDashboard(branchId: branchId);
+        voucherStats = Map<String, dynamic>.from(voucherRes.data['data'] ?? {});
+      } catch (_) {}
 
-    try {
-      final expenseRes = await api.expenses(branchId: branchId, status: 'Active');
-      final expenses = expenseRes.data['data'] as List? ?? const [];
-      for (final raw in expenses) {
-        final e = Map<String, dynamic>.from(raw);
-        final amount = double.tryParse('${e['amount'] ?? 0}') ?? 0;
-        final dateRaw = '${e['date_incurred'] ?? ''}';
-        final d = DateTime.tryParse(dateRaw);
-        if (d != null && d.year == now.year && d.month == now.month) {
-          currentMonthExpense += amount;
+      try {
+        final expenseRes = await api.expenses(branchId: branchId, status: 'Active');
+        final expenses = expenseRes.data['data'] as List? ?? const [];
+        for (final raw in expenses) {
+          final e = Map<String, dynamic>.from(raw);
+          final amount = double.tryParse('${e['amount'] ?? 0}') ?? 0;
+          final dateRaw = '${e['date_incurred'] ?? ''}';
+          final d = DateTime.tryParse(dateRaw);
+          if (d != null && d.year == now.year && d.month == now.month) {
+            currentMonthExpense += amount;
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     return {
       'stats': stats,
@@ -1455,8 +1461,10 @@ class DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
 
-        title: const Text(
-          'Dashboard',
+        title: Text(
+          context.watch<AuthProvider>().role.trim().toLowerCase() == 'admin'
+              ? 'Dashboard'
+              : 'User Dashboard',
           style: AppBarStyle.titleStyle,
         ),
 
@@ -1502,6 +1510,8 @@ class DashboardScreenState extends State<DashboardScreen> {
 
           final stats =
               data['stats'] as DashboardStats;
+          final isAdmin =
+              context.read<AuthProvider>().role.trim().toLowerCase() == 'admin';
 
           final currentMonthTotal =
               data['currentMonthTotal'] as int? ?? 0;
@@ -1633,8 +1643,9 @@ class DashboardScreenState extends State<DashboardScreen> {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.45,
                   children: [
+                    if (isAdmin) ...[
                     // ---------------------------------------------
-                    // TOTAL BRANCHES
+                    // TOTAL BRANCHES (ADMIN ONLY)
                     // ---------------------------------------------
 
                     _KpiCard(
@@ -1652,6 +1663,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                         );
                       },
                     ),
+                    ],
 
                     // ---------------------------------------------
                     // TODAY'S EXAM
@@ -1727,8 +1739,9 @@ class DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 20),
 
                 // =================================================
-                // FINANCE & VOUCHER KPI CARDS
+                // FINANCE & VOUCHER KPI CARDS (ADMIN ONLY)
                 // =================================================
+                if (isAdmin) ...[
                 GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
@@ -1850,6 +1863,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                 ),
 
                 const SizedBox(height: 20),
+
+                ],
 
                 // =================================================
                 // BRANCH OVERVIEW
