@@ -22,4 +22,9 @@ class ApiService {
       client.expenses(branchId: branchId, q: q, status: status);
   Future<Response> expenseCategories() => client.expenseCategories();
   Future<Response> createExpense(Map<String, dynamic> data) => client.createExpense(data);
+  Future<Response> invoices({int? branchId, String? q, String? status}) =>
+      client.invoices(branchId: branchId, q: q, status: status);
+  Future<Response> createInvoice(Map<String, dynamic> data) => client.createInvoice(data);
+  Future<Response> updateInvoice(int id, Map<String, dynamic> data) => client.updateInvoice(id, data);
+  Future<Response> deleteInvoice(int id) => client.deleteInvoice(id);
 }

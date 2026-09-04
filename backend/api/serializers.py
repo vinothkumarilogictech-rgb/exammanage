@@ -65,6 +65,43 @@ def expense_dict(e):
             'branch_name': e.branch.branch_name if e.branch else None, 'payment_mode': e.payment_mode,
             'receipt_file': e.receipt_file, 'status': e.status, 'created_at': iso(e.created_at), 'updated_at': iso(e.updated_at)}
 
+def voucher_purchase_invoice_dict(inv):
+    return {
+        'id': inv.id,
+        'invoice_number': inv.invoice_number,
+        'supplier': inv.supplier,
+        'invoice_date': iso(inv.invoice_date),
+        'branch_id': inv.branch_id,
+        'branch_name': inv.branch.branch_name if inv.branch else None,
+        'payment_status': inv.payment_status,
+        'payment_mode': inv.payment_mode,
+        'payment_reference': inv.payment_reference,
+        'subtotal': inv.subtotal or 0,
+        'discount': inv.discount or 0,
+        'tax': inv.tax or 0,
+        'total_amount': inv.total_amount or 0,
+        'paid_amount': inv.paid_amount or 0,
+        'balance_amount': inv.balance_amount or 0,
+        'notes': inv.notes,
+        'status': inv.status,
+        'created_at': iso(inv.created_at),
+        'updated_at': iso(inv.updated_at),
+        'items': [
+            {
+                'id': item.id,
+                'exam_type_id': item.exam_type_id,
+                'exam_name': item.exam_type.name if item.exam_type else '-',
+                'quantity': item.quantity,
+                'unit_price': item.unit_price or 0,
+                'discount': item.discount or 0,
+                'tax': item.tax or 0,
+                'total_amount': item.total_amount or 0,
+            }
+            for item in inv.items
+        ],
+    }
+
+
 def budget_dict(b):
     return {'id': b.id, 'branch_id': b.branch_id, 'category_id': b.category_id, 'period_year': b.period_year,
             'period_month': b.period_month, 'budget_amount': b.budget_amount}

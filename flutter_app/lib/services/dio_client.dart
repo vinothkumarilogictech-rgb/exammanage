@@ -186,6 +186,20 @@ class DioClient {
       dio.post('${ApiConfig.expenseCategoriesPath}$id/toggle/', data: {if (status != null) 'status': status});
 
   Future<Response> expenseBudgets() => dio.get(ApiConfig.expenseBudgetsPath);
+  Future<Response> invoices({int? branchId, String? q, String? status}) => dio.get(
+        ApiConfig.expenseInvoicesPath,
+        queryParameters: {
+          if (branchId != null) 'branch_id': branchId,
+          if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+          if (status != null && status.isNotEmpty && status != 'All') 'status': status,
+        },
+      );
+  Future<Response> createInvoice(Map<String, dynamic> data) =>
+      dio.post(ApiConfig.expenseInvoicesPath, data: data);
+  Future<Response> updateInvoice(int id, Map<String, dynamic> data) =>
+      dio.put('${ApiConfig.expenseInvoicesPath}$id/', data: data);
+  Future<Response> deleteInvoice(int id) =>
+      dio.delete('${ApiConfig.expenseInvoicesPath}$id/');
   Future<Response> createExpense(Map<String, dynamic> data) =>
       dio.post(ApiConfig.expensesPath, data: data);
   Future<Response> updateExpense(int id, Map<String, dynamic> data) =>

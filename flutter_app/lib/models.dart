@@ -169,6 +169,90 @@ class Expense {
       );
 }
 
+class VoucherPurchaseInvoiceItem {
+  final int id;
+  final int examTypeId;
+  final String examName;
+  final int quantity;
+  final double unitPrice, discount, tax, totalAmount;
+
+  VoucherPurchaseInvoiceItem({
+    required this.id,
+    required this.examTypeId,
+    required this.examName,
+    required this.quantity,
+    required this.unitPrice,
+    required this.discount,
+    required this.tax,
+    required this.totalAmount,
+  });
+
+  factory VoucherPurchaseInvoiceItem.fromMap(Map<String, dynamic> m) =>
+      VoucherPurchaseInvoiceItem(
+        id: int.tryParse('${m['id'] ?? 0}') ?? 0,
+        examTypeId: int.tryParse('${m['exam_type_id'] ?? 0}') ?? 0,
+        examName: '${m['exam_name'] ?? '-'}',
+        quantity: int.tryParse('${m['quantity'] ?? 0}') ?? 0,
+        unitPrice: double.tryParse('${m['unit_price'] ?? 0}') ?? 0,
+        discount: double.tryParse('${m['discount'] ?? 0}') ?? 0,
+        tax: double.tryParse('${m['tax'] ?? 0}') ?? 0,
+        totalAmount: double.tryParse('${m['total_amount'] ?? 0}') ?? 0,
+      );
+}
+
+class VoucherPurchaseInvoice {
+  final int id;
+  final String invoiceNumber, supplier, invoiceDate, branchName, paymentStatus, paymentMode, paymentReference, notes, status;
+  final int branchId;
+  final double subtotal, discount, tax, totalAmount, paidAmount, balanceAmount;
+  final List<VoucherPurchaseInvoiceItem> items;
+
+  VoucherPurchaseInvoice({
+    required this.id,
+    required this.invoiceNumber,
+    required this.supplier,
+    required this.invoiceDate,
+    required this.branchId,
+    required this.branchName,
+    required this.paymentStatus,
+    required this.paymentMode,
+    required this.paymentReference,
+    required this.subtotal,
+    required this.discount,
+    required this.tax,
+    required this.totalAmount,
+    required this.paidAmount,
+    required this.balanceAmount,
+    required this.notes,
+    required this.status,
+    required this.items,
+  });
+
+  factory VoucherPurchaseInvoice.fromMap(Map<String, dynamic> m) =>
+      VoucherPurchaseInvoice(
+        id: int.tryParse('${m['id'] ?? 0}') ?? 0,
+        invoiceNumber: '${m['invoice_number'] ?? ''}',
+        supplier: '${m['supplier'] ?? ''}',
+        invoiceDate: '${m['invoice_date'] ?? ''}',
+        branchId: int.tryParse('${m['branch_id'] ?? 0}') ?? 0,
+        branchName: '${m['branch_name'] ?? ''}',
+        paymentStatus: '${m['payment_status'] ?? 'Pending'}',
+        paymentMode: '${m['payment_mode'] ?? ''}',
+        paymentReference: '${m['payment_reference'] ?? ''}',
+        subtotal: double.tryParse('${m['subtotal'] ?? 0}') ?? 0,
+        discount: double.tryParse('${m['discount'] ?? 0}') ?? 0,
+        tax: double.tryParse('${m['tax'] ?? 0}') ?? 0,
+        totalAmount: double.tryParse('${m['total_amount'] ?? 0}') ?? 0,
+        paidAmount: double.tryParse('${m['paid_amount'] ?? 0}') ?? 0,
+        balanceAmount: double.tryParse('${m['balance_amount'] ?? 0}') ?? 0,
+        notes: '${m['notes'] ?? ''}',
+        status: '${m['status'] ?? 'Active'}',
+        items: (m['items'] as List? ?? const [])
+            .map((x) => VoucherPurchaseInvoiceItem.fromMap(Map<String, dynamic>.from(x)))
+            .toList(),
+      );
+}
+
 class ExpenseCategoryItem {
   final int id;
   final String name;
