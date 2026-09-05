@@ -111,12 +111,12 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFF7A18), Color(0xFFE85D04)],
+                      colors: [Color(0xFF9A22C7), Color(0xFF6C1FB0)],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
                     borderRadius: BorderRadius.circular(18),
-                    boxShadow: [BoxShadow(color: const Color(0xFFE85D04).withOpacity(0.3), blurRadius: 14, offset: const Offset(0, 6))],
+                    boxShadow: [BoxShadow(color: const Color(0xFF6C1FB0).withOpacity(0.3), blurRadius: 14, offset: const Offset(0, 6))],
                   ),
                   child: Row(children: [
                     Container(
@@ -152,7 +152,7 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                 _formSectionCard(
                   title: 'PERSONAL DETAILS',
                   icon: Icons.badge_rounded,
-                  color: const Color(0xFFE85D04),
+                  color: const Color(0xFF6C1FB0),
                   children: [
                     field(name, 'Full Name *', icon: Icons.person_outline_rounded),
                     field(des, 'Designation *', icon: Icons.work_outline_rounded),
@@ -264,7 +264,7 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                   height: 52,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFE85D04),
+                      backgroundColor: const Color(0xFF6C1FB0),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 0,
                     ),
@@ -332,7 +332,7 @@ class EmployeesScreenState extends State<EmployeesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFFFBF7),
+    backgroundColor: const Color(0xFFF7F5FD),
     appBar: AppBar(
       elevation: 0,
       toolbarHeight: 92,
@@ -343,11 +343,11 @@ class EmployeesScreenState extends State<EmployeesScreen> {
       flexibleSpace: Container(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFFA24C)],
+            colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          boxShadow: const [BoxShadow(color: Color(0x55FF7A18), blurRadius: 26, offset: Offset(0, 9))],
+          boxShadow: const [BoxShadow(color: Color(0x559A22C7), blurRadius: 26, offset: Offset(0, 9))],
           borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26)),
         ),
       ),
@@ -357,7 +357,7 @@ class EmployeesScreenState extends State<EmployeesScreen> {
       ],
     ),
     floatingActionButton: FloatingActionButton.extended(
-      backgroundColor: const Color(0xFFE85D04),
+      backgroundColor: const Color(0xFF6C1FB0),
       foregroundColor: Colors.white,
       elevation: 10,
       onPressed: () => editEmployee(),
@@ -365,9 +365,9 @@ class EmployeesScreenState extends State<EmployeesScreen> {
       label: const Text('Add', style: TextStyle(fontWeight: FontWeight.w800)),
     ),
     body: loading
-        ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF7A18)))
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF9A22C7)))
         : RefreshIndicator(
-            color: const Color(0xFFFF7A18),
+            color: const Color(0xFF9A22C7),
             onRefresh: load,
             child: employees.isEmpty
                 ? ListView(
@@ -378,11 +378,11 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(28),
-                          border: Border.all(color: const Color(0xFFFFE1CC)),
+                          border: Border.all(color: const Color(0xFFEDE9FE)),
                           boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, 10))],
                         ),
                         child: Column(children: [
-                          Container(width: 76, height: 76, decoration: BoxDecoration(color: const Color(0xFFFFE8D6), borderRadius: BorderRadius.circular(24)), child: const Icon(Icons.groups_2_rounded, color: Color(0xFFE85D04), size: 38)),
+                          Container(width: 76, height: 76, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(24)), child: const Icon(Icons.groups_2_rounded, color: Color(0xFF6C1FB0), size: 38)),
                           const SizedBox(height: 18),
                           const Text('No employees yet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
                           const SizedBox(height: 8),
@@ -404,7 +404,7 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: const Color(0xFFFFE4D0)),
+                          border: Border.all(color: const Color(0xFFEDE9FE)),
                           boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 18, offset: Offset(0, 7))],
                         ),
                         child: InkWell(
@@ -413,7 +413,7 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                           child: Padding(
                             padding: const EdgeInsets.all(15),
                             child: Row(children: [
-                              Container(width: 54, height: 54, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFFE8D6), Color(0xFFFFD0A8)]), borderRadius: BorderRadius.circular(18)), child: Center(child: Text(initial, style: const TextStyle(color: Color(0xFFE85D04), fontSize: 20, fontWeight: FontWeight.w900)))),
+                              Container(width: 54, height: 54, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFF0E3FA), Color(0xFFD8B4FE)]), borderRadius: BorderRadius.circular(18)), child: Center(child: Text(initial, style: const TextStyle(color: Color(0xFF6C1FB0), fontSize: 20, fontWeight: FontWeight.w900)))),
                               const SizedBox(width: 14),
                               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                 Text(e.fullName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),

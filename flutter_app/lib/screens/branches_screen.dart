@@ -27,10 +27,10 @@ class BranchesScreenState extends State<BranchesScreen> {
   late Future<List<Branch>> future;
   bool opened = false;
 
-  static const Color _purple = Color(0xFFFF7A18);
+  static const Color _purple = Color(0xFF9A22C7);
   static const Color _purpleDark = Color(0xFF9A3412);
-  static const Color _purpleSoft = Color(0xFFFFF1E6);
-  static const Color _pageBg = Color(0xFFF7F5FC);
+  static const Color _purpleSoft = Color(0xFFEDE9FE);
+  static const Color _pageBg = Color(0xFFF7F5FD);
 
   @override
   void initState() {
@@ -1053,11 +1053,11 @@ class BranchesScreenState extends State<BranchesScreen> {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFF9F43)],
+              colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            boxShadow: [BoxShadow(color: Color(0x55FF7A18), blurRadius: 24, offset: Offset(0, 8))],
+            boxShadow: [BoxShadow(color: Color(0x559A22C7), blurRadius: 24, offset: Offset(0, 8))],
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
           ),
         ),
@@ -1895,8 +1895,8 @@ class BranchesScreenState extends State<BranchesScreen> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             colors: [
-              Color(0xFFFF7A18),
-              Color(0xFFE85D04),
+              Color(0xFF9A22C7),
+              Color(0xFF6C1FB0),
             ],
           ),
           borderRadius: BorderRadius.circular(16),

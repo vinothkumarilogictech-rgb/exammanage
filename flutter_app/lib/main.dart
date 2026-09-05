@@ -146,11 +146,11 @@ class _StartupSplashState extends State<StartupSplash>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFFB74D), Color(0xFFFF6D00)],
+                          colors: [Color(0xFFC77DF0), Color(0xFF7B14B5)],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFFFF9800),
+                            color: Color(0xFF9A22C7),
                             blurRadius: 16,
                             spreadRadius: 1,
                           ),
@@ -203,9 +203,9 @@ class RootScreen extends StatelessWidget {
   }
 }
 
-/// Brand mark: the same swoosh "i" used on the login screen (angled flag
-/// top, curved stem, hook tail, offset dot), drawn with CustomPaint and
-/// filled white on top of the orange gradient disc.
+/// Brand mark: the real iLOGIC TECH "i" logo (assets/ilogictech_icon.png),
+/// shown on a white disc so the logo's own blue-to-magenta gradient reads
+/// exactly as designed, regardless of the background behind it.
 class _BrandMark extends StatelessWidget {
   final double size;
 
@@ -217,73 +217,27 @@ class _BrandMark extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
+        color: Colors.white,
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFB300), Color(0xFFE65100)],
-        ),
         border: Border.all(
           color: Colors.white.withOpacity(.24),
           width: 1.5,
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x80FF9800),
+            color: Color(0x805A17B5),
             blurRadius: 34,
             spreadRadius: 6,
           ),
         ],
       ),
-      padding: EdgeInsets.all(size * .17),
-      child: CustomPaint(
-        size: Size(size, size),
-        painter: _SwooshIPainter(),
+      padding: EdgeInsets.all(size * .2),
+      child: Image.asset(
+        'assets/ilogictech_icon.png',
+        fit: BoxFit.contain,
       ),
     );
   }
-}
-
-/// Hand-traced swoosh "i" path (angled flag top, curved stem, hook tail,
-/// offset dot) - same shape used on the login screen's logo badge.
-class _SwooshIPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    const boxW = 44.0;
-    const boxH = 92.0;
-    final scale = (size.width / boxW) < (size.height / boxH)
-        ? size.width / boxW
-        : size.height / boxH;
-    final dx = (size.width - boxW * scale) / 2;
-    final dy = (size.height - boxH * scale) / 2;
-
-    canvas.save();
-    canvas.translate(dx, dy);
-    canvas.scale(scale);
-
-    final paint = Paint()..color = Colors.white;
-
-    // Dot of the "i"
-    canvas.drawCircle(const Offset(25, 10), 8, paint);
-
-    // Stem + curled hook tail, traced as one continuous outline
-    final path = Path()
-      ..moveTo(28, 24)
-      ..lineTo(13, 32)
-      ..cubicTo(9, 40, 7, 55, 7, 68)
-      ..cubicTo(7, 81, 12, 91, 23, 91)
-      ..cubicTo(33, 91, 41, 85, 38, 75)
-      ..cubicTo(36, 81, 29, 84, 22, 80)
-      ..cubicTo(29, 78, 32, 68, 32, 55)
-      ..cubicTo(32, 44, 30, 32, 28, 24)
-      ..close();
-
-    canvas.drawPath(path, paint);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _SplashBackground extends StatelessWidget {
@@ -304,10 +258,10 @@ class _SplashPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF3A1600),
-          Color(0xFF7A2F00),
-          Color(0xFFE65C00),
-          Color(0xFF2A0E00),
+          Color(0xFF120B4A),
+          Color(0xFF2A1470),
+          Color(0xFF7B14B5),
+          Color(0xFF1A0A3D),
         ],
       ).createShader(rect);
     canvas.drawRect(rect, base);
@@ -322,7 +276,7 @@ class _SplashPainter extends CustomPainter {
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [
-            const Color(0xFFFF9800).withOpacity(.24),
+            const Color(0xFF9A22C7).withOpacity(.24),
             Colors.transparent,
           ],
         ).createShader(

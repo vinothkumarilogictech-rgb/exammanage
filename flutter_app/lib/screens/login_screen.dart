@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: const Color(0xFFFFF6ED),
+      backgroundColor: const Color(0xFFF7F5FD),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final h = constraints.maxHeight;
@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen>
                         Text(
                           'Exam Management',
                           style: TextStyle(
-                            color: const Color(0xFF2A1400),
+                            color: const Color(0xFF1F1533),
                             fontSize: compact ? 22 : 26,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -.6,
@@ -110,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen>
                             const Text(
                               'CONTROL PANEL',
                               style: TextStyle(
-                                color: Color(0xFFE07417),
+                                color: Color(0xFF7B14B5),
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 3,
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen>
                         Text(
                           'iLOGIC TECH  |  Logic Group of Companies',
                           style: TextStyle(
-                            color: const Color(0xFFC7A98A),
+                            color: const Color(0xFFA79BC4),
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                             letterSpacing: .6,
@@ -157,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _dash() => Container(width: 24, height: 1.4, color: const Color(0xFFF0C79A));
+  Widget _dash() => Container(width: 24, height: 1.4, color: const Color(0xFFD9C7F0));
 
   Widget _buildForm(AuthProvider auth, {required bool compact, required bool veryCompact}) {
     return Container(
@@ -170,10 +170,10 @@ class _LoginScreenState extends State<LoginScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFFCE6CC), width: 1.2),
+        border: Border.all(color: const Color(0xFFE9DDF7), width: 1.2),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1FE0741A),
+            color: Color(0x1F9A22C7),
             blurRadius: 30,
             offset: Offset(0, 14),
           ),
@@ -187,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen>
             height: 50,
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: const Color(0xFFFBF0E4),
+              color: const Color(0xFFF2ECFA),
               borderRadius: BorderRadius.circular(15),
             ),
             child: Row(
@@ -260,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen>
               onPressed: () => setState(() => obscure = !obscure),
               icon: Icon(
                 obscure ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                color: const Color(0xFFD6690C),
+                color: const Color(0xFF7B14B5),
                 size: 21,
               ),
             ),
@@ -278,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen>
               child: const Text(
                 'Forgot password?',
                 style: TextStyle(
-                  color: Color(0xFFC96A15),
+                  color: Color(0xFF7B14B5),
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                 ),
@@ -297,12 +297,12 @@ class _LoginScreenState extends State<LoginScreen>
           SizedBox(height: veryCompact ? 16 : 20),
           Row(
             children: [
-              Expanded(child: Container(height: 1, color: const Color(0xFFF2E6D6))),
+              Expanded(child: Container(height: 1, color: const Color(0xFFEBE2F7))),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Icon(Icons.verified_user_rounded, color: const Color(0xFFE07A17), size: 18),
+                child: Icon(Icons.verified_user_rounded, color: const Color(0xFF7B14B5), size: 18),
               ),
-              Expanded(child: Container(height: 1, color: const Color(0xFFF2E6D6))),
+              Expanded(child: Container(height: 1, color: const Color(0xFFEBE2F7))),
             ],
           ),
           const SizedBox(height: 8),
@@ -310,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen>
             'Secure access for authorized staff only',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF8A7A67),
+              color: Color(0xFF6B6280),
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
             ),
@@ -331,11 +331,11 @@ class _LoginScreenState extends State<LoginScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(11),
         gradient: selected
-            ? const LinearGradient(colors: [Color(0xFFFF9A2E), Color(0xFFE0630C)])
+            ? const LinearGradient(colors: [Color(0xFFB23BD6), Color(0xFF5A17B5)])
             : null,
         boxShadow: selected
             ? const [
-                BoxShadow(color: Color(0x40E0740C), blurRadius: 10, offset: Offset(0, 4)),
+                BoxShadow(color: Color(0x409A22C7), blurRadius: 10, offset: Offset(0, 4)),
               ]
             : null,
       ),
@@ -347,12 +347,12 @@ class _LoginScreenState extends State<LoginScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 17, color: selected ? Colors.white : const Color(0xFF8C7A64)),
+              Icon(icon, size: 17, color: selected ? Colors.white : const Color(0xFF6B6280)),
               const SizedBox(width: 7),
               Text(
                 label,
                 style: TextStyle(
-                  color: selected ? Colors.white : const Color(0xFF8C7A64),
+                  color: selected ? Colors.white : const Color(0xFF6B6280),
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
                 ),
@@ -367,7 +367,7 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _label(String text) => Text(
         text,
         style: const TextStyle(
-          color: Color(0xFF5B4D3D),
+          color: Color(0xFF4A3F66),
           fontSize: 13.5,
           fontWeight: FontWeight.w800,
         ),
@@ -387,14 +387,14 @@ class _LoginScreenState extends State<LoginScreen>
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCFAF6),
+        color: const Color(0xFFFAF8FE),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: focused ? const Color(0xFFE0821E) : const Color(0xFFEEE2D2),
+          color: focused ? const Color(0xFF7B14B5) : const Color(0xFFE3D7F5),
           width: focused ? 1.6 : 1.1,
         ),
         boxShadow: focused
-            ? const [BoxShadow(color: Color(0x22E0821E), blurRadius: 12, spreadRadius: 1)]
+            ? const [BoxShadow(color: Color(0x229A22C7), blurRadius: 12, spreadRadius: 1)]
             : null,
       ),
       child: Focus(
@@ -404,16 +404,16 @@ class _LoginScreenState extends State<LoginScreen>
           obscureText: obscure,
           textInputAction: action,
           onSubmitted: onSubmitted,
-          cursorColor: const Color(0xFFC96A15),
+          cursorColor: const Color(0xFF7B14B5),
           style: const TextStyle(
-            color: Color(0xFF2E2418),
+            color: Color(0xFF241B3D),
             fontSize: 15.5,
             fontWeight: FontWeight.w600,
           ),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: const Color(0xFFC96A15), size: 21),
+            prefixIcon: Icon(icon, color: const Color(0xFF7B14B5), size: 21),
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFB2A28C), fontSize: 13.5),
+            hintStyle: const TextStyle(color: Color(0xFF9C93B5), fontSize: 13.5),
             suffixIcon: suffix,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 4),
@@ -428,9 +428,9 @@ class _LoginScreenState extends State<LoginScreen>
       height: compact ? 54 : 58,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(15),
-        gradient: const LinearGradient(colors: [Color(0xFFFF9A2E), Color(0xFFE0630C)]),
+        gradient: const LinearGradient(colors: [Color(0xFFB23BD6), Color(0xFF5A17B5)]),
         boxShadow: const [
-          BoxShadow(color: Color(0x4DE07A17), blurRadius: 18, offset: Offset(0, 8)),
+          BoxShadow(color: Color(0x4D9A22C7), blurRadius: 18, offset: Offset(0, 8)),
         ],
       ),
       child: Material(
@@ -485,9 +485,9 @@ class _LoginScreenState extends State<LoginScreen>
       );
 }
 
-/// Fully code-drawn iLOGIC TECH mark - a hand-traced version of the curvy
-/// swoosh "i" (with hook tail and offset dot) from the brand logo, rendered
-/// in an orange gradient. Pure Flutter drawing, no image asset needed.
+/// The real iLOGIC TECH "i" logo (assets/ilogictech_icon.png) on a white
+/// disc, so the logo's own blue-to-magenta gradient renders exactly as
+/// designed rather than an approximated redraw.
 class _LogoBadge extends StatelessWidget {
   final double size;
   const _LogoBadge({required this.size});
@@ -502,67 +502,16 @@ class _LogoBadge extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: const [
           BoxShadow(color: Color(0x33000000), blurRadius: 22, offset: Offset(0, 10)),
-          BoxShadow(color: Color(0x4DE0741A), blurRadius: 30, spreadRadius: 1),
+          BoxShadow(color: Color(0x4D9A22C7), blurRadius: 30, spreadRadius: 1),
         ],
       ),
-      padding: EdgeInsets.all(size * .16),
-      child: CustomPaint(
-        size: Size(size, size),
-        painter: _SwooshIPainter(),
+      padding: EdgeInsets.all(size * .2),
+      child: Image.asset(
+        'assets/ilogictech_icon.png',
+        fit: BoxFit.contain,
       ),
     );
   }
-}
-
-/// Draws a stylised swoosh "i" - slanted flag top, curved stem, and a
-/// hook-shaped tail - filled with an orange gradient, matching the look of
-/// the iLOGIC TECH mark.
-class _SwooshIPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Design box the path below is authored in; scaled + centred to fit.
-    const boxW = 44.0;
-    const boxH = 92.0;
-    final scale = (size.width / boxW) < (size.height / boxH)
-        ? size.width / boxW
-        : size.height / boxH;
-    final dx = (size.width - boxW * scale) / 2;
-    final dy = (size.height - boxH * scale) / 2;
-
-    canvas.save();
-    canvas.translate(dx, dy);
-    canvas.scale(scale);
-
-    const gradient = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [Color(0xFFFFC24D), Color(0xFFFF8A2E), Color(0xFFB84A06)],
-      stops: [0.0, 0.45, 1.0],
-    );
-    final rect = const Rect.fromLTWH(0, 0, boxW, boxH);
-    final paint = Paint()..shader = gradient.createShader(rect);
-
-    // Dot of the "i"
-    canvas.drawCircle(const Offset(25, 10), 8, paint);
-
-    // Stem + curled hook tail, traced as one continuous outline
-    final path = Path()
-      ..moveTo(28, 24)
-      ..lineTo(13, 32) // slanted flag-top edge
-      ..cubicTo(9, 40, 7, 55, 7, 68) // outer edge down the left side
-      ..cubicTo(7, 81, 12, 91, 23, 91) // curl into the bottom of the hook
-      ..cubicTo(33, 91, 41, 85, 38, 75) // sweep out to the tail tip
-      ..cubicTo(36, 81, 29, 84, 22, 80) // curl back to the hook's inner notch
-      ..cubicTo(29, 78, 32, 68, 32, 55) // back up the inner right edge
-      ..cubicTo(32, 44, 30, 32, 28, 24) // close near the dot
-      ..close();
-
-    canvas.drawPath(path, paint);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Full-width curved gradient header behind the logo/card.
@@ -580,7 +529,7 @@ class _CurvedHeader extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFFAE52), Color(0xFFE0630C), Color(0xFFB84A06)],
+            colors: [Color(0xFF8E3FD1), Color(0xFF5A17B5), Color(0xFF3D0F8C)],
           ),
         ),
         child: Stack(

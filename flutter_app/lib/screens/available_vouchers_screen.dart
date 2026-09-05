@@ -202,7 +202,7 @@ class _AvailableVouchersScreenState extends State<AvailableVouchersScreen> {
   Widget build(BuildContext context) {
     final groups = _groupByExam();
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
@@ -280,7 +280,7 @@ class _ExamVoucherListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 3,
         backgroundColor: AppColors.primaryLight,

@@ -1076,11 +1076,176 @@ def employee_salary_history(employee_id):
     return ok([salary_expense_dict(x) for x in rows])
 
 # ============================================================
-# Voucher Management API
+# Voucher Purchase Invoice API
 # ============================================================
+# The mobile UI exposes invoices as the purchase records created by
+# VoucherBatch.  The project database does not have a separate invoice
+# table, so invoices are backed by the existing voucher-purchase batch and
+# its linked expense record.  This keeps the invoice screen functional
+# without introducing a new database migration/table.
 from apps.models import VoucherBatch, Voucher, VoucherStudent, VoucherSaleHistory
 
 
+def _invoice_json(batch):
+    vouchers = Voucher.query.filter(Voucher.batch_id == batch.id).all()
+    grouped = {}
+    for v in vouchers:
+        key = v.exam_type_id or 0
+        if key not in grouped:
+            grouped[key] = {
+                'id': batch.id,
+                'exam_type_id': v.exam_type_id or 0,
+                'exam_name': v.exam_type.name if v.exam_type else '-',
+                'quantity': 0,
+                'unit_price': float(v.purchase_cost or batch.cost_per_voucher or 0),
+                'discount': 0,
+                'tax': 0,
+                'total_amount': 0,
+            }
+        grouped[key]['quantity'] += 1
+        grouped[key]['total_amount'] += float(v.purchase_cost or batch.cost_per_voucher or 0)
+
+    total = float(batch.total_cost or 0)
+    expense = Expense.query.get(batch.expense_id) if getattr(batch, 'expense_id', None) else None
+    payment_mode = expense.payment_mode if expense else ''
+    status = 'Cancelled' if expense and expense.status == 'Inactive' else 'Active'
+    return {
+        'id': batch.id,
+        'invoice_number': batch.batch_number,
+        'supplier': batch.supplier or '',
+        'invoice_date': batch.purchase_date.isoformat() if batch.purchase_date else '',
+        'branch_id': batch.branch_id or 0,
+        'branch_name': batch.branch.branch_name if batch.branch else '',
+        'payment_status': 'Paid' if status == 'Active' else 'Cancelled',
+        'payment_mode': payment_mode or '',
+        'payment_reference': '',
+        'subtotal': total,
+        'discount': 0,
+        'tax': 0,
+        'total_amount': total,
+        'paid_amount': total if status == 'Active' else 0,
+        'balance_amount': 0,
+        'notes': batch.notes or '',
+        'status': status,
+        'items': list(grouped.values()),
+    }
+
+
+@api_bp.get('/expenses/invoices/')
+@api_token_required
+def expense_invoice_list_api():
+    q = VoucherBatch.query
+    bid = request.args.get('branch_id', type=int)
+    status = (request.args.get('status') or '').strip()
+    search = (request.args.get('q') or '').strip().lower()
+    if bid:
+        q = q.filter(VoucherBatch.branch_id == bid)
+    rows = q.order_by(VoucherBatch.id.desc()).all()
+    result = [_invoice_json(x) for x in rows]
+    if status and status != 'All':
+        result = [x for x in result if x['status'].lower() == status.lower() or x['payment_status'].lower() == status.lower()]
+    if search:
+        result = [x for x in result if search in x['invoice_number'].lower() or search in x['supplier'].lower()
+                  or any(search in item['exam_name'].lower() for item in x['items'])]
+    return ok(result)
+
+
+@api_bp.post('/expenses/invoices/')
+@api_token_required
+def expense_invoice_create_api():
+    d = body()
+    items = d.get('items') or []
+    if not items:
+        return fail('At least one invoice item is required.', 422)
+    bid = d.get('branch_id')
+    branch_id = int(bid) if str(bid).isdigit() else None
+    created = []
+    for item in items:
+        exam_type_id = item.get('exam_type_id')
+        if not str(exam_type_id).isdigit():
+            return fail('Each invoice item must have a valid exam type.', 422)
+        exam = ExamType.query.get(int(exam_type_id))
+        if not exam:
+            return fail('Selected exam type not found.', 404)
+        try:
+            quantity = int(item.get('quantity') or 0)
+            unit_price = float(item.get('unit_price') or 0)
+        except (ValueError, TypeError):
+            return fail('Invalid invoice quantity or unit price.', 422)
+        if quantity <= 0 or unit_price <= 0:
+            return fail('Invoice quantity and unit price must be greater than 0.', 422)
+        batch = VoucherBatch(
+            batch_number=str(d.get('invoice_number') or '').strip() or f'INV-{datetime.utcnow().strftime("%Y%m%d%H%M%S%f")}',
+            supplier=str(d.get('supplier') or '').strip() or None,
+            purchase_date=datetime.strptime(d.get('invoice_date'), '%Y-%m-%d').date() if d.get('invoice_date') else datetime.utcnow().date(),
+            quantity=quantity,
+            cost_per_voucher=unit_price,
+            default_selling_price=unit_price,
+            total_cost=quantity * unit_price,
+            notes=str(d.get('notes') or '').strip() or None,
+            branch_id=branch_id,
+        )
+        db.session.add(batch); db.session.flush()
+        cat = ExpenseCategory.query.filter(func.lower(ExpenseCategory.name) == 'exam voucher purchase').first()
+        if not cat:
+            cat = ExpenseCategory(name='Exam Voucher Purchase', status='Active'); db.session.add(cat); db.session.flush()
+        expense = Expense(
+            category=cat.name, category_id=cat.id, amount=quantity * unit_price,
+            description=f'Voucher purchase invoice - {batch.batch_number} ({quantity} vouchers, {exam.name})',
+            date_incurred=datetime.combine(batch.purchase_date, datetime.min.time()),
+            branch_id=branch_id, payment_mode=d.get('payment_mode') or 'Other', status='Active'
+        )
+        db.session.add(expense); db.session.flush(); batch.expense_id = expense.id
+        import uuid
+        for _ in range(quantity):
+            code = f'VCH-{datetime.utcnow().strftime("%Y%m%d")}-{uuid.uuid4().hex[:8].upper()}'
+            while Voucher.query.filter_by(voucher_code=code).first():
+                code = f'VCH-{datetime.utcnow().strftime("%Y%m%d")}-{uuid.uuid4().hex[:8].upper()}'
+            db.session.add(Voucher(voucher_code=code, batch_id=batch.id, purchase_cost=unit_price,
+                                   selling_price=unit_price, branch_id=branch_id, exam_type_id=exam.id, status='Available'))
+        created.append(batch)
+    db.session.commit()
+    return ok(_invoice_json(created[0]), 'Invoice created successfully.', 201)
+
+
+@api_bp.put('/expenses/invoices/<int:invoice_id>/')
+@api_token_required
+def expense_invoice_update_api(invoice_id):
+    batch = VoucherBatch.query.get_or_404(invoice_id)
+    d = body()
+    if 'supplier' in d:
+        batch.supplier = str(d.get('supplier') or '').strip() or None
+    if d.get('invoice_date'):
+        try:
+            batch.purchase_date = datetime.strptime(d['invoice_date'], '%Y-%m-%d').date()
+        except ValueError:
+            return fail('Invalid invoice date.', 422)
+    if 'notes' in d:
+        batch.notes = str(d.get('notes') or '').strip() or None
+    if getattr(batch, 'expense_id', None):
+        expense = Expense.query.get(batch.expense_id)
+        if expense and 'payment_mode' in d:
+            expense.payment_mode = d.get('payment_mode') or 'Other'
+    db.session.commit()
+    return ok(_invoice_json(batch), 'Invoice updated successfully.')
+
+
+@api_bp.delete('/expenses/invoices/<int:invoice_id>/')
+@api_token_required
+def expense_invoice_delete_api(invoice_id):
+    batch = VoucherBatch.query.get_or_404(invoice_id)
+    if getattr(batch, 'expense_id', None):
+        expense = Expense.query.get(batch.expense_id)
+        if expense:
+            expense.status = 'Inactive'
+    # Do not delete vouchers: existing stock/history must remain auditable.
+    db.session.commit()
+    return ok(_invoice_json(batch), 'Invoice cancelled successfully.')
+
+
+# ============================================================
+# Voucher Management API
+# ============================================================
 def _voucher_student_json(s):
     if not s:
         return None
