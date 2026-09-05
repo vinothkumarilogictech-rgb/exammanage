@@ -130,6 +130,7 @@ class ExamTeam {
 class Candidate {
   final int id;
   final String name, email, phone, registerNumber, status, branch, examType, date, teamName, remarks;
+  final int? branchId, examTypeId, teamId;
 
   Candidate({
     required this.id,
@@ -143,6 +144,9 @@ class Candidate {
     required this.date,
     required this.teamName,
     required this.remarks,
+    this.branchId,
+    this.examTypeId,
+    this.teamId,
   });
 
   factory Candidate.fromMap(Map<String, dynamic> m) => Candidate(
@@ -157,6 +161,9 @@ class Candidate {
     date: '${m['exam_date'] ?? ''}',
     teamName: '${m['team_name'] ?? ''}',
     remarks: '${m['remarks'] ?? m['reason_note'] ?? ''}',
+    branchId: int.tryParse('${m['branch_id'] ?? ''}'),
+    examTypeId: int.tryParse('${m['exam_type_id'] ?? ''}'),
+    teamId: int.tryParse('${m['team_id'] ?? ''}'),
   );
 }
 

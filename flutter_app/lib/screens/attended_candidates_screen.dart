@@ -214,7 +214,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
     final data = await future;
     final allRows = data['rows'] as List<AttendedCandidate>? ?? [];
     final q = searchQuery.trim().toLowerCase();
-    return allRows.where((r) {
+
+    final rows = allRows.where((r) {
       if (q.isEmpty) return true;
       return r.candidateName.toLowerCase().contains(q) ||
           r.registerNumber.toLowerCase().contains(q) ||
@@ -222,6 +223,27 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
           r.examTypeName.toLowerCase().contains(q) ||
           r.result.toLowerCase().contains(q);
     }).toList();
+
+    // Always export in chronological order: oldest date -> newest date.
+    // Invalid/missing dates are placed at the end instead of breaking sorting.
+    rows.sort((a, b) {
+      final da = DateTime.tryParse(a.attendedDate);
+      final db = DateTime.tryParse(b.attendedDate);
+      if (da == null && db == null) return 0;
+      if (da == null) return 1;
+      if (db == null) return -1;
+      return da.compareTo(db);
+    });
+
+    return rows;
+  }
+
+  String _exportDate(String value) {
+    final d = DateTime.tryParse(value);
+    if (d == null) return value.isEmpty ? '-' : value;
+    return '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
   }
 
   Future<void> _exportPdf() async {
@@ -238,11 +260,21 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
             pw.Text('Filter: ${_exportFilterLabel()}${searchQuery.trim().isEmpty ? '' : ' | Search: ${searchQuery.trim()}'}'),
             pw.SizedBox(height: 14),
             pw.Table.fromTextArray(
-              headers: const ['Date', 'Candidate Name', 'Team', 'Exam Type', 'Branch', 'Status', 'Remarks'],
-              data: rows.map((r) => [
-                r.attendedDate, r.candidateName, r.teamName.isNotEmpty ? r.teamName : '-',
-                r.examTypeName, r.branchName, r.result, r.remarks.isNotEmpty ? r.remarks : '-',
-              ]).toList(),
+              headers: const ['S.No', 'Date', 'Candidate Name', 'Team', 'Exam Type', 'Branch', 'Status', 'Remarks'],
+              data: rows.asMap().entries.map((entry) {
+                final index = entry.key;
+                final r = entry.value;
+                return [
+                  '${index + 1}',
+                  _exportDate(r.attendedDate),
+                  r.candidateName,
+                  r.teamName.isNotEmpty ? r.teamName : '-',
+                  r.examTypeName,
+                  r.branchName,
+                  r.result,
+                  r.remarks.isNotEmpty ? r.remarks : '-',
+                ];
+              }).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white),
               headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
               cellStyle: const pw.TextStyle(fontSize: 8),
@@ -270,13 +302,21 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
       final workbook = ex.Excel.createExcel();
       final sheet = workbook['Attended Candidates'];
       sheet.appendRow([
-        ex.TextCellValue('Candidate'), ex.TextCellValue('Team'), ex.TextCellValue('Exam Type'),
-        ex.TextCellValue('Branch'), ex.TextCellValue('Attended Date'), ex.TextCellValue('Result'), ex.TextCellValue('Remarks'),
+        ex.TextCellValue('S.No'), ex.TextCellValue('Date'), ex.TextCellValue('Candidate Name'),
+        ex.TextCellValue('Team'), ex.TextCellValue('Exam Type'), ex.TextCellValue('Branch'),
+        ex.TextCellValue('Status'), ex.TextCellValue('Remarks'),
       ]);
-      for (final r in rows) {
+      for (final entry in rows.asMap().entries) {
+        final r = entry.value;
         sheet.appendRow([
-          ex.TextCellValue(r.candidateName), ex.TextCellValue(r.teamName.isNotEmpty ? r.teamName : '-'), ex.TextCellValue(r.examTypeName),
-          ex.TextCellValue(r.branchName), ex.TextCellValue(r.attendedDate), ex.TextCellValue(r.result), ex.TextCellValue(r.remarks.isNotEmpty ? r.remarks : '-'),
+          ex.TextCellValue('${entry.key + 1}'),
+          ex.TextCellValue(_exportDate(r.attendedDate)),
+          ex.TextCellValue(r.candidateName),
+          ex.TextCellValue(r.teamName.isNotEmpty ? r.teamName : '-'),
+          ex.TextCellValue(r.examTypeName),
+          ex.TextCellValue(r.branchName),
+          ex.TextCellValue(r.result),
+          ex.TextCellValue(r.remarks.isNotEmpty ? r.remarks : '-'),
         ]);
       }
       final bytes = workbook.save();
