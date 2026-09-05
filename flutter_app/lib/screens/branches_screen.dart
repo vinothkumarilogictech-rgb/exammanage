@@ -27,10 +27,10 @@ class BranchesScreenState extends State<BranchesScreen> {
   late Future<List<Branch>> future;
   bool opened = false;
 
-  static const Color _purple = Color(0xFF6D28D9);
-  static const Color _purpleDark = Color(0xFF4C1D95);
-  static const Color _purpleSoft = Color(0xFFF3EEFF);
-  static const Color _pageBg = Color(0xFFF7F5FC);
+  static const Color _purple = Color(0xFF9A22C7);
+  static const Color _purpleDark = Color(0xFF9A3412);
+  static const Color _purpleSoft = Color(0xFFEDE9FE);
+  static const Color _pageBg = Color(0xFFF7F5FD);
 
   @override
   void initState() {
@@ -202,7 +202,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                   const SizedBox(width: 13),
                   const Expanded(
                     child: Text(
-                      'Add New Branch',
+                      'Add',
                       style: TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.w900,
@@ -264,7 +264,7 @@ class BranchesScreenState extends State<BranchesScreen> {
               const SizedBox(height: 25),
 
               _gradientButton(
-                label: 'Save Branch',
+                label: 'Save',
                 icon: Icons.add_business_rounded,
                 onPressed: () async {
                   if (name.text.trim().isEmpty) {
@@ -1048,10 +1048,21 @@ class BranchesScreenState extends State<BranchesScreen> {
         scrolledUnderElevation: 0,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: AppColors.primaryLight,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [BoxShadow(color: Color(0x559A22C7), blurRadius: 24, offset: Offset(0, 8))],
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         title: const Text(
-          'Branch Management',
+          'Branch',
           style: AppBarStyle.titleStyle,
         ),
         actions: [
@@ -1884,8 +1895,8 @@ class BranchesScreenState extends State<BranchesScreen> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             colors: [
-              Color(0xFF7C3AED),
-              Color(0xFF5B21B6),
+              Color(0xFF9A22C7),
+              Color(0xFF6C1FB0),
             ],
           ),
           borderRadius: BorderRadius.circular(16),

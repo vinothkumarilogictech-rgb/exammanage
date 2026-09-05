@@ -1,23 +1,33 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiConfig {
-  /// Build with:
-  /// - Android emulator: flutter run --dart-define=API_SERVER_URL=http://10.0.2.2:5000
-  /// - Chrome/web (flutter run -d chrome): no flag needed, defaults to localhost:5000
-  /// - iOS simulator: flutter run --dart-define=API_SERVER_URL=http://localhost:5000
-  /// - Real phone: flutter run --dart-define=API_SERVER_URL=http://YOUR-PC-LAN-IP:5000
+  /// API_SERVER_URL may be supplied without /api/v1, for example:
   ///
-  /// 10.0.2.2 is a special alias that ONLY exists inside the Android
-  /// emulator's virtual network - it is unreachable from Chrome/web,
-  /// iOS simulator, or a real device, and was the cause of "Unable to
-  /// connect to the Office Management API." when testing in Chrome.
+  /// Android emulator:
+  /// flutter run --dart-define=API_SERVER_URL=http://10.0.2.2:5000
   ///
-  /// The API itself is mounted at /api/v1.
-  static const String _dartDefineUrl = String.fromEnvironment('API_SERVER_URL');
-  
-  static const String baseUrl = 'http://localhost:5001';
+  /// Chrome/web:
+  /// no flag needed; defaults to http://localhost:5000
+  ///
+  /// Real phone:
+  /// flutter run --dart-define=API_SERVER_URL=http://YOUR-PC-LAN-IP:5000
+  static const String _dartDefineUrl =
+      String.fromEnvironment('API_SERVER_URL');
+
+  static String get baseUrl {
+    if (_dartDefineUrl.isNotEmpty) {
+      return _dartDefineUrl.replaceFirst(RegExp(r'/$'), '');
+    }
+
+    if (kIsWeb) {
+      return 'http://localhost:5001';
+    }
+
+    return 'http://10.0.2.2:5000';
+  }
 
   static const String apiBasePath = '/api/v1';
+
   static String get apiBaseUrl => '$baseUrl$apiBasePath';
 
   static const String loginPath = '/auth/login/';
@@ -36,6 +46,7 @@ class ApiConfig {
   static const String employeesPath = '/employees/';
   static const String expenseCategoriesPath = '/expenses/categories/';
   static const String expenseBudgetsPath = '/expenses/budgets/';
+  static const String expenseInvoicesPath = '/expenses/invoices/';
   static const String vouchersPath = '/vouchers/';
   static const String voucherDashboardPath = '/vouchers/dashboard/';
   static const String voucherPurchasePath = '/vouchers/purchase/';

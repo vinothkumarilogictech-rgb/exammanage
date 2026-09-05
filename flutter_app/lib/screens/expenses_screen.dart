@@ -9,6 +9,8 @@ import '../services/dio_client.dart';
 import '../widgets/common.dart';
 import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'invoice_tab.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final bool openAddOnStart;
@@ -21,7 +23,7 @@ class ExpensesScreen extends StatefulWidget {
 class ExpensesScreenState extends State<ExpensesScreen> {
   final api = DioClient();
 
-  // Tab: 0 = Expenses, 1 = Categories
+  // Tab: 0 = Expenses, 1 = Categories, 2 = Invoices
   int _selectedTab = 0;
 
   // Expenses state
@@ -424,6 +426,52 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     }
   }
 
+  Widget _formSectionCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFEFEFEF)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, size: 14, color: color),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF6B7280),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...children,
+          ],
+        ),
+      );
+
   // --- Add Expense Modal ---
   Future<void> addExpense() async {
     final globalBranchId = _branchContext.selectedBranchId;
@@ -474,242 +522,287 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 Row(
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
+                      width: 46,
+                      height: 46,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                          colors: [Color(0xFF9A22C7), Color(0xFF6C1FB0)],
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x336C1FB0), blurRadius: 14, offset: Offset(0, 6)),
+                        ],
                       ),
                       child: const Icon(
                         Icons.add_circle_outline_rounded,
                         color: Colors.white,
-                        size: 22,
+                        size: 23,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
-                      'Add Expense',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1F2937),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Add',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Record a new branch expense',
+                            style: TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => Navigator.pop(ctx),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF6B7280)),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
 
-                // Amount
-                const Text(
-                  'Amount *',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF4B5563),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    hintText: '0.00',
-                    prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 20),
-                    filled: true,
-                    fillColor: const Color(0xFFF9FAFB),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                _formSectionCard(
+                  title: 'EXPENSE CATEGORY',
+                  icon: Icons.sell_rounded,
+                  color: const Color(0xFF6C1FB0),
+                  children: [
+                    const Text(
+                      'Category *',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF4B5563),
+                      ),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Category Dropdown
-                const Text(
-                  'Category *',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF4B5563),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      isExpanded: true,
-                      value: categoryId,
-                      hint: const Text('Select Category'),
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      items: _categories.map((c) {
-                        return DropdownMenuItem<int>(
-                          value: c.id,
-                          child: Text(c.name),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setSheetState(() => categoryId = val);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                if (categoryId != null && _categories.any((c) => c.id == categoryId && ['salary', 'salaries'].contains(c.name.trim().toLowerCase()))) ...[
-                  const Text('Employee', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
-                  const SizedBox(height: 6),
-                  Container(decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))), padding: const EdgeInsets.symmetric(horizontal: 12), child: DropdownButtonHideUnderline(child: DropdownButton<int>(isExpanded: true, value: employeeId, hint: const Text('Select Employee'), items: _employees.map((e) => DropdownMenuItem<int>(value: e.id, child: Text('${e.employeeId} - ${e.fullName}'))).toList(), onChanged: (v) => setSheetState(() => employeeId = v)))),
-                  const SizedBox(height: 14),
-                ],
-
-                const Text(
-                  'Branch',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563)),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.business_rounded, size: 20, color: Color(0xFF6B7280)),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(
-                      _branches.where((b) => b.id == globalBranchId).isNotEmpty
-                          ? _branches.firstWhere((b) => b.id == globalBranchId).name
-                          : 'Selected Branch',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                    )),
-                    const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
-                  ]),
-                ),
-                const SizedBox(height: 14),
-
-                // Payment Mode Dropdown
-                const Text(
-                  'Payment Mode *',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF4B5563),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: paymentMode,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      items: _paymentModes
-                          .map((m) => DropdownMenuItem<String>(value: m, child: Text(m)))
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setSheetState(() => paymentMode = val);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Date Incurred
-                const Text(
-                  'Date Incurred',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF4B5563),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) {
-                      setSheetState(() => selectedDate = picked);
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF6B7280)),
-                        const SizedBox(width: 10),
-                        Text(
-                          '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    const SizedBox(height: 6),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          isExpanded: true,
+                          value: categoryId,
+                          hint: const Text('Select Category'),
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          items: _categories.where((c) => context.read<AuthProvider>().role != 'Employee' || !['salary','salaries'].contains(c.name.trim().toLowerCase())).map((c) {
+                            return DropdownMenuItem<int>(
+                              value: c.id,
+                              child: Text(c.name),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setSheetState(() => categoryId = val);
+                            }
+                          },
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    if (categoryId != null && _categories.any((c) => c.id == categoryId && ['salary', 'salaries'].contains(c.name.trim().toLowerCase()))) ...[
+                      const SizedBox(height: 14),
+                      const Text('Employee', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                      const SizedBox(height: 6),
+                      Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))), padding: const EdgeInsets.symmetric(horizontal: 12), child: DropdownButtonHideUnderline(child: DropdownButton<int>(isExpanded: true, value: employeeId, hint: const Text('Select Employee'), items: _employees.map((e) => DropdownMenuItem<int>(value: e.id, child: Text('${e.employeeId} - ${e.fullName}'))).toList(), onChanged: (v) => setSheetState(() => employeeId = v)))),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 14),
 
-                // Description Note
-                const Text(
-                  'Description / Note',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF4B5563),
-                  ),
+                _formSectionCard(
+                  title: 'PAYMENT DETAILS',
+                  icon: Icons.payments_rounded,
+                  color: const Color(0xFF7C3AED),
+                  children: [
+                    const Text(
+                      'Branch',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563)),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.business_rounded, size: 20, color: Color(0xFF6B7280)),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(
+                          _branches.where((b) => b.id == globalBranchId).isNotEmpty
+                              ? _branches.firstWhere((b) => b.id == globalBranchId).name
+                              : 'Selected Branch',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        )),
+                        const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
+                      ]),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Payment Mode Dropdown
+                    const Text(
+                      'Payment Mode *',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF4B5563),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: paymentMode,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          items: _paymentModes
+                              .map((m) => DropdownMenuItem<String>(value: m, child: Text(m)))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setSheetState(() => paymentMode = val);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Date Incurred
+                    const Text(
+                      'Date Incurred',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF4B5563),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                        );
+                        if (picked != null) {
+                          setSheetState(() => selectedDate = picked);
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF6B7280)),
+                            const SizedBox(width: 10),
+                            Text(
+                              '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Amount
+                    const Text(
+                      'Amount *',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF4B5563),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: amountCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        hintText: '0.00',
+                        prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 20),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: noteCtrl,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    hintText: 'Enter expense note or description',
-                    prefixIcon: const Icon(Icons.notes_rounded, size: 20),
-                    filled: true,
-                    fillColor: const Color(0xFFF9FAFB),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                const SizedBox(height: 14),
+
+                _formSectionCard(
+                  title: 'NOTES',
+                  icon: Icons.notes_rounded,
+                  color: const Color(0xFF6B7280),
+                  children: [
+                    const Text(
+                      'Description / Note',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF4B5563),
+                      ),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: noteCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Enter expense note or description',
+                        prefixIcon: const Icon(Icons.notes_rounded, size: 20),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
@@ -717,13 +810,15 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 52,
-                  child: FilledButton(
+                  child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF7C3AED),
+                      backgroundColor: const Color(0xFF9A22C7),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
+                      elevation: 0,
                     ),
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 19),
                     onPressed: () async {
                       final val = double.tryParse(amountCtrl.text.trim()) ?? 0;
                       if (val <= 0) {
@@ -777,8 +872,8 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         }
                       }
                     },
-                    child: const Text(
-                      'Save Expense',
+                    label: const Text(
+                      'Add',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -852,7 +947,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                       child: const Icon(
                         Icons.edit_note_rounded,
-                        color: Color(0xFF4338CA),
+                        color: Color(0xFF6C1FB0),
                         size: 24,
                       ),
                     ),
@@ -901,7 +996,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     child: DropdownButton<int?>(
                       isExpanded: true,
                       value: categoryId,
-                      items: _categories.map((c) {
+                      items: _categories.where((c) => context.read<AuthProvider>().role != 'Employee' || !['salary','salaries'].contains(c.name.trim().toLowerCase())).map((c) {
                         return DropdownMenuItem<int?>(
                           value: c.id,
                           child: Text(c.name),
@@ -1083,7 +1178,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   height: 52,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF4338CA),
+                      backgroundColor: const Color(0xFF6C1FB0),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -1192,7 +1287,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                       child: const Icon(
                         Icons.receipt_long_rounded,
-                        color: Color(0xFF5B21B6),
+                        color: Color(0xFF6C1FB0),
                         size: 22,
                       ),
                     ),
@@ -1270,7 +1365,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 Expanded(
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF7C3AED),
+                      backgroundColor: const Color(0xFF9A22C7),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
@@ -1309,6 +1404,82 @@ class ExpensesScreenState extends State<ExpensesScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // --- Print options (Export PDF / Export Excel) ---
+  Future<void> _showPrintOptions() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Print',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF6C1FB0), size: 20),
+              ),
+              title: const Text('Export PDF', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _exportPdf();
+              },
+            ),
+            const SizedBox(height: 6),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.table_chart_rounded, color: Color(0xFF6C1FB0), size: 20),
+              ),
+              title: const Text('Export Excel', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _exportExcel();
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1378,7 +1549,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 ];
               }).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF5B2A86)),
+              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF6C1FB0)),
               cellAlignment: pw.Alignment.centerLeft,
               rowDecoration: const pw.BoxDecoration(
                 border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
@@ -1422,16 +1593,27 @@ class ExpensesScreenState extends State<ExpensesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: AppColors.primaryLight,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [BoxShadow(color: Color(0x559A22C7), blurRadius: 24, offset: Offset(0, 8))],
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         title: const Text(
-          'Expense Management',
+          'Expense',
           style: AppBarStyle.titleStyle,
         ),
         actions: [
@@ -1447,7 +1629,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
           : _errorMessage != null
               ? ErrorView(message: _errorMessage!, onRetry: reload)
               : RefreshIndicator(
-                  color: const Color(0xFF7C3AED),
+                  color: const Color(0xFF9A22C7),
                   onRefresh: reload,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -1455,12 +1637,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Tabs selector (Expenses & Categories ONLY)
+                        // Tabs selector
                         _buildTabSelector(),
                         const SizedBox(height: 16),
 
                         // Switch Tab View
-                        if (_selectedTab == 0) _buildExpensesTab() else _buildCategoriesTab(),
+                        if (_selectedTab == 0) _buildExpensesTab()
+                        else if (_selectedTab == 1) _buildCategoriesTab()
+                        else const VoucherPurchaseInvoicesTab(),
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -1481,7 +1665,8 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       child: Row(
         children: [
           Expanded(child: _tabButton(label: 'Expenses', icon: Icons.receipt_long_rounded, index: 0)),
-          Expanded(child: _tabButton(label: 'Categories', icon: Icons.category_rounded, index: 1)),
+          if (context.read<AuthProvider>().role != 'Employee') Expanded(child: _tabButton(label: 'Categories', icon: Icons.category_rounded, index: 1)),
+          if (context.read<AuthProvider>().role != 'Employee') Expanded(child: _tabButton(label: 'Invoices', icon: Icons.request_quote_rounded, index: 2)),
         ],
       ),
     );
@@ -1552,23 +1737,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
   // Summary Metrics Grid / Row
   Widget _buildSummaryGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: [
-        _metricCard('Total Expenses', _totalExpenses, Icons.account_balance_wallet_rounded,
-            const Color(0xFFEDE9FE), AppColors.primary),
-        _metricCard('This Month', _thisMonthExpenses, Icons.calendar_month_rounded,
-            const Color(0xFFDBEAFE), AppColors.blue),
-        _metricCard('This Quarter', _thisQuarterExpenses, Icons.donut_large_rounded,
-            const Color(0xFFDCFCE7), AppColors.green),
-        _metricCard('This Year', _thisYearExpenses, Icons.trending_up_rounded,
-            const Color(0xFFFCE7F3), const Color(0xFFDB2777)),
-      ],
+    return SizedBox(
+      height: 125,
+      width: double.infinity,
+      child: _metricCard('Total Expenses', _totalExpenses, Icons.account_balance_wallet_rounded,
+          const Color(0xFFEDE9FE), AppColors.primary),
     );
   }
 
@@ -1790,7 +1963,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           Icon(
                             Icons.calendar_month_rounded,
                             size: 18,
-                            color: _selectedExpenseDate != null ? const Color(0xFF5B21B6) : const Color(0xFF64748B),
+                            color: _selectedExpenseDate != null ? const Color(0xFF6C1FB0) : const Color(0xFF64748B),
                           ),
                           if (_selectedExpenseDate != null) ...[
                             const SizedBox(width: 5),
@@ -1798,7 +1971,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                               '${_selectedExpenseDate!.day.toString().padLeft(2, '0')} ${_monthShortName(_selectedExpenseDate!.month)}',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF5B21B6),
+                                color: Color(0xFF6C1FB0),
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -1834,10 +2007,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF5B2A86) : const Color(0xFFF8FAFC),
+                        color: isSelected ? const Color(0xFF6C1FB0) : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF5B2A86) : const Color(0xFFE2E8F0),
+                          color: isSelected ? const Color(0xFF6C1FB0) : const Color(0xFFE2E8F0),
                         ),
                       ),
                       child: FittedBox(
@@ -1862,73 +2035,36 @@ class ExpensesScreenState extends State<ExpensesScreen> {
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
           const SizedBox(height: 12),
 
-          // 3. Export PDF / Export Excel — equal-width pair, same row
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: _exportPdf,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFC4B5FD)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.picture_as_pdf_rounded, size: 14, color: Color(0xFF5B21B6)),
-                        SizedBox(width: 5),
-                        Text(
-                          'Export PDF',
-                          style: TextStyle(
-                            color: Color(0xFF5B21B6),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+          // 3. Print — single button, opens Export PDF / Export Excel choice
+          InkWell(
+            onTap: _showPrintOptions,
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: double.infinity,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFC4B5FD)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.print_rounded, size: 14, color: Color(0xFF6C1FB0)),
+                  SizedBox(width: 5),
+                  Text(
+                    'Print',
+                    style: TextStyle(
+                      color: Color(0xFF6C1FB0),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  onTap: _exportExcel,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFC4B5FD)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.table_chart_rounded, size: 14, color: Color(0xFF5B21B6)),
-                        SizedBox(width: 5),
-                        Text(
-                          'Export Excel',
-                          style: TextStyle(
-                            color: Color(0xFF5B21B6),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
 
           const SizedBox(height: 10),
@@ -1942,12 +2078,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 11),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                  colors: [Color(0xFF9A22C7), Color(0xFF6C1FB0)],
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                    color: const Color(0xFF9A22C7).withValues(alpha: 0.3),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -1960,7 +2096,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   Icon(Icons.add, size: 16, color: Colors.white),
                   SizedBox(width: 5),
                   Text(
-                    'Add Expense',
+                    'Add',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 12.5,
@@ -2384,7 +2520,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     ),
                     child: Text(
                       cat.status == 'Active' ? 'Deactivate' : 'Activate',
-                      style: const TextStyle(color: Color(0xFF4338CA), fontWeight: FontWeight.w700, fontSize: 11.5),
+                      style: const TextStyle(color: Color(0xFF6C1FB0), fontWeight: FontWeight.w700, fontSize: 11.5),
                     ),
                   ),
                 ],

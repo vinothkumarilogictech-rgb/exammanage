@@ -300,7 +300,7 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F4FB),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 0,
         toolbarHeight: AppBarStyle.height,

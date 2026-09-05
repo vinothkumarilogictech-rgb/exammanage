@@ -5,10 +5,14 @@ import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
 import '../providers/branch_context.dart';
+import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'attended_candidates_screen.dart';
-import 'branches_screen.dart';
 import 'scheduled_candidates_screen.dart';
+import 'expenses_screen.dart';
+import 'vouchers_screen.dart';
+import 'available_vouchers_screen.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -45,6 +49,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<Map<String, dynamic>> load() async {
+    final isAdmin = context.read<AuthProvider>().role.trim().toLowerCase() == 'admin';
     await _branchContext.ensureLoaded();
     final branchId = _branchContext.selectedBranchId;
     final r = await api.dashboard(branchId: branchId);
@@ -111,20 +116,34 @@ class DashboardScreenState extends State<DashboardScreen> {
         .where((c) => (c.status ?? '').trim().toLowerCase() == 'rescheduled')
         .length;
 
+    // Financial/voucher summaries are admin-only. Do not request these
+    // datasets for employee/user sessions.
     double currentMonthExpense = 0;
-    try {
-      final expenseRes = await api.expenses(branchId: branchId, status: 'Active');
-      final expenses = expenseRes.data['data'] as List? ?? const [];
-      for (final raw in expenses) {
-        final e = Map<String, dynamic>.from(raw);
-        final amount = double.tryParse('${e['amount'] ?? 0}') ?? 0;
-        final dateRaw = '${e['date_incurred'] ?? ''}';
-        final d = DateTime.tryParse(dateRaw);
-        if (d != null && d.year == now.year && d.month == now.month) {
-          currentMonthExpense += amount;
+    double previousMonthExpense = 0;
+    Map<String, dynamic> voucherStats = {};
+    if (isAdmin) {
+      try {
+        final voucherRes = await api.voucherDashboard(branchId: branchId);
+        voucherStats = Map<String, dynamic>.from(voucherRes.data['data'] ?? {});
+      } catch (_) {}
+
+      try {
+        final prevMonthDate = DateTime(now.year, now.month - 1, 1);
+        final expenseRes = await api.expenses(branchId: branchId, status: 'Active');
+        final expenses = expenseRes.data['data'] as List? ?? const [];
+        for (final raw in expenses) {
+          final e = Map<String, dynamic>.from(raw);
+          final amount = double.tryParse('${e['amount'] ?? 0}') ?? 0;
+          final dateRaw = '${e['date_incurred'] ?? ''}';
+          final d = DateTime.tryParse(dateRaw);
+          if (d != null && d.year == now.year && d.month == now.month) {
+            currentMonthExpense += amount;
+          } else if (d != null && d.year == prevMonthDate.year && d.month == prevMonthDate.month) {
+            previousMonthExpense += amount;
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     return {
       'stats': stats,
@@ -160,6 +179,8 @@ class DashboardScreenState extends State<DashboardScreen> {
       'currentMonthAbsent': currentMonthAbsent,
       'currentMonthRescheduled': currentMonthRescheduled,
       'currentMonthExpense': currentMonthExpense,
+      'previousMonthExpense': previousMonthExpense,
+      'voucherStats': voucherStats,
       'selectedBranchId': branchId,
     };
   }
@@ -275,7 +296,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                         width: 42, height: 42,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF6D28D9), Color(0xFF4C1D95)],
+                            colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
                           ),
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -362,7 +383,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     width: double.infinity, height: 52,
                     child: FilledButton(
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: Color(0xFF6C1FB0),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       onPressed: () async {
@@ -577,8 +598,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
-                              Color(0xFF059669),
-                              Color(0xFF047857),
+                              Color(0xFF9A22C7),
+                              Color(0xFF6C1FB0),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(14),
@@ -737,7 +758,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                           DropdownMenuItem<String>(
                             value: 'Rescheduled',
                             child: Row(children: [
-                              Icon(Icons.event_repeat_rounded, size: 18, color: Color(0xFF7C3AED)),
+                              Icon(Icons.event_repeat_rounded, size: 18, color: Color(0xFF9A22C7)),
                               SizedBox(width: 8),
                               Expanded(child: Text('Rescheduled')),
                             ]),
@@ -807,7 +828,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor:
-                            const Color(0xFF059669),
+                            const Color(0xFF9A22C7),
                         shape: RoundedRectangleBorder(
                           borderRadius:
                               BorderRadius.circular(16),
@@ -904,8 +925,8 @@ class DashboardScreenState extends State<DashboardScreen> {
               _ModalHandle(),
               _ModalHeader(
                 icon: Icons.business_rounded,
-                iconColor: AppColors.primary,
-                iconBg: const Color(0xFFEDE9FE),
+                iconColor: Color(0xFF6C1FB0),
+                iconBg: const Color(0xFFF0E3FA),
                 title: 'All Branches',
                 subtitle: '${list.length} branches registered',
               ),
@@ -930,10 +951,10 @@ class DashboardScreenState extends State<DashboardScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 22,
-                                  backgroundColor: const Color(0xFFEDE9FE),
+                                  backgroundColor: const Color(0xFFF0E3FA),
                                   child: Text(
                                     b.name.isNotEmpty ? b.name[0].toUpperCase() : '?',
-                                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: const TextStyle(color: Color(0xFF6C1FB0), fontWeight: FontWeight.bold, fontSize: 16),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -987,12 +1008,12 @@ class DashboardScreenState extends State<DashboardScreen> {
           ? AppColors.blue
           : filterDate.isNotEmpty
               ? AppColors.green
-              : AppColors.primary;
+              : Color(0xFF6C1FB0);
       final Color accentBg = filterDate == null
           ? const Color(0xFFDBEAFE)
           : filterDate.isNotEmpty
               ? const Color(0xFFDCFCE7)
-              : const Color(0xFFEDE9FE);
+              : const Color(0xFFF0E3FA);
 
       showModalBottomSheet(
         context: context,
@@ -1036,12 +1057,12 @@ class DashboardScreenState extends State<DashboardScreen> {
                               ? AppColors.green
                               : item.status.toLowerCase().contains('fail')
                                   ? const Color(0xFFE11D48)
-                                  : AppColors.primary;
+                                  : Color(0xFF6C1FB0);
                           final statusBg = item.status.toLowerCase().contains('pass')
                               ? const Color(0xFFDCFCE7)
                               : item.status.toLowerCase().contains('fail')
                                   ? const Color(0xFFFFE4E6)
-                                  : const Color(0xFFEDE9FE);
+                                  : const Color(0xFFF0E3FA);
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(14),
@@ -1123,8 +1144,8 @@ class DashboardScreenState extends State<DashboardScreen> {
             _ModalHandle(),
             _ModalHeader(
               icon: Icons.calendar_month_rounded,
-              iconColor: AppColors.primary,
-              iconBg: const Color(0xFFEDE9FE),
+              iconColor: Color(0xFF6C1FB0),
+              iconBg: const Color(0xFFF0E3FA),
               title: "Today's Exams",
               subtitle: exams.isEmpty ? 'No exams today' : '${exams.length} exam session${exams.length == 1 ? '' : 's'}',
             ),
@@ -1162,8 +1183,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                             statusIcon = Icons.play_circle_rounded;
                             break;
                           default:
-                            statusColor = AppColors.primary;
-                            statusBg = const Color(0xFFEDE9FE);
+                            statusColor = Color(0xFF6C1FB0);
+                            statusBg = const Color(0xFFF0E3FA);
                             statusIcon = Icons.schedule_rounded;
                         }
                         return Container(
@@ -1184,8 +1205,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                                 children: [
                                   Container(
                                     width: 40, height: 40,
-                                    decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
-                                    child: const Icon(Icons.school_rounded, color: AppColors.primary, size: 22),
+                                    decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(12)),
+                                    child: const Icon(Icons.school_rounded, color: Color(0xFF6C1FB0), size: 22),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -1234,7 +1255,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // MODAL: TOMORROW'S CANDIDATES (section heading tap)
+  // MODAL: TOMORROW'S EXAM (section heading tap)
   // ─────────────────────────────────────────────────────────────────────────
   void _showTomorrowCandidatesModal(List<TomorrowBranchCandidates> tomorrow, DashboardStats stats) {
     showModalBottomSheet(
@@ -1254,7 +1275,7 @@ class DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.groups_rounded,
               iconColor: const Color(0xFFE11D48),
               iconBg: const Color(0xFFFFE4E6),
-              title: "Tomorrow's Candidates",
+              title: "Tomorrow's Exam",
               subtitle: prettyDate(stats.tomorrow),
             ),
             const Divider(height: 1),
@@ -1322,8 +1343,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                                         children: item.examBreakdown.entries.map((entry) {
                                           return Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                            decoration: BoxDecoration(color: const Color(0xFFF0E9FF), borderRadius: BorderRadius.circular(20)),
-                                            child: Text('${entry.key}: ${entry.value}', style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+                                            decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(20)),
+                                            child: Text('${entry.key}: ${entry.value}', style: const TextStyle(color: Color(0xFF6C1FB0), fontSize: 12, fontWeight: FontWeight.w600)),
                                           );
                                         }).toList(),
                                       ),
@@ -1339,14 +1360,14 @@ class DashboardScreenState extends State<DashboardScreen> {
                           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF0E9FF),
+                            color: const Color(0xFFF0E3FA),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text("Total Tomorrow's Candidates", style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary)),
-                              Text('${stats.tomorrowCandidates}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: AppColors.primary)),
+                              const Text("Total Tomorrow's Exam", style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF6C1FB0))),
+                              Text('${stats.tomorrowCandidates}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Color(0xFF6C1FB0))),
                             ],
                           ),
                         ),
@@ -1388,7 +1409,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                 value: b.id,
                 child: Row(
                   children: [
-                    const Icon(Icons.business_rounded, color: AppColors.primary),
+                    const Icon(Icons.business_rounded, color: Color(0xFF6C1FB0)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -1411,23 +1432,60 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: Colors.transparent,
 
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: AppColors.primaryLight,
+        backgroundColor: Color(0xFF9A22C7),
         foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF6C1FB0),
+                Color(0xFF9A22C7),
+                Color(0xFFE0189E),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x559A22C7),
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+        ),
 
-        title: const Text(
-          'Exam Dashboard',
+        title: Text(
+          context.watch<AuthProvider>().role.trim().toLowerCase() == 'admin'
+              ? 'Dashboard'
+              : 'User Dashboard',
           style: AppBarStyle.titleStyle,
         ),
 
         actions: [
           IconButton(
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProfileScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.person_rounded),
+          ),
+          IconButton(
+            tooltip: 'Refresh',
             onPressed: reload,
             icon: const Icon(
               Icons.refresh_rounded,
@@ -1456,15 +1514,23 @@ class DashboardScreenState extends State<DashboardScreen> {
 
           final stats =
               data['stats'] as DashboardStats;
+          final isAdmin =
+              context.read<AuthProvider>().role.trim().toLowerCase() == 'admin';
 
           final currentMonthTotal =
               data['currentMonthTotal'] as int? ?? 0;
-          final currentMonthAbsent =
-              data['currentMonthAbsent'] as int? ?? 0;
-          final currentMonthRescheduled =
-              data['currentMonthRescheduled'] as int? ?? 0;
           final currentMonthExpense =
               (data['currentMonthExpense'] as num?)?.toDouble() ?? 0.0;
+          final previousMonthExpense =
+              (data['previousMonthExpense'] as num?)?.toDouble() ?? 0.0;
+          final voucherStats =
+              Map<String, dynamic>.from(data['voucherStats'] ?? {});
+          final totalProfit =
+              double.tryParse('${voucherStats['realized_profit'] ?? 0}') ?? 0.0;
+          final salesRevenue =
+              double.tryParse('${voucherStats['sales_revenue'] ?? 0}') ?? 0.0;
+          final availableVouchers =
+              int.tryParse('${voucherStats['available'] ?? 0}') ?? 0;
 
           /*
            * IMPORTANT:
@@ -1546,8 +1612,20 @@ class DashboardScreenState extends State<DashboardScreen> {
           final tomorrowCandidates =
               data['tomorrowCandidates'] as List<Candidate>? ?? [];
 
-          return RefreshIndicator(
-            color: AppColors.primary,
+          return Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFFF5F0FF),
+                  Color(0xFFFFF8FC),
+                  Color(0xFFF1F5FF),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: RefreshIndicator(
+            color: Color(0xFF6C1FB0),
 
             onRefresh: () async {
               reload();
@@ -1577,7 +1655,12 @@ class DashboardScreenState extends State<DashboardScreen> {
                 // KPI CARDS
                 // =================================================
 
-                GridView.count(
+                Container(
+                  padding: EdgeInsets.zero,
+                  decoration: const BoxDecoration(
+                    color: Colors.transparent,
+                  ),
+                  child: GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1586,77 +1669,41 @@ class DashboardScreenState extends State<DashboardScreen> {
                   childAspectRatio: 1.45,
                   children: [
                     // ---------------------------------------------
-                    // TOTAL BRANCHES
+                    // TOTAL EXAMS - FIRST
                     // ---------------------------------------------
-
                     _KpiCard(
-                      title: 'Total Branches',
-                      value: '${stats.totalBranches}',
-                      icon: Icons.business_rounded,
-                      tint: const Color(0xFFEDE9FE),
-                      iconColor: AppColors.primary,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const BranchesScreen(),
-                          ),
-                        );
-                      },
+                      title: 'Total Exams',
+                      value: '${stats.totalExams}',
+                      icon: Icons.menu_book_rounded,
+                      tint: const Color(0xFFE0E7FF),
+                      iconColor: const Color(0xFF4F46E5),
                     ),
 
                     // ---------------------------------------------
-                    // TODAY'S CANDIDATES
+                    // TODAY'S EXAM
                     // ---------------------------------------------
-
                     _KpiCard(
-                      title: "Today's Candidates",
+                      title: "Today's Exam",
                       value: '${stats.todayCandidates}',
                       icon: Icons.groups_rounded,
                       tint: const Color(0xFFDCFCE7),
                       iconColor: AppColors.green,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ScheduledCandidatesScreen(
-                              title: "Today's Candidates",
-                              date: stats.today,
-                              isToday: true,
-                            ),
-                          ),
-                        );
-                      },
                     ),
 
                     // ---------------------------------------------
-                    // TOMORROW'S CANDIDATES
+                    // NEXT DAY EXAM
                     // ---------------------------------------------
-
                     _KpiCard(
-                      title: "Tomorrow's Candidates",
+                      title: 'Next Day Exam',
                       value: '${stats.tomorrowCandidates}',
                       icon: Icons.event_available_rounded,
                       tint: const Color(0xFFFFE4E6),
                       iconColor: const Color(0xFFE11D48),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ScheduledCandidatesScreen(
-                              title: "Tomorrow's Candidates",
-                              date: stats.tomorrow,
-                              isToday: false,
-                            ),
-                          ),
-                        );
-                      },
                     ),
 
                     // ---------------------------------------------
-                    // TOTAL ATTENDED CANDIDATES
+                    // TOTAL CANDIDATES
                     // ---------------------------------------------
-
                     _KpiCard(
                       title: 'Total Candidates',
                       value: '$currentMonthTotal',
@@ -1672,250 +1719,133 @@ class DashboardScreenState extends State<DashboardScreen> {
                         );
                       },
                     ),
-
-                    // ---------------------------------------------
-                    // CURRENT MONTH ABSENT
-                    // ---------------------------------------------
-                    _KpiCard(
-                      title: 'Total Absent',
-                      value: '$currentMonthAbsent',
-                      icon: Icons.person_off_rounded,
-                      tint: const Color(0xFFFFEDD5),
-                      iconColor: const Color(0xFFEA580C),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AttendedCandidatesScreen(
-                              initialFilter: 'Today',
-                              initialStatus: 'Absent',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    // ---------------------------------------------
-                    // CURRENT MONTH RESCHEDULED
-                    // ---------------------------------------------
-                    _KpiCard(
-                      title: 'Total Rescheduled',
-                      value: '$currentMonthRescheduled',
-                      icon: Icons.event_repeat_rounded,
-                      tint: const Color(0xFFEDE9FE),
-                      iconColor: const Color(0xFF7C3AED),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AttendedCandidatesScreen(
-                              initialFilter: 'Today',
-                              initialStatus: 'Rescheduled',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
                   ],
+                  ),
                 ),
-
                 const SizedBox(height: 20),
 
                 // =================================================
-                // TOTAL EXPENSE PER MONTH
+                // FINANCE & VOUCHER KPI CARDS (ADMIN ONLY)
                 // =================================================
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFE9D5FF)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.05),
-                        blurRadius: 14,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Row(
+                if (isAdmin) ...[
+                  Container(
+                    padding: EdgeInsets.zero,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                    ),
+                    child: GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.45,
                     children: [
-                      Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3E8FF),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: AppColors.primary,
-                          size: 28,
-                        ),
+                      _KpiCard(
+                        title: 'Total Profit',
+                        value: '₹${totalProfit.toStringAsFixed(2)}',
+                        icon: Icons.trending_up_rounded,
+                        tint: const Color(0xFFDCFCE7),
+                        iconColor: AppColors.green,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const VouchersScreen(initialTab: 1),
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Total Expense Per Month',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF374151),
-                              ),
+                      _KpiCard(
+                        title: 'Available Voucher',
+                        value: '$availableVouchers',
+                        icon: Icons.confirmation_num_rounded,
+                        tint: const Color(0xFFF0E3FA),
+                        iconColor: const Color(0xFF6C1FB0),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AvailableVouchersScreen(),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '₹${currentMonthExpense.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 27,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.primary,
-                              ),
+                          );
+                        },
+                      ),
+                      _KpiCard(
+                        title: 'Total Expenses',
+                        value: '₹${currentMonthExpense.toStringAsFixed(2)}',
+                        icon: Icons.account_balance_wallet_rounded,
+                        tint: const Color(0xFFF0E3FA),
+                        iconColor: const Color(0xFF6C1FB0),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ExpensesScreen(),
                             ),
-                          ],
-                        ),
+                          );
+                        },
+                      ),
+                      _KpiCard(
+                        title: 'Sales',
+                        value: '₹${salesRevenue.toStringAsFixed(2)}',
+                        icon: Icons.payments_rounded,
+                        tint: const Color(0xFFD1FAE5),
+                        iconColor: const Color(0xFF059669),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const VouchersScreen(initialTab: 1),
+                            ),
+                          );
+                        },
                       ),
                     ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // =================================================
-                // BRANCH OVERVIEW
-                // =================================================
-
-                _SectionCard(
-                  title: 'Branch Overview',
-                  icon: Icons.location_on_rounded,
-                  action: 'View All',
-                  child: branches.isEmpty
-                      ? const _EmptyText(
-                          'No active exam branches for today or tomorrow',
-                        )
-                      : Column(
-                          children: branches.map(
-                            (branch) {
-                              return _BranchRow(
-                                branch: branch,
-                              );
-                            },
-                          ).toList(),
-                        ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // =================================================
-                // TODAY'S CANDIDATES
-                // =================================================
-
-                _SectionCard(
-                  title: "Today's Candidates",
-                  icon: Icons.groups_rounded,
-                  action: 'View All',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ScheduledCandidatesScreen(
-                          title: "Today's Candidates",
-                          date: stats.today,
-                          isToday: true,
-                        ),
-                      ),
-                    );
-                  },
-                  child: todayCandidates.isEmpty
-                      ? const _EmptyText('No candidates scheduled for today')
-                      : Column(
-                          children: todayCandidates
-                              .map((c) => _CandidateRow(candidate: c))
-                              .toList(),
-                        ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // =================================================
-                // TOMORROW'S CANDIDATES
-                // =================================================
-
-                _SectionCard(
-                  title: "Tomorrow's Candidates",
-                  icon: Icons.event_available_rounded,
-                  action: 'View All',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ScheduledCandidatesScreen(
-                          title: "Tomorrow's Candidates",
-                          date: stats.tomorrow,
-                          isToday: false,
-                        ),
-                      ),
-                    );
-                  },
-                  trailing: Text(
-                    prettyDate(stats.tomorrow),
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
                     ),
                   ),
-                  child: tomorrowCandidates.isEmpty
-                      ? const _EmptyText('No candidates scheduled for tomorrow')
-                      : Column(
-                          children: [
-                            ...tomorrowCandidates.map((c) => _CandidateRow(candidate: c)),
 
-                            const SizedBox(height: 8),
+                  const SizedBox(height: 20),
 
-                            // -----------------------------------
-                            // TOTAL
-                            // -----------------------------------
-
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0E9FF),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    "Total Tomorrow's Candidates",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${tomorrowCandidates.length > stats.tomorrowCandidates ? tomorrowCandidates.length : stats.tomorrowCandidates}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 18,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                  // =================================================
+                  // DASHBOARD GRAPHICAL REPRESENTATION
+                  // =================================================
+                  _DashboardMetricsChart(
+                    currentExpense: currentMonthExpense,
+                    previousExpense: previousMonthExpense,
+                    profit: totalProfit,
+                    sales: salesRevenue,
+                    onExpensesTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ExpensesScreen(),
                         ),
-                ),
+                      );
+                    },
+                    onProfitTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VouchersScreen(initialTab: 1),
+                        ),
+                      );
+                    },
+                    onSalesTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VouchersScreen(initialTab: 1),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
+
               ],
+            ),
             ),
           );
         },
@@ -2072,15 +2002,278 @@ class _QuickActionCard extends StatelessWidget {
 // KPI CARD
 // ================================================================
 
+class _DashboardMetricsChart extends StatelessWidget {
+  final double currentExpense;
+  final double previousExpense;
+  final double profit;
+  final double sales;
+  final VoidCallback? onExpensesTap;
+  final VoidCallback? onProfitTap;
+  final VoidCallback? onSalesTap;
+
+  const _DashboardMetricsChart({
+    required this.currentExpense,
+    required this.previousExpense,
+    required this.profit,
+    required this.sales,
+    this.onExpensesTap,
+    this.onProfitTap,
+    this.onSalesTap,
+  });
+
+  static const double _barAreaHeight = 110;
+  static const double _maxBarHeight = 64;
+
+  String _money(double value) {
+    // Compact Indian-style formatting so a big figure never forces a
+    // smaller one's label to overflow or shrink to nothing.
+    if (value >= 10000000) return '₹${(value / 10000000).toStringAsFixed(2)}Cr';
+    if (value >= 100000) return '₹${(value / 100000).toStringAsFixed(2)}L';
+    if (value >= 1000) return '₹${(value / 1000).toStringAsFixed(1)}K';
+    return '₹${value.toStringAsFixed(0)}';
+  }
+
+  Widget _miniBar({required double value, required double maxValue, required Color color, required String label}) {
+    final ratio = (value / maxValue).clamp(0.0, 1.0);
+    // Always keep a visible sliver so a ₹0 month still reads as "zero".
+    final barHeight = 6 + (ratio * (_maxBarHeight - 6));
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _money(value),
+              maxLines: 1,
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: color),
+            ),
+          ),
+          const SizedBox(height: 6),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            height: barHeight,
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 32),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color, color.withOpacity(.55)],
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF6B7280)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _singleBar({required double value, required Color color, required IconData icon}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            _money(value),
+            maxLines: 1,
+            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: color),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: _maxBarHeight,
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 52),
+          alignment: Alignment.bottomCenter,
+          padding: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color, color.withOpacity(.55)],
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: Colors.white, size: 16),
+        ),
+      ],
+    );
+  }
+
+  Widget _groupBox({
+    required String title,
+    required Color accent,
+    required Widget child,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withOpacity(.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: accent),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(height: _barAreaHeight, child: child),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final expenseMax = currentExpense > previousExpense ? currentExpense : previousExpense;
+    final safeExpenseMax = expenseMax <= 0 ? 1.0 : expenseMax;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFEDE9FE)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Dashboard Overview',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Expenses vs last month, plus profit and sales — tap a box for details',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(height: 16),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ---------------------------------------------------
+                // EXPENSES — previous month vs this month, grouped
+                // ---------------------------------------------------
+                Expanded(
+                  flex: 5,
+                  child: _groupBox(
+                    title: 'Expenses',
+                    accent: const Color(0xFF6C1FB0),
+                    onTap: onExpensesTap,
+                    child: Row(
+                      children: [
+                        _miniBar(
+                          value: previousExpense,
+                          maxValue: safeExpenseMax,
+                          color: const Color(0xFFC9A6F0),
+                          label: 'Last mo.',
+                        ),
+                        const SizedBox(width: 8),
+                        _miniBar(
+                          value: currentExpense,
+                          maxValue: safeExpenseMax,
+                          color: const Color(0xFF6C1FB0),
+                          label: 'This mo.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // ---------------------------------------------------
+                // PROFIT — single current total
+                // ---------------------------------------------------
+                Expanded(
+                  flex: 3,
+                  child: _groupBox(
+                    title: 'Profit',
+                    accent: const Color(0xFF16A34A),
+                    onTap: onProfitTap,
+                    child: Center(
+                      child: _singleBar(
+                        value: profit,
+                        color: const Color(0xFF16A34A),
+                        icon: Icons.trending_up_rounded,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // ---------------------------------------------------
+                // SALES — single current total
+                // ---------------------------------------------------
+                Expanded(
+                  flex: 3,
+                  child: _groupBox(
+                    title: 'Sales',
+                    accent: const Color(0xFF059669),
+                    onTap: onSalesTap,
+                    child: Center(
+                      child: _singleBar(
+                        value: sales,
+                        color: const Color(0xFF059669),
+                        icon: Icons.payments_rounded,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 class _KpiCard extends StatelessWidget {
   final String title;
   final String value;
-
   final IconData icon;
-
   final Color tint;
   final Color iconColor;
-
   final VoidCallback? onTap;
 
   const _KpiCard({
@@ -2094,110 +2287,212 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius:
-          BorderRadius.circular(20),
-
-      onTap: onTap,
-
-      child: Container(
-        padding:
-            const EdgeInsets.all(14),
-
-        decoration:
-            BoxDecoration(
-          color: Colors.white,
-
-          borderRadius:
-              BorderRadius.circular(20),
-
-          border: Border.all(
-            color: tint,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(11, 9, 10, 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                tint.withOpacity(.38),
+                Colors.white.withOpacity(.94),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: iconColor.withOpacity(.14),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: iconColor.withOpacity(.09),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
+              ),
+            ],
           ),
-
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x10000000),
-
-              blurRadius: 12,
-
-              offset:
-                  Offset(0, 4),
-            ),
-          ],
-        ),
-
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-
-              decoration:
-                  BoxDecoration(
-                color: tint,
-
-                borderRadius:
-                    BorderRadius.circular(11),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -28,
+                bottom: -38,
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: iconColor.withOpacity(.035),
+                  ),
+                ),
               ),
-
-              child: Icon(
-                icon,
-
-                color:
-                    iconColor,
-
-                size: 19,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(.11),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          icon,
+                          color: iconColor,
+                          size: 18,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (onTap != null)
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 11,
+                          color: iconColor.withOpacity(.45),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textDark,
+                      letterSpacing: -.35,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.remove_rounded,
+                              size: 10,
+                              color: iconColor,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '0%',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: iconColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      SizedBox(
+                        width: 52,
+                        height: 21,
+                        child: CustomPaint(
+                          painter: _KpiSparklinePainter(
+                            color: iconColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ),
-
-            const Spacer(),
-
-            Text(
-              title,
-
-              maxLines: 1,
-
-              overflow:
-                  TextOverflow.ellipsis,
-
-              style:
-                  const TextStyle(
-                fontSize: 11.5,
-
-                fontWeight:
-                    FontWeight.w700,
-
-                color:
-                    Color(0xFF4B5563),
-              ),
-            ),
-
-            const SizedBox(
-              height: 2,
-            ),
-
-            Text(
-              value,
-
-              style:
-                  const TextStyle(
-                fontSize: 22,
-
-                fontWeight:
-                    FontWeight.w900,
-
-                color:
-                    Color(0xFF111827),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class _KpiSparklinePainter extends CustomPainter {
+  final Color color;
+
+  const _KpiSparklinePainter({
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final points = <Offset>[
+      Offset(0, size.height * .78),
+      Offset(size.width * .15, size.height * .62),
+      Offset(size.width * .30, size.height * .70),
+      Offset(size.width * .44, size.height * .42),
+      Offset(size.width * .58, size.height * .57),
+      Offset(size.width * .73, size.height * .30),
+      Offset(size.width * .86, size.height * .38),
+      Offset(size.width, size.height * .12),
+    ];
+
+    final linePaint = Paint()
+      ..color = color
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final fillPaint = Paint()
+      ..color = color.withOpacity(.055)
+      ..style = PaintingStyle.fill;
+
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    final fillPath = Path()
+      ..moveTo(points.first.dx, size.height)
+      ..lineTo(points.first.dx, points.first.dy);
+
+    for (int i = 1; i < points.length; i++) {
+      linePath.lineTo(points[i].dx, points[i].dy);
+      fillPath.lineTo(points[i].dx, points[i].dy);
+    }
+
+    fillPath
+      ..lineTo(points.last.dx, size.height)
+      ..close();
+
+    canvas
+      ..drawPath(fillPath, fillPaint)
+      ..drawPath(linePath, linePaint);
+
+    canvas.drawCircle(
+      points.last,
+      2.8,
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _KpiSparklinePainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
 
@@ -2233,10 +2528,10 @@ class _SectionCard extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: const Color(0xFFEDE9FE),
+              color: const Color(0xFFF0E3FA),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 21),
+            child: Icon(icon, color: Color(0xFF6C1FB0), size: 21),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -2253,7 +2548,7 @@ class _SectionCard extends StatelessWidget {
           if (action != null || onTap != null)
             Icon(
               Icons.chevron_right_rounded,
-              color: onTap != null ? AppColors.primary : Colors.grey[400],
+              color: onTap != null ? Color(0xFF6C1FB0) : Colors.grey[400],
             ),
         ],
       ),
@@ -2317,7 +2612,7 @@ void _showDashboardBranchDetails(BuildContext context, DashboardBranch b) {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEDE9FE),
+                  color: const Color(0xFFF0E3FA),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
@@ -2326,7 +2621,7 @@ void _showDashboardBranchDetails(BuildContext context, DashboardBranch b) {
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
+                      color: Color(0xFF6C1FB0),
                     ),
                   ),
                 ),
@@ -2425,7 +2720,7 @@ Widget _detailRow(IconData icon, String label, String value) {
           color: const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, size: 18, color: AppColors.primary),
+        child: Icon(icon, size: 18, color: Color(0xFF6C1FB0)),
       ),
       const SizedBox(width: 12),
       Expanded(
@@ -2526,7 +2821,7 @@ class _BranchRow extends StatelessWidget {
               Icons.business_rounded,
 
               color: hasExams
-                  ? AppColors.primary
+                  ? Color(0xFF6C1FB0)
                   : const Color(
                       0xFF9CA3AF,
                     ),
@@ -2661,7 +2956,7 @@ class _ExamRow extends StatelessWidget {
             decoration:
                 BoxDecoration(
               color:
-                  AppColors.primary,
+                  Color(0xFF6C1FB0),
 
               borderRadius:
                   BorderRadius.circular(
@@ -2771,7 +3066,7 @@ class _ExamRow extends StatelessWidget {
 }
 
 // ================================================================
-// TOMORROW'S CANDIDATES ROW
+// TOMORROW'S EXAM ROW
 // ================================================================
 
 class _TomorrowRow extends StatelessWidget {
@@ -2794,13 +3089,13 @@ class _TomorrowRow extends StatelessWidget {
       leading:
           const CircleAvatar(
         backgroundColor:
-            Color(0xFFEDE9FE),
+            Color(0xFFF0E3FA),
 
         child: Icon(
           Icons.location_on_rounded,
 
           color:
-              AppColors.primary,
+              Color(0xFF6C1FB0),
 
           size: 19,
         ),
@@ -2841,7 +3136,7 @@ class _TomorrowRow extends StatelessWidget {
         decoration:
             BoxDecoration(
           color:
-              const Color(0xFFF0E9FF),
+              const Color(0xFFF0E3FA),
 
           borderRadius:
               BorderRadius.circular(
@@ -2855,7 +3150,7 @@ class _TomorrowRow extends StatelessWidget {
           style:
               const TextStyle(
             color:
-                AppColors.primary,
+                Color(0xFF6C1FB0),
 
             fontWeight:
                 FontWeight.w900,
@@ -2878,12 +3173,12 @@ class _CandidateRow extends StatelessWidget {
   // Color generator based on name
   Color _avatarBg(String name) {
     final colors = [
-      const Color(0xFFEDE9FE),
+      const Color(0xFFF0E3FA),
       const Color(0xFFDCFCE7),
       const Color(0xFFDBEAFE),
       const Color(0xFFFFE4E6),
       const Color(0xFFFEF3C7),
-      const Color(0xFFF3E8FF),
+      const Color(0xFFEDE9FE),
     ];
     if (name.isEmpty) return colors[0];
     final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
@@ -2892,7 +3187,7 @@ class _CandidateRow extends StatelessWidget {
 
   Color _avatarText(String name) {
     final colors = [
-      AppColors.primary,
+      Color(0xFF6C1FB0),
       AppColors.green,
       AppColors.blue,
       const Color(0xFFE11D48),
@@ -2913,7 +3208,7 @@ class _CandidateRow extends StatelessWidget {
     Color statusBg;
     final s = candidate.status.toLowerCase();
     if (s.contains('pass') || s == 'completed') {
-      statusColor = const Color(0xFF059669);
+      statusColor = const Color(0xFF9A22C7);
       statusBg = const Color(0xFFDCFCE7);
     } else if (s.contains('fail') || s == 'cancelled') {
       statusColor = const Color(0xFFE11D48);
@@ -2922,8 +3217,8 @@ class _CandidateRow extends StatelessWidget {
       statusColor = const Color(0xFFD97706);
       statusBg = const Color(0xFFFEF3C7);
     } else if (s == 'scheduled') {
-      statusColor = const Color(0xFF7C3AED);
-      statusBg = const Color(0xFFEDE9FE);
+      statusColor = const Color(0xFF9A22C7);
+      statusBg = const Color(0xFFF0E3FA);
     } else if (s == 'no show' || s == 'no_show' || s == 'absent') {
       statusColor = const Color(0xFFEA580C);
       statusBg = const Color(0xFFFFEDD5);

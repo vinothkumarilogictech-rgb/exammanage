@@ -53,7 +53,7 @@ class _StartupSplashState extends State<StartupSplash>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1700),
     )..forward();
 
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
@@ -146,11 +146,11 @@ class _StartupSplashState extends State<StartupSplash>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFB56BFF), Color(0xFF6D27E8)],
+                          colors: [Color(0xFFC77DF0), Color(0xFF7B14B5)],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFFB56BFF),
+                            color: Color(0xFF9A22C7),
                             blurRadius: 16,
                             spreadRadius: 1,
                           ),
@@ -203,6 +203,9 @@ class RootScreen extends StatelessWidget {
   }
 }
 
+/// Brand mark: the real iLOGIC TECH "i" logo (assets/ilogictech_icon.png),
+/// shown on a white disc so the logo's own blue-to-magenta gradient reads
+/// exactly as designed, regardless of the background behind it.
 class _BrandMark extends StatelessWidget {
   final double size;
 
@@ -214,60 +217,27 @@ class _BrandMark extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
+        color: Colors.white,
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF9C4DFF), Color(0xFF5318D4)],
-        ),
         border: Border.all(
           color: Colors.white.withOpacity(.24),
           width: 1.5,
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x806F2AFF),
+            color: Color(0x805A17B5),
             blurRadius: 34,
             spreadRadius: 6,
           ),
         ],
       ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Text(
-            'i',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 78,
-              height: .9,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Positioned(
-            top: size * .20,
-            right: size * .20,
-            child: Row(
-              children: [
-                _dot(size * .075),
-                SizedBox(width: size * .035),
-                _dot(size * .055),
-              ],
-            ),
-          ),
-        ],
+      padding: EdgeInsets.all(size * .2),
+      child: Image.asset(
+        'assets/ilogictech_icon.png',
+        fit: BoxFit.contain,
       ),
     );
   }
-
-  Widget _dot(double value) => Container(
-        width: value,
-        height: value,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white,
-        ),
-      );
 }
 
 class _SplashBackground extends StatelessWidget {
@@ -288,10 +258,10 @@ class _SplashPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF12002F),
-          Color(0xFF30006D),
-          Color(0xFF5D13B9),
-          Color(0xFF160039),
+          Color(0xFF120B4A),
+          Color(0xFF2A1470),
+          Color(0xFF7B14B5),
+          Color(0xFF1A0A3D),
         ],
       ).createShader(rect);
     canvas.drawRect(rect, base);
@@ -306,7 +276,7 @@ class _SplashPainter extends CustomPainter {
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [
-            const Color(0xFFB24CFF).withOpacity(.22),
+            const Color(0xFF9A22C7).withOpacity(.24),
             Colors.transparent,
           ],
         ).createShader(

@@ -10,7 +10,12 @@ import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
 
 class VouchersScreen extends StatefulWidget {
-  const VouchersScreen({super.key});
+  final int initialTab;
+
+  const VouchersScreen({
+    super.key,
+    this.initialTab = 0,
+  }) : assert(initialTab >= 0 && initialTab < 3);
 
   @override
   State<VouchersScreen> createState() => _VouchersScreenState();
@@ -34,7 +39,11 @@ class _VouchersScreenState extends State<VouchersScreen>
     super.initState();
     _branchContext = context.read<BranchContext>();
     _branchContext.addListener(_onBranchChanged);
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTab,
+    );
     load();
   }
 
@@ -104,16 +113,27 @@ class _VouchersScreenState extends State<VouchersScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: AppColors.primaryLight,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [BoxShadow(color: Color(0x559A22C7), blurRadius: 24, offset: Offset(0, 8))],
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         title: const Text(
-          'Voucher Management',
+          'Voucher',
           style: AppBarStyle.titleStyle,
         ),
         actions: [
@@ -151,7 +171,19 @@ class _VouchersScreenState extends State<VouchersScreen>
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : RefreshIndicator(
+          : Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFFF5F0FF),
+                  Color(0xFFFFF8FC),
+                  Color(0xFFF1F5FF),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: load,
               child: TabBarView(
@@ -163,6 +195,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                 ],
               ),
             ),
+          ),
     );
   }
 
@@ -221,8 +254,8 @@ class _VouchersScreenState extends State<VouchersScreen>
           Expanded(
             child: _VoucherQuickAction(
               icon: Icons.add_card_rounded,
-              title: 'Sell Voucher',
-              gradientColors: const [Color(0xFF6D28D9), AppColors.primary],
+              title: 'Sell',
+              gradientColors: const [Color(0xFF9A22C7), AppColors.primary],
               onTap: _showSellVoucher,
             ),
           ),
@@ -468,7 +501,7 @@ class _VouchersScreenState extends State<VouchersScreen>
               }).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
               headerDecoration: const pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFF5B2A86),
+                color: PdfColor.fromInt(0xFF6C1FB0),
               ),
               cellAlignment: pw.Alignment.centerLeft,
               cellStyle: const pw.TextStyle(fontSize: 8),
@@ -570,7 +603,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                             Icons.calendar_month_rounded,
                             size: 19,
                             color: selected != null
-                                ? const Color(0xFF5B21B6)
+                                ? const Color(0xFF6C1FB0)
                                 : const Color(0xFF64748B),
                           ),
                           const SizedBox(width: 8),
@@ -583,7 +616,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: selected != null
-                                    ? const Color(0xFF5B21B6)
+                                    ? const Color(0xFF6C1FB0)
                                     : const Color(0xFF475569),
                               ),
                             ),
@@ -594,7 +627,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                               child: const Icon(
                                 Icons.close_rounded,
                                 size: 18,
-                                color: Color(0xFF5B21B6),
+                                color: Color(0xFF6C1FB0),
                               ),
                             ),
                         ],
@@ -625,12 +658,12 @@ class _VouchersScreenState extends State<VouchersScreen>
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.picture_as_pdf_rounded, size: 15, color: Color(0xFF5B21B6)),
+                        Icon(Icons.picture_as_pdf_rounded, size: 15, color: Color(0xFF6C1FB0)),
                         SizedBox(width: 5),
                         Text(
                           'Export PDF',
                           style: TextStyle(
-                            color: Color(0xFF5B21B6),
+                            color: Color(0xFF6C1FB0),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -656,12 +689,12 @@ class _VouchersScreenState extends State<VouchersScreen>
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.table_chart_rounded, size: 15, color: Color(0xFF5B21B6)),
+                        Icon(Icons.table_chart_rounded, size: 15, color: Color(0xFF6C1FB0)),
                         SizedBox(width: 5),
                         Text(
                           'Export Excel',
                           style: TextStyle(
-                            color: Color(0xFF5B21B6),
+                            color: Color(0xFF6C1FB0),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -750,8 +783,16 @@ class _VouchersScreenState extends State<VouchersScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${h['voucher_code'] ?? '-'}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                      Row(children: [
+                        Flexible(
+                            child: Text('${h['voucher_code'] ?? '-'}',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5))),
+                        if (h['exam_type_name'] != null) ...[
+                          const SizedBox(width: 6),
+                          _examTag('${h['exam_type_name']}'),
+                        ],
+                      ]),
                       const SizedBox(height: 4),
                       Text('${h['student_name'] ?? '-'} • ${h['mobile'] ?? '-'}',
                           style: TextStyle(color: Colors.grey.shade700, fontSize: 12.5)),
@@ -811,8 +852,16 @@ class _VouchersScreenState extends State<VouchersScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${v['voucher_code'] ?? '-'}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                      Row(children: [
+                        Flexible(
+                            child: Text('${v['voucher_code'] ?? '-'}',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5))),
+                        if (v['exam_type_name'] != null) ...[
+                          const SizedBox(width: 6),
+                          _examTag('${v['exam_type_name']}'),
+                        ],
+                      ]),
                       const SizedBox(height: 4),
                       Text(sold ? '${v['student_name'] ?? '-'} • ${v['student_mobile'] ?? '-'}' : 'Available for sale',
                           style: TextStyle(color: Colors.grey.shade700, fontSize: 12.5)),
@@ -852,6 +901,20 @@ class _VouchersScreenState extends State<VouchersScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _examTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Text(text,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF1D4ED8))),
     );
   }
 
@@ -963,56 +1026,177 @@ class _VouchersScreenState extends State<VouchersScreen>
       _toast('Please select a branch from Dashboard before purchasing vouchers.', error: true);
       return;
     }
+
+    List<Map<String, dynamic>> examTypesList = [];
+    try {
+      final et = await api.examTypes();
+      examTypesList = (et.data['data'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((e) => '${e['status'] ?? 'Active'}' == 'Active')
+          .toList();
+    } catch (_) {}
+
+    if (examTypesList.isEmpty) {
+      _toast('No exam types found. Please add an exam type first.', error: true);
+      return;
+    }
+
+    Map<String, dynamic>? selectedExam = examTypesList.first;
     final q = TextEditingController();
     final c = TextEditingController();
     final s = TextEditingController();
     final supplier = TextEditingController();
-    await showDialog(
+    bool saving = false;
+
+    await showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Bulk Voucher Purchase'),
-        content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-          _input(q, 'Quantity', Icons.numbers, keyboard: TextInputType.number),
-          const SizedBox(height: 10),
-          _input(c, 'Cost / Voucher', Icons.currency_rupee, keyboard: TextInputType.numberWithOptions(decimal: true)),
-          const SizedBox(height: 10),
-          _input(s, 'Selling Price / Voucher', Icons.sell_outlined,
-              keyboard: TextInputType.numberWithOptions(decimal: true)),
-          const SizedBox(height: 10),
-          _input(supplier, 'Supplier (optional)', Icons.storefront_outlined),
-        ])),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () async {
-              final qty = int.tryParse(q.text) ?? 0;
-              final cost = double.tryParse(c.text) ?? 0;
-              final sell = double.tryParse(s.text) ?? 0;
-              if (qty <= 0 || cost <= 0) {
-                _toast('Enter a valid quantity and purchase cost.', error: true);
-                return;
-              }
-              try {
-                await api.purchaseVouchers({
-                  'quantity': qty,
-                  'branch_id': globalBranchId,
-                  'cost_per_voucher': cost,
-                  'selling_price': sell,
-                  'supplier': supplier.text.trim(),
-                });
-                if (ctx.mounted) Navigator.pop(ctx);
-                _toast('Voucher stock added successfully.');
-                await load();
-              } catch (e) {
-                _toast('Purchase failed: $e', error: true);
-              }
-            },
-            child: const Text('Save Purchase'),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final bottom = MediaQuery.of(ctx).viewInsets.bottom;
+          return Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * .92),
+            padding: EdgeInsets.fromLTRB(20, 10, 20, bottom + 20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(5)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.3), blurRadius: 14, offset: const Offset(0, 6)),
+                      ],
+                    ),
+                    child: Row(children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(14)),
+                        child: const Icon(Icons.inventory_rounded, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Bulk Purchase', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                          SizedBox(height: 2),
+                          Text('Add new voucher stock for a specific exam',
+                              style: TextStyle(fontSize: 11.5, color: Colors.white70)),
+                        ]),
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionTitle('1. Exam'),
+                  const SizedBox(height: 9),
+                  DropdownButtonFormField<Map<String, dynamic>>(
+                    value: selectedExam,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.school_outlined, color: Color(0xFF6B7280)),
+                      labelText: 'Exam Type *',
+                      helperText: 'Which exam are these vouchers for?',
+                      filled: true,
+                      fillColor: const Color(0xFFF6F5FA),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.6),
+                      ),
+                    ),
+                    items: examTypesList
+                        .map((e) => DropdownMenuItem(value: e, child: Text('${e['name']}', overflow: TextOverflow.ellipsis)))
+                        .toList(),
+                    onChanged: (v) => setSheetState(() => selectedExam = v),
+                  ),
+                  const SizedBox(height: 18),
+                  _sectionTitle('2. Batch & Pricing'),
+                  const SizedBox(height: 9),
+                  _input(q, 'Quantity *', Icons.numbers, keyboard: TextInputType.number),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(
+                        child: _input(c, 'Cost / Voucher *', Icons.currency_rupee,
+                            keyboard: TextInputType.numberWithOptions(decimal: true))),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: _input(s, 'Selling Price / Voucher', Icons.sell_outlined,
+                            keyboard: TextInputType.numberWithOptions(decimal: true))),
+                  ]),
+                  const SizedBox(height: 10),
+                  _input(supplier, 'Supplier (optional)', Icons.storefront_outlined),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              final qty = int.tryParse(q.text.trim()) ?? 0;
+                              final cost = double.tryParse(c.text.trim()) ?? 0;
+                              final sell = double.tryParse(s.text.trim()) ?? 0;
+                              if (selectedExam == null) {
+                                _toast('Please select an exam.', error: true);
+                                return;
+                              }
+                              if (qty <= 0 || cost <= 0) {
+                                _toast('Enter a valid quantity and purchase cost.', error: true);
+                                return;
+                              }
+                              setSheetState(() => saving = true);
+                              try {
+                                await api.purchaseVouchers({
+                                  'quantity': qty,
+                                  'branch_id': globalBranchId,
+                                  'exam_type_id': selectedExam!['id'],
+                                  'cost_per_voucher': cost,
+                                  'selling_price': sell,
+                                  'supplier': supplier.text.trim(),
+                                });
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                _toast('Voucher stock added successfully.');
+                                await load();
+                              } catch (e) {
+                                setSheetState(() => saving = false);
+                                _toast('Purchase failed: $e', error: true);
+                              }
+                            },
+                      icon: saving
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.check_circle_outline),
+                      label: Text(saving ? 'Saving...' : 'Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1078,6 +1262,7 @@ class _VouchersScreenState extends State<VouchersScreen>
           const SizedBox(height: 18),
           _detailSection('Voucher Information', [
             _detail('Voucher ID', '${v['voucher_code'] ?? '-'}'),
+            _detail('Exam', '${v['exam_type_name'] ?? '-'}'),
             _detail('Batch', '${p['batch_number'] ?? v['batch_number'] ?? '-'}'),
             _detail('Purchase Date', '${p['purchase_date'] ?? '-'}'),
             _detail('Purchase Cost', money(v['purchase_cost'])),
@@ -1220,7 +1405,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                       ),
                       const SizedBox(width: 12),
                       const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Sell Voucher', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                        Text('Sell', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
                         SizedBox(height: 2),
                         Text('Create a voucher sale with its own student record',
                             style: TextStyle(fontSize: 11.5, color: Colors.white70)),
@@ -1334,7 +1519,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                               }
                             },
                       icon: saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle_outline),
-                      label: Text(saving ? 'Saving Sale...' : 'Sell Voucher'),
+                      label: Text(saving ? 'Saving...' : 'Sell'),
                     ),
                   ),
                 ],
@@ -1350,6 +1535,7 @@ class _VouchersScreenState extends State<VouchersScreen>
 // ================================================================
 // KPI CARD
 // ================================================================
+
 
 class _VoucherKpiCard extends StatelessWidget {
   final String title;
@@ -1369,37 +1555,180 @@ class _VoucherKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(11, 9, 10, 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          colors: [
+            tint.withOpacity(.38),
+            Colors.white.withOpacity(.94),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: tint),
-        boxShadow: const [
-          BoxShadow(color: Color(0x10000000), blurRadius: 12, offset: Offset(0, 4)),
+        border: Border.all(
+          color: iconColor.withOpacity(.14),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: iconColor.withOpacity(.08),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
+          ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(11)),
-            child: Icon(icon, color: iconColor, size: 19),
+          Positioned(
+            right: -25,
+            bottom: -35,
+            child: Container(
+              width: 105,
+              height: 105,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: iconColor.withOpacity(.035),
+              ),
+            ),
           ),
-          const Spacer(),
-          Text(title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF4B5563))),
-          const SizedBox(height: 2),
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: iconColor.withOpacity(.10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: iconColor,
+                      size: 18,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: iconColor.withOpacity(.07),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.remove_rounded,
+                          size: 9,
+                          color: iconColor,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '0%',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: iconColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textDark,
+                  letterSpacing: -.3,
+                ),
+              ),
+              const SizedBox(height: 5),
+              SizedBox(
+                width: double.infinity,
+                height: 17,
+                child: CustomPaint(
+                  painter: _VoucherSparklinePainter(
+                    color: iconColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+}
+
+class _VoucherSparklinePainter extends CustomPainter {
+  final Color color;
+
+  const _VoucherSparklinePainter({
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final points = <Offset>[
+      Offset(0, size.height * .78),
+      Offset(size.width * .14, size.height * .55),
+      Offset(size.width * .28, size.height * .68),
+      Offset(size.width * .42, size.height * .35),
+      Offset(size.width * .56, size.height * .52),
+      Offset(size.width * .70, size.height * .25),
+      Offset(size.width * .84, size.height * .36),
+      Offset(size.width, size.height * .10),
+    ];
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final path = Path()
+      ..moveTo(points.first.dx, points.first.dy);
+
+    for (int i = 1; i < points.length; i++) {
+      path.lineTo(points[i].dx, points[i].dy);
+    }
+
+    canvas.drawPath(path, paint);
+
+    canvas.drawCircle(
+      points.last,
+      2.6,
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _VoucherSparklinePainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
 
