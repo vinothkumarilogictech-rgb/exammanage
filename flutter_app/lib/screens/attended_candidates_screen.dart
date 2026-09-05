@@ -246,6 +246,65 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
         '${d.day.toString().padLeft(2, '0')}';
   }
 
+  // Tallies candidates per team (unassigned candidates are grouped under
+  // 'Unassigned'), preserving first-seen order, and renders it as a bordered
+  // summary block matching the app's report styling, with a shaded Total row.
+  pw.Widget _buildTeamSummaryBlock(List<AttendedCandidate> rows) {
+    final counts = <String, int>{};
+    for (final r in rows) {
+      final key = r.teamName.trim().isEmpty ? 'Unassigned' : r.teamName.trim();
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    pw.Widget countRow(String label, int count, {bool isTotal = false}) {
+      return pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: pw.BoxDecoration(
+          color: isTotal ? const pdf.PdfColor.fromInt(0xFFF3F4F6) : pdf.PdfColors.white,
+          border: const pw.Border(top: pw.BorderSide(color: pdf.PdfColors.grey300, width: 0.5)),
+        ),
+        child: pw.RichText(
+          text: pw.TextSpan(
+            children: [
+              pw.TextSpan(
+                text: isTotal ? label : label.toUpperCase(),
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5),
+              ),
+              pw.TextSpan(
+                text: ' - $count candidate${count == 1 ? '' : 's'}',
+                style: const pw.TextStyle(fontSize: 9.5),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: pdf.PdfColors.grey400, width: 0.5),
+        borderRadius: pw.BorderRadius.circular(4),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
+            child: pw.Text(
+              'Team-wise Candidate Count',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: pdf.PdfColors.white),
+            ),
+          ),
+          for (final entry in counts.entries) countRow(entry.key, entry.value),
+          countRow('Total', rows.length, isTotal: true),
+        ],
+      ),
+    );
+  }
+
   Future<void> _exportPdf() async {
     try {
       final rows = await _currentFilteredRows();
@@ -257,10 +316,12 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
           build: (context) => [
             pw.Text('Attended Candidates', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 6),
+            pw.Text('Branch: ${_branchContext.selectedBranchName}'),
+            pw.SizedBox(height: 4),
             pw.Text('Filter: ${_exportFilterLabel()}${searchQuery.trim().isEmpty ? '' : ' | Search: ${searchQuery.trim()}'}'),
             pw.SizedBox(height: 14),
             pw.Table.fromTextArray(
-              headers: const ['S.No', 'Date', 'Candidate Name', 'Team', 'Exam Type', 'Branch', 'Status', 'Remarks'],
+              headers: const ['S.No', 'Date', 'Candidate Name', 'Team', 'Exam Type', 'Status', 'Remarks'],
               data: rows.asMap().entries.map((entry) {
                 final index = entry.key;
                 final r = entry.value;
@@ -270,17 +331,20 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                   r.candidateName,
                   r.teamName.isNotEmpty ? r.teamName : '-',
                   r.examTypeName,
-                  r.branchName,
                   r.result,
                   r.remarks.isNotEmpty ? r.remarks : '-',
                 ];
               }).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white),
               headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
+              headerAlignment: pw.Alignment.center,
               cellStyle: const pw.TextStyle(fontSize: 8),
+              cellAlignment: pw.Alignment.center,
               cellPadding: const pw.EdgeInsets.all(5),
               border: pw.TableBorder.all(color: pdf.PdfColors.grey400, width: 0.5),
             ),
+            pw.SizedBox(height: 20),
+            _buildTeamSummaryBlock(rows),
           ],
         ),
       );
