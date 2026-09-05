@@ -452,7 +452,6 @@ class _ExamsScreenState extends State<ExamsScreen>
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    final regNumCtrl = TextEditingController();
     final remarksCtrl = TextEditingController();
     final dateCtrl = TextEditingController(
       text: DateTime.now().toIso8601String().split('T').first,
@@ -544,11 +543,6 @@ class _ExamsScreenState extends State<ExamsScreen>
                     const SizedBox(height: 6),
                     _field(nameCtrl, 'Enter candidate name',
                         icon: Icons.person_outline_rounded),
-                    const SizedBox(height: 14),
-                    _label('Register Number'),
-                    const SizedBox(height: 6),
-                    _field(regNumCtrl, 'Register number',
-                        icon: Icons.badge_outlined),
                     const SizedBox(height: 14),
                     _label('Email'),
                     const SizedBox(height: 6),
@@ -725,7 +719,6 @@ class _ExamsScreenState extends State<ExamsScreen>
                           'name': nameCtrl.text.trim(),
                           'email': emailCtrl.text.trim(),
                           'phone': phoneCtrl.text.trim(),
-                          'register_number': regNumCtrl.text.trim(),
                           'branch_id': selectedBranchId,
                           'exam_type_id': selectedExamTypeId,
                           'team_id': selectedTeamId,
@@ -1293,9 +1286,9 @@ class _ExamsScreenState extends State<ExamsScreen>
       for (final t in await teams) rows.add({'Team Name': t.name, 'Location': t.location, 'Phone': t.phone, 'Exam': t.examTypeName, 'Candidates': t.candidateCount, 'Status': t.status});
     } else {
       final report = await _loadTeamReport(team); if (report == null) return;
-      for (final item in (report['candidates'] as List? ?? const [])) { final c = Map<String,dynamic>.from(item); rows.add({'Team Name': team.name, 'Location': team.location, 'Phone': team.phone, 'Exam': c['exam_type_name'] ?? team.examTypeName, 'Candidate': c['name'], 'Register Number': c['register_number'], 'Branch': c['branch_name'], 'Exam Date': c['exam_date'], 'Status': c['status']}); }
+      for (final item in (report['candidates'] as List? ?? const [])) { final c = Map<String,dynamic>.from(item); rows.add({'Team Name': team.name, 'Location': team.location, 'Phone': team.phone, 'Exam': c['exam_type_name'] ?? team.examTypeName, 'Candidate': c['name'], 'Branch': c['branch_name'], 'Exam Date': c['exam_date'], 'Status': c['status']}); }
     }
-    final headers = all ? ['Team Name','Location','Phone','Exam','Candidates','Status'] : ['Team Name','Location','Phone','Exam','Candidate','Register Number','Branch','Exam Date','Status'];
+    final headers = all ? ['Team Name','Location','Phone','Exam','Candidates','Status'] : ['Team Name','Location','Phone','Exam','Candidate','Branch','Exam Date','Status'];
     final buffer = StringBuffer()..writeln(headers.map(_csvEscape).join(','));
     for (final row in rows) buffer.writeln(headers.map((h) => _csvEscape(row[h])).join(','));
     final safe = (all ? 'all_teams' : team.name).replaceAll(RegExp(r'\W+'), '_');
@@ -1313,7 +1306,7 @@ class _ExamsScreenState extends State<ExamsScreen>
       if (!all) ...[
         pw.Container(padding: const pw.EdgeInsets.all(12), decoration: pw.BoxDecoration(color: const pdf.PdfColor.fromInt(0xFFF3E8FF), borderRadius: pw.BorderRadius.circular(8)), child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [pw.Text('Team Details', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)), pw.SizedBox(height: 5), pw.Text('Team: ${team.name}'), pw.Text('Location: ${team.location.isEmpty ? '-' : team.location}'), pw.Text('Phone: ${team.phone.isEmpty ? '-' : team.phone}'), pw.Text('Exam: ${team.examTypeName.isEmpty ? '-' : team.examTypeName}'), pw.Text('Candidates: ${candidates.length}') ])),
         pw.SizedBox(height: 16), pw.Text('Assigned Candidates', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 8),
-        pw.TableHelper.fromTextArray(headers: ['Candidate','Register No.','Branch','Exam','Date','Status'], data: candidates.map((item) { final c=Map<String,dynamic>.from(item); return ['${c['name']??'-'}','${c['register_number']??'-'}','${c['branch_name']??'-'}','${c['exam_type_name']??'-'}','${c['exam_date']??'-'}','${c['status']??'-'}']; }).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFFE85D04)), cellStyle: const pw.TextStyle(fontSize: 8)),
+        pw.TableHelper.fromTextArray(headers: ['Candidate','Branch','Exam','Date','Status'], data: candidates.map((item) { final c=Map<String,dynamic>.from(item); return ['${c['name']??'-'}','${c['branch_name']??'-'}','${c['exam_type_name']??'-'}','${c['exam_date']??'-'}','${c['status']??'-'}']; }).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFFE85D04)), cellStyle: const pw.TextStyle(fontSize: 8)),
       ] else ...[
         pw.Text('All Teams', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 8),
         pw.TableHelper.fromTextArray(headers: ['Team','Location','Phone','Exam','Candidates','Status'], data: teamRows.map((t)=>[t.name,t.location.isEmpty?'-':t.location,t.phone.isEmpty?'-':t.phone,t.examTypeName.isEmpty?'-':t.examTypeName,'${t.candidateCount}',t.status]).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFFE85D04)), cellStyle: const pw.TextStyle(fontSize: 9)),
@@ -1500,6 +1493,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       onStatusChanged: _updateCandidateStatus,
                       onOpenDetails: _openCandidateDetails,
                       onEditRemarks: _showCandidateRemarks,
+                      onEditCandidate: _showEditCandidateDialog,
                     ),
               );
             },
@@ -1571,7 +1565,218 @@ class _ExamsScreenState extends State<ExamsScreen>
       ),
     );
   }
+
+  Future<void> _showEditCandidateDialog(Candidate candidate) async {
+    final nameCtrl = TextEditingController(text: candidate.name);
+    final emailCtrl = TextEditingController(text: candidate.email);
+    final phoneCtrl = TextEditingController(text: candidate.phone);
+    final remarksCtrl = TextEditingController(text: candidate.remarks);
+    bool saving = false;
+
+    try {
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setSheetState) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              20, 18, 20, MediaQuery.of(ctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1D5DB),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEDE9FE),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.edit_rounded,
+                            color: AppColors.primary, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Edit Candidate',
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF111827))),
+                            SizedBox(height: 2),
+                            Text('Update candidate details',
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: Color(0xFF6B7280),
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pop(ctx),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(Icons.close_rounded,
+                              size: 18, color: Color(0xFF6B7280)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _formSectionCard(
+                    title: 'CANDIDATE DETAILS',
+                    icon: Icons.badge_rounded,
+                    color: const Color(0xFF7C3AED),
+                    children: [
+                      _label('Full Name *'),
+                      const SizedBox(height: 6),
+                      _field(nameCtrl, 'Enter candidate name',
+                          icon: Icons.person_outline_rounded),
+                      const SizedBox(height: 13),
+                      _label('Email'),
+                      const SizedBox(height: 6),
+                      _field(emailCtrl, 'Candidate email',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress),
+                      const SizedBox(height: 13),
+                      _label('Phone'),
+                      const SizedBox(height: 6),
+                      _field(phoneCtrl, 'Candidate phone',
+                          icon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone),
+                      const SizedBox(height: 13),
+                      _label('Remarks'),
+                      const SizedBox(height: 6),
+                      _field(remarksCtrl, 'Add a note about this candidate...',
+                          icon: Icons.notes_rounded),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F5FD),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded,
+                            size: 18, color: Color(0xFF6C1FB0)),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            'Exam, branch, team and status can be changed from the existing controls.',
+                            style: const TextStyle(
+                                fontSize: 11.5,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: FilledButton.icon(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              if (nameCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Candidate name is required.')),
+                                );
+                                return;
+                              }
+                              setSheetState(() => saving = true);
+                              try {
+                                await api.updateCandidate(candidate.id, {
+                                  'name': nameCtrl.text.trim(),
+                                          'email': emailCtrl.text.trim(),
+                                  'phone': phoneCtrl.text.trim(),
+                                  'remarks': remarksCtrl.text.trim(),
+                                });
+                                if (!mounted) return;
+                                Navigator.pop(ctx);
+                                reload();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Candidate details updated successfully.'),
+                                    backgroundColor: AppColors.green,
+                                  ),
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                setSheetState(() => saving = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Unable to update candidate: $e')),
+                                );
+                              }
+                            },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C1FB0),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15)),
+                      ),
+                      icon: saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.save_rounded),
+                      label: Text(
+                        saving ? 'Saving...' : 'Save Changes',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      nameCtrl.dispose();
+      emailCtrl.dispose();
+      phoneCtrl.dispose();
+      remarksCtrl.dispose();
+    }
+  }
 }
+
 
 // ================================================================
 // TEAM CARD
@@ -1683,6 +1888,7 @@ class _ExamTypeCard extends StatelessWidget {
       ),
     );
   }
+
 }
 
 // ================================================================
@@ -1694,12 +1900,14 @@ class _CandidateCard extends StatelessWidget {
   final Future<void> Function(int candidateId, String status) onStatusChanged;
   final Future<void> Function(Candidate candidate) onOpenDetails;
   final Future<void> Function(Candidate candidate) onEditRemarks;
+  final Future<void> Function(Candidate candidate) onEditCandidate;
 
   const _CandidateCard({
     required this.candidate,
     required this.onStatusChanged,
     required this.onOpenDetails,
     required this.onEditRemarks,
+    required this.onEditCandidate,
   });
 
   Color _statusColor(String s) {
@@ -1871,7 +2079,6 @@ class _CandidateCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   [
-                    if (candidate.registerNumber.isNotEmpty) candidate.registerNumber,
                     if (candidate.branch.isNotEmpty) candidate.branch,
                     if (candidate.date.isNotEmpty) candidate.date,
                   ].join(' • '),
@@ -1915,7 +2122,20 @@ class _CandidateCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
+          Material(
+            color: const Color(0xFFF3E8FF),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: () => onEditCandidate(candidate),
+              borderRadius: BorderRadius.circular(12),
+              child: const Padding(
+                padding: EdgeInsets.all(7),
+                child: Icon(Icons.edit_rounded, size: 15, color: AppColors.primary),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
@@ -2053,8 +2273,6 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
           ]),
         ),
         _section('PERSONAL INFORMATION', Icons.person_rounded, [
-          _infoRow(Icons.badge_outlined, 'Register Number', candidate.registerNumber),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
           _infoRow(Icons.email_outlined, 'Email', candidate.email),
           const Divider(height: 1, color: Color(0xFFF3F4F6)),
           _infoRow(Icons.phone_outlined, 'Phone', candidate.phone),

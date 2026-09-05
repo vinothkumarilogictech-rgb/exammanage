@@ -14,17 +14,7 @@ class ApiConfig {
   static const String _dartDefineUrl =
       String.fromEnvironment('API_SERVER_URL');
 
-  static String get baseUrl {
-    if (_dartDefineUrl.isNotEmpty) {
-      return _dartDefineUrl.replaceFirst(RegExp(r'/$'), '');
-    }
-
-    if (kIsWeb) {
-      return 'http://localhost:5001';
-    }
-
-    return 'http://10.0.2.2:5000';
-  }
+  static const String baseUrl = 'https://exam.ilogicigroup.com';
 
   static const String apiBasePath = '/api/v1';
 

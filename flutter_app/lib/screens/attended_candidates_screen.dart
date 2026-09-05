@@ -238,10 +238,10 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
             pw.Text('Filter: ${_exportFilterLabel()}${searchQuery.trim().isEmpty ? '' : ' | Search: ${searchQuery.trim()}'}'),
             pw.SizedBox(height: 14),
             pw.Table.fromTextArray(
-              headers: const ['Candidate', 'Team', 'Exam Type', 'Branch', 'Exam Date', 'Status', 'Remarks'],
+              headers: const ['Date', 'Candidate Name', 'Team', 'Exam Type', 'Branch', 'Status', 'Remarks'],
               data: rows.map((r) => [
-                r.candidateName, r.teamName.isNotEmpty ? r.teamName : '-', r.examTypeName, r.branchName,
-                r.attendedDate, r.result, r.remarks.isNotEmpty ? r.remarks : '-',
+                r.attendedDate, r.candidateName, r.teamName.isNotEmpty ? r.teamName : '-',
+                r.examTypeName, r.branchName, r.result, r.remarks.isNotEmpty ? r.remarks : '-',
               ]).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white),
               headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
