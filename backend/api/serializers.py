@@ -38,7 +38,7 @@ def team_dict(t):
 
 def candidate_dict(c):
     return {'id': c.id, 'name': c.name, 'email': c.email, 'phone': c.phone, 'register_number': c.register_number,
-            'test_type': c.test_type, 'exam_date': c.exam_date, 'status': c.status, 'branch_id': c.branch_id,
+            'test_type': c.test_type, 'exam_date': c.exam_date, 'status': ('Not Completed' if (c.status or '').strip().lower() == 'absent' else c.status), 'branch_id': c.branch_id,
             'branch_name': c.branch.branch_name if c.branch else None, 'exam_type_id': c.exam_type_id,
             'exam_type_name': c.exam_type.name if c.exam_type else None, 'team_id': c.team_id,
             'team_name': c.team.name if c.team else None, 'team_location': c.team.location if c.team else None,

@@ -599,21 +599,24 @@ def candidate_update(candidate_id):
     c = Candidate.query.get(candidate_id)
     if not c:
         return fail('Candidate not found.', 404)
+
     own_branch_id = _employee_branch_id()
     if own_branch_id is not None and c.branch_id != own_branch_id:
         return fail('Employees can only access candidates in their assigned branch.', 403)
 
     d = body()
     status = str(d.get('status') or '').strip()
-    allowed = {'Registered', 'Absent', 'Rescheduled', 'Completed'}
+    # "Absent" is accepted only for backward compatibility with old records.
+    # The UI/new API value is "Not Completed".
+    status_map = {'Absent': 'Not Completed', 'Not Completed': 'Not Completed'}
+    if status in status_map:
+        status = status_map[status]
+    allowed = {'Registered', 'Not Completed', 'Rescheduled', 'Completed'}
 
-    # Profile/remarks edits are also allowed from the candidate details page.
-    # Status remains optional for those updates.
-    if status:
-        if status not in allowed:
-            return fail('Status must be Registered, Absent, Rescheduled, or Completed.', 422)
-        c.status = status
+    if status and status not in allowed:
+        return fail('Status must be Registered, Not Completed, Rescheduled, or Completed.', 422)
 
+    # Profile fields.
     for field in ('name', 'email', 'phone', 'register_number'):
         if field in d:
             value = (d.get(field) or '').strip()
@@ -622,24 +625,96 @@ def candidate_update(candidate_id):
             setattr(c, field, value or None)
 
     if 'remarks' in d or 'reason_note' in d:
-        c.reason_note = (d.get('remarks') if 'remarks' in d else d.get('reason_note') or '').strip() or None
+        value = d.get('remarks') if 'remarks' in d else d.get('reason_note')
+        c.reason_note = (value or '').strip() or None
 
-    # Keep the candidate master status and its first attempt in sync when the
-    # caller actually changes status.
-    if status:
-        attempt = (ExamAttempt.query.filter_by(candidate_id=c.id)
-                   .order_by(ExamAttempt.attempt_number.asc()).first())
-        if attempt:
+    # Full exam-assignment editing. These fields are the same fields exposed
+    # by Add Candidate.
+    if 'branch_id' in d:
+        try:
+            branch_id = int(d.get('branch_id')) if d.get('branch_id') not in (None, '') else None
+        except (TypeError, ValueError):
+            return fail('Invalid branch_id.', 422)
+        if own_branch_id is not None and branch_id != int(own_branch_id):
+            return fail('Employees can only update candidates in their assigned branch.', 403)
+        if branch_id is not None and not Branch.query.get(branch_id):
+            return fail('Selected branch not found.', 404)
+        c.branch_id = branch_id
+
+    if 'exam_type_id' in d:
+        try:
+            exam_type_id = int(d.get('exam_type_id')) if d.get('exam_type_id') not in (None, '') else None
+        except (TypeError, ValueError):
+            return fail('Invalid exam_type_id.', 422)
+        if exam_type_id is not None and not ExamType.query.get(exam_type_id):
+            return fail('Selected exam type not found.', 404)
+        c.exam_type_id = exam_type_id
+
+    if 'team_id' in d:
+        try:
+            team_id = int(d.get('team_id')) if d.get('team_id') not in (None, '', -1, '-1') else None
+        except (TypeError, ValueError):
+            return fail('Invalid team_id.', 422)
+        c.team_id = team_id
+
+    if c.team_id:
+        team = ExamTeam.query.get(int(c.team_id))
+        if not team:
+            return fail('Team not found.', 404)
+        if team.status != 'Active':
+            return fail('Selected team is inactive.', 422)
+        if team.exam_type_id and c.exam_type_id and int(team.exam_type_id) != int(c.exam_type_id):
+            return fail('Selected team is not assigned to this exam type.', 422)
+
+    if c.exam_type_id:
+        et = ExamType.query.get(int(c.exam_type_id))
+        if et:
+            c.test_type = et.name
+
+    if 'exam_date' in d:
+        exam_date = str(d.get('exam_date') or '').strip()
+        if exam_date:
+            c.exam_date = exam_date
+
+    # Keep the first attempt synchronized with the editable Add-Candidate
+    # fields. Completed candidates remain editable; changing status simply
+    # changes the current lifecycle state instead of locking the record.
+    attempt = (ExamAttempt.query.filter_by(candidate_id=c.id)
+               .order_by(ExamAttempt.attempt_number.asc()).first())
+
+    if attempt:
+        if c.branch_id is not None:
+            attempt.branch_id = c.branch_id
+        if c.exam_type_id is not None:
+            attempt.exam_type_id = c.exam_type_id
+        if c.exam_date:
+            if status == 'Rescheduled' and attempt.scheduled_date != str(c.exam_date):
+                # Preserve the original scheduled date for reschedule history.
+                if not attempt.original_scheduled_date:
+                    attempt.original_scheduled_date = str(attempt.scheduled_date or c.exam_date)
+                attempt.scheduled_date = str(c.exam_date)
+            else:
+                attempt.scheduled_date = str(c.exam_date)
+                if not attempt.original_scheduled_date:
+                    attempt.original_scheduled_date = str(c.exam_date)
+
+        if status:
+            c.status = status
             if status == 'Completed':
                 attempt.status = 'Completed'
-                attempt.actual_exam_date = attempt.actual_exam_date or attempt.scheduled_date or c.exam_date
-            elif status == 'Absent':
+                attempt.actual_exam_date = str(c.exam_date or attempt.scheduled_date)
+            elif status == 'Not Completed':
                 attempt.status = 'No Show'
+                attempt.actual_exam_date = None
             elif status == 'Rescheduled':
                 attempt.status = 'Scheduled'
+                attempt.actual_exam_date = None
             else:  # Registered
                 attempt.status = 'Scheduled'
-            db.session.add(attempt)
+                attempt.actual_exam_date = None
+    elif status:
+        c.status = status
+
     db.session.commit()
     return ok(candidate_dict(c), 'Candidate updated.')
 
