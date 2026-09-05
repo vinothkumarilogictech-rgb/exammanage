@@ -296,7 +296,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                         width: 42, height: 42,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFFF7A18), Color(0xFF9A3412)],
+                            colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
                           ),
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -383,7 +383,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     width: double.infinity, height: 52,
                     child: FilledButton(
                       style: FilledButton.styleFrom(
-                        backgroundColor: Color(0xFFE85D04),
+                        backgroundColor: Color(0xFF6C1FB0),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       onPressed: () async {
@@ -598,8 +598,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
-                              Color(0xFFFF7A18),
-                              Color(0xFFE85D04),
+                              Color(0xFF9A22C7),
+                              Color(0xFF6C1FB0),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(14),
@@ -758,7 +758,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                           DropdownMenuItem<String>(
                             value: 'Rescheduled',
                             child: Row(children: [
-                              Icon(Icons.event_repeat_rounded, size: 18, color: Color(0xFFFF7A18)),
+                              Icon(Icons.event_repeat_rounded, size: 18, color: Color(0xFF9A22C7)),
                               SizedBox(width: 8),
                               Expanded(child: Text('Rescheduled')),
                             ]),
@@ -828,7 +828,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor:
-                            const Color(0xFFFF7A18),
+                            const Color(0xFF9A22C7),
                         shape: RoundedRectangleBorder(
                           borderRadius:
                               BorderRadius.circular(16),
@@ -925,8 +925,8 @@ class DashboardScreenState extends State<DashboardScreen> {
               _ModalHandle(),
               _ModalHeader(
                 icon: Icons.business_rounded,
-                iconColor: Color(0xFFE85D04),
-                iconBg: const Color(0xFFFFE8D6),
+                iconColor: Color(0xFF6C1FB0),
+                iconBg: const Color(0xFFF0E3FA),
                 title: 'All Branches',
                 subtitle: '${list.length} branches registered',
               ),
@@ -951,10 +951,10 @@ class DashboardScreenState extends State<DashboardScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 22,
-                                  backgroundColor: const Color(0xFFFFE8D6),
+                                  backgroundColor: const Color(0xFFF0E3FA),
                                   child: Text(
                                     b.name.isNotEmpty ? b.name[0].toUpperCase() : '?',
-                                    style: const TextStyle(color: Color(0xFFE85D04), fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: const TextStyle(color: Color(0xFF6C1FB0), fontWeight: FontWeight.bold, fontSize: 16),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -1008,12 +1008,12 @@ class DashboardScreenState extends State<DashboardScreen> {
           ? AppColors.blue
           : filterDate.isNotEmpty
               ? AppColors.green
-              : Color(0xFFE85D04);
+              : Color(0xFF6C1FB0);
       final Color accentBg = filterDate == null
           ? const Color(0xFFDBEAFE)
           : filterDate.isNotEmpty
               ? const Color(0xFFDCFCE7)
-              : const Color(0xFFFFE8D6);
+              : const Color(0xFFF0E3FA);
 
       showModalBottomSheet(
         context: context,
@@ -1057,12 +1057,12 @@ class DashboardScreenState extends State<DashboardScreen> {
                               ? AppColors.green
                               : item.status.toLowerCase().contains('fail')
                                   ? const Color(0xFFE11D48)
-                                  : Color(0xFFE85D04);
+                                  : Color(0xFF6C1FB0);
                           final statusBg = item.status.toLowerCase().contains('pass')
                               ? const Color(0xFFDCFCE7)
                               : item.status.toLowerCase().contains('fail')
                                   ? const Color(0xFFFFE4E6)
-                                  : const Color(0xFFFFE8D6);
+                                  : const Color(0xFFF0E3FA);
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(14),
@@ -1144,8 +1144,8 @@ class DashboardScreenState extends State<DashboardScreen> {
             _ModalHandle(),
             _ModalHeader(
               icon: Icons.calendar_month_rounded,
-              iconColor: Color(0xFFE85D04),
-              iconBg: const Color(0xFFFFE8D6),
+              iconColor: Color(0xFF6C1FB0),
+              iconBg: const Color(0xFFF0E3FA),
               title: "Today's Exams",
               subtitle: exams.isEmpty ? 'No exams today' : '${exams.length} exam session${exams.length == 1 ? '' : 's'}',
             ),
@@ -1183,8 +1183,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                             statusIcon = Icons.play_circle_rounded;
                             break;
                           default:
-                            statusColor = Color(0xFFE85D04);
-                            statusBg = const Color(0xFFFFE8D6);
+                            statusColor = Color(0xFF6C1FB0);
+                            statusBg = const Color(0xFFF0E3FA);
                             statusIcon = Icons.schedule_rounded;
                         }
                         return Container(
@@ -1205,8 +1205,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                                 children: [
                                   Container(
                                     width: 40, height: 40,
-                                    decoration: BoxDecoration(color: const Color(0xFFFFE8D6), borderRadius: BorderRadius.circular(12)),
-                                    child: const Icon(Icons.school_rounded, color: Color(0xFFE85D04), size: 22),
+                                    decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(12)),
+                                    child: const Icon(Icons.school_rounded, color: Color(0xFF6C1FB0), size: 22),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -1343,8 +1343,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                                         children: item.examBreakdown.entries.map((entry) {
                                           return Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                            decoration: BoxDecoration(color: const Color(0xFFFFE8D6), borderRadius: BorderRadius.circular(20)),
-                                            child: Text('${entry.key}: ${entry.value}', style: const TextStyle(color: Color(0xFFE85D04), fontSize: 12, fontWeight: FontWeight.w600)),
+                                            decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(20)),
+                                            child: Text('${entry.key}: ${entry.value}', style: const TextStyle(color: Color(0xFF6C1FB0), fontSize: 12, fontWeight: FontWeight.w600)),
                                           );
                                         }).toList(),
                                       ),
@@ -1360,14 +1360,14 @@ class DashboardScreenState extends State<DashboardScreen> {
                           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFE8D6),
+                            color: const Color(0xFFF0E3FA),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text("Total Tomorrow's Exam", style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFE85D04))),
-                              Text('${stats.tomorrowCandidates}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Color(0xFFE85D04))),
+                              const Text("Total Tomorrow's Exam", style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF6C1FB0))),
+                              Text('${stats.tomorrowCandidates}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Color(0xFF6C1FB0))),
                             ],
                           ),
                         ),
@@ -1409,7 +1409,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                 value: b.id,
                 child: Row(
                   children: [
-                    const Icon(Icons.business_rounded, color: Color(0xFFE85D04)),
+                    const Icon(Icons.business_rounded, color: Color(0xFF6C1FB0)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -1432,22 +1432,22 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF7),
+      backgroundColor: const Color(0xFFF7F5FD),
 
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
         toolbarHeight: AppBarStyle.height,
         shape: AppBarStyle.shape,
-        backgroundColor: Color(0xFFFF7A18),
+        backgroundColor: Color(0xFF9A22C7),
         foregroundColor: Colors.white,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFFE85D04),
-                Color(0xFFFF7A18),
-                Color(0xFFFF9F43),
+                Color(0xFF6C1FB0),
+                Color(0xFF9A22C7),
+                Color(0xFFE0189E),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -1457,7 +1457,7 @@ class DashboardScreenState extends State<DashboardScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Color(0x55FF7A18),
+                color: Color(0x559A22C7),
                 blurRadius: 24,
                 offset: Offset(0, 8),
               ),
@@ -1613,7 +1613,7 @@ class DashboardScreenState extends State<DashboardScreen> {
               data['tomorrowCandidates'] as List<Candidate>? ?? [];
 
           return RefreshIndicator(
-            color: Color(0xFFE85D04),
+            color: Color(0xFF6C1FB0),
 
             onRefresh: () async {
               reload();
@@ -1643,7 +1643,25 @@ class DashboardScreenState extends State<DashboardScreen> {
                 // KPI CARDS
                 // =================================================
 
-                GridView.count(
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFEDE4FB), Color(0xFFFCE7F3)],
+                    ),
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(.14),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1703,6 +1721,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
                   ],
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -1710,7 +1729,25 @@ class DashboardScreenState extends State<DashboardScreen> {
                 // FINANCE & VOUCHER KPI CARDS (ADMIN ONLY)
                 // =================================================
                 if (isAdmin) ...[
-                  GridView.count(
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFDDF4E8), Color(0xFFE4E9FC)],
+                      ),
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.green.withOpacity(.14),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -1737,8 +1774,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                         title: 'Available Voucher',
                         value: '$availableVouchers',
                         icon: Icons.confirmation_num_rounded,
-                        tint: const Color(0xFFFFE8D6),
-                        iconColor: const Color(0xFFE85D04),
+                        tint: const Color(0xFFF0E3FA),
+                        iconColor: const Color(0xFF6C1FB0),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -1752,8 +1789,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                         title: 'Total Expenses',
                         value: '₹${currentMonthExpense.toStringAsFixed(2)}',
                         icon: Icons.account_balance_wallet_rounded,
-                        tint: const Color(0xFFFFE8D6),
-                        iconColor: const Color(0xFFE85D04),
+                        tint: const Color(0xFFF0E3FA),
+                        iconColor: const Color(0xFF6C1FB0),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -1779,6 +1816,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
                     ],
+                    ),
                   ),
 
                   const SizedBox(height: 20),
@@ -2133,7 +2171,7 @@ class _DashboardMetricsChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFFFE1CF)),
+        border: Border.all(color: const Color(0xFFEDE9FE)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0D000000),
@@ -2174,21 +2212,21 @@ class _DashboardMetricsChart extends StatelessWidget {
                   flex: 5,
                   child: _groupBox(
                     title: 'Expenses',
-                    accent: const Color(0xFFE85D04),
+                    accent: const Color(0xFF6C1FB0),
                     onTap: onExpensesTap,
                     child: Row(
                       children: [
                         _miniBar(
                           value: previousExpense,
                           maxValue: safeExpenseMax,
-                          color: const Color(0xFFFDBA74),
+                          color: const Color(0xFFC9A6F0),
                           label: 'Last mo.',
                         ),
                         const SizedBox(width: 8),
                         _miniBar(
                           value: currentExpense,
                           maxValue: safeExpenseMax,
-                          color: const Color(0xFFE85D04),
+                          color: const Color(0xFF6C1FB0),
                           label: 'This mo.',
                         ),
                       ],
@@ -2276,23 +2314,23 @@ class _KpiCard extends StatelessWidget {
 
         decoration:
             BoxDecoration(
-          color: Colors.white,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [iconColor, iconColor.withOpacity(.76)],
+          ),
 
           borderRadius:
               BorderRadius.circular(20),
 
-          border: Border.all(
-            color: tint,
-          ),
-
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x10000000),
+              color: iconColor.withOpacity(.40),
 
-              blurRadius: 12,
+              blurRadius: 16,
 
               offset:
-                  Offset(0, 4),
+                  const Offset(0, 8),
             ),
           ],
         ),
@@ -2308,7 +2346,7 @@ class _KpiCard extends StatelessWidget {
 
               decoration:
                   BoxDecoration(
-                color: tint,
+                color: Colors.white.withOpacity(.24),
 
                 borderRadius:
                     BorderRadius.circular(11),
@@ -2318,7 +2356,7 @@ class _KpiCard extends StatelessWidget {
                 icon,
 
                 color:
-                    iconColor,
+                    Colors.white,
 
                 size: 19,
               ),
@@ -2342,7 +2380,7 @@ class _KpiCard extends StatelessWidget {
                     FontWeight.w700,
 
                 color:
-                    Color(0xFF4B5563),
+                    Colors.white,
               ),
             ),
 
@@ -2361,7 +2399,7 @@ class _KpiCard extends StatelessWidget {
                     FontWeight.w900,
 
                 color:
-                    Color(0xFF111827),
+                    Colors.white,
               ),
             ),
           ],
@@ -2403,10 +2441,10 @@ class _SectionCard extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFE8D6),
+              color: const Color(0xFFF0E3FA),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: Color(0xFFE85D04), size: 21),
+            child: Icon(icon, color: Color(0xFF6C1FB0), size: 21),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -2423,7 +2461,7 @@ class _SectionCard extends StatelessWidget {
           if (action != null || onTap != null)
             Icon(
               Icons.chevron_right_rounded,
-              color: onTap != null ? Color(0xFFE85D04) : Colors.grey[400],
+              color: onTap != null ? Color(0xFF6C1FB0) : Colors.grey[400],
             ),
         ],
       ),
@@ -2487,7 +2525,7 @@ void _showDashboardBranchDetails(BuildContext context, DashboardBranch b) {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFE8D6),
+                  color: const Color(0xFFF0E3FA),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
@@ -2496,7 +2534,7 @@ void _showDashboardBranchDetails(BuildContext context, DashboardBranch b) {
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFFE85D04),
+                      color: Color(0xFF6C1FB0),
                     ),
                   ),
                 ),
@@ -2595,7 +2633,7 @@ Widget _detailRow(IconData icon, String label, String value) {
           color: const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, size: 18, color: Color(0xFFE85D04)),
+        child: Icon(icon, size: 18, color: Color(0xFF6C1FB0)),
       ),
       const SizedBox(width: 12),
       Expanded(
@@ -2696,7 +2734,7 @@ class _BranchRow extends StatelessWidget {
               Icons.business_rounded,
 
               color: hasExams
-                  ? Color(0xFFE85D04)
+                  ? Color(0xFF6C1FB0)
                   : const Color(
                       0xFF9CA3AF,
                     ),
@@ -2831,7 +2869,7 @@ class _ExamRow extends StatelessWidget {
             decoration:
                 BoxDecoration(
               color:
-                  Color(0xFFE85D04),
+                  Color(0xFF6C1FB0),
 
               borderRadius:
                   BorderRadius.circular(
@@ -2964,13 +3002,13 @@ class _TomorrowRow extends StatelessWidget {
       leading:
           const CircleAvatar(
         backgroundColor:
-            Color(0xFFFFE8D6),
+            Color(0xFFF0E3FA),
 
         child: Icon(
           Icons.location_on_rounded,
 
           color:
-              Color(0xFFE85D04),
+              Color(0xFF6C1FB0),
 
           size: 19,
         ),
@@ -3011,7 +3049,7 @@ class _TomorrowRow extends StatelessWidget {
         decoration:
             BoxDecoration(
           color:
-              const Color(0xFFFFE8D6),
+              const Color(0xFFF0E3FA),
 
           borderRadius:
               BorderRadius.circular(
@@ -3025,7 +3063,7 @@ class _TomorrowRow extends StatelessWidget {
           style:
               const TextStyle(
             color:
-                Color(0xFFE85D04),
+                Color(0xFF6C1FB0),
 
             fontWeight:
                 FontWeight.w900,
@@ -3048,12 +3086,12 @@ class _CandidateRow extends StatelessWidget {
   // Color generator based on name
   Color _avatarBg(String name) {
     final colors = [
-      const Color(0xFFFFE8D6),
+      const Color(0xFFF0E3FA),
       const Color(0xFFDCFCE7),
       const Color(0xFFDBEAFE),
       const Color(0xFFFFE4E6),
       const Color(0xFFFEF3C7),
-      const Color(0xFFFFF0E6),
+      const Color(0xFFEDE9FE),
     ];
     if (name.isEmpty) return colors[0];
     final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
@@ -3062,7 +3100,7 @@ class _CandidateRow extends StatelessWidget {
 
   Color _avatarText(String name) {
     final colors = [
-      Color(0xFFE85D04),
+      Color(0xFF6C1FB0),
       AppColors.green,
       AppColors.blue,
       const Color(0xFFE11D48),
@@ -3083,7 +3121,7 @@ class _CandidateRow extends StatelessWidget {
     Color statusBg;
     final s = candidate.status.toLowerCase();
     if (s.contains('pass') || s == 'completed') {
-      statusColor = const Color(0xFFFF7A18);
+      statusColor = const Color(0xFF9A22C7);
       statusBg = const Color(0xFFDCFCE7);
     } else if (s.contains('fail') || s == 'cancelled') {
       statusColor = const Color(0xFFE11D48);
@@ -3092,8 +3130,8 @@ class _CandidateRow extends StatelessWidget {
       statusColor = const Color(0xFFD97706);
       statusBg = const Color(0xFFFEF3C7);
     } else if (s == 'scheduled') {
-      statusColor = const Color(0xFFFF7A18);
-      statusBg = const Color(0xFFFFE8D6);
+      statusColor = const Color(0xFF9A22C7);
+      statusBg = const Color(0xFFF0E3FA);
     } else if (s == 'no show' || s == 'no_show' || s == 'absent') {
       statusColor = const Color(0xFFEA580C);
       statusBg = const Color(0xFFFFEDD5);

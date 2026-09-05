@@ -154,7 +154,7 @@ class _ExamsScreenState extends State<ExamsScreen>
             Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(8)))),
             const SizedBox(height: 18),
             Row(children: [
-              Container(width: 42, height: 42, decoration: BoxDecoration(color: Color(0xFFFFEDD5), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.sticky_note_2_rounded, color: Color(0xFFEA580C))),
+              Container(width: 42, height: 42, decoration: BoxDecoration(color: Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.sticky_note_2_rounded, color: Color(0xFFEA580C))),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('Candidate Remarks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
@@ -166,16 +166,16 @@ class _ExamsScreenState extends State<ExamsScreen>
               controller: controller, autofocus: true, maxLines: 5, maxLength: 500,
               decoration: InputDecoration(
                 hintText: 'Type any note or remark about this candidate...', alignLabelWithHint: true,
-                filled: true, fillColor: const Color(0xFFFFFBF7),
+                filled: true, fillColor: const Color(0xFFF7F5FD),
                 prefixIcon: const Icon(Icons.notes_rounded, color: Color(0xFFEA580C)),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFFF7A18), width: 1.5)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF9A22C7), width: 1.5)),
               ),
             ),
             const SizedBox(height: 8),
             SizedBox(width: double.infinity, height: 50, child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE85D04), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C1FB0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
               icon: const Icon(Icons.save_rounded), label: const Text('Save Remarks', style: TextStyle(fontWeight: FontWeight.w800)),
               onPressed: () async {
                 try {
@@ -848,7 +848,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       height: 42,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFF7A18), Color(0xFF9A3412)],
+                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -1069,122 +1069,171 @@ class _ExamsScreenState extends State<ExamsScreen>
   // ================================================================
 
   Future<void> _showAddExamTypeDialog() async {
-    final nameCtrl = TextEditingController();
-    final langCtrl = TextEditingController(text: 'English');
-    final descCtrl = TextEditingController();
+    // The Add Exam form uses the existing English-language exam catalog.
+    // If the user selects "Others", they can enter a custom exam name manually.
+    if (_examTypesList.isEmpty) {
+      await _loadLookups();
+    }
+
+    final englishExamNames = <String>{
+      for (final exam in _examTypesList)
+        if ('${exam['language'] ?? ''}'.trim().toLowerCase() == 'english' &&
+            '${exam['name'] ?? ''}'.trim().isNotEmpty)
+          '${exam['name']}'.trim(),
+    }.toList();
+    englishExamNames.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    String? selectedExam = englishExamNames.isNotEmpty ? englishExamNames.first : null;
+    final customExamCtrl = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: EdgeInsets.fromLTRB(
-          24,
-          16,
-          24,
-          MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            16,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFF7A18), Color(0xFF9A3412)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: const Icon(Icons.school_rounded, color: Colors.white, size: 22),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Add',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _label('Exam Name *'),
-              const SizedBox(height: 6),
-              _field(nameCtrl, 'e.g. CELPIP, IELTS, TOEFL, PTE, GRE', icon: Icons.badge_outlined),
-              const SizedBox(height: 14),
-              _label('Language *'),
-              const SizedBox(height: 6),
-              _field(langCtrl, 'e.g. English, French, German', icon: Icons.language_rounded),
-              const SizedBox(height: 14),
-              _label('Description'),
-              const SizedBox(height: 6),
-              _field(descCtrl, 'Exam description or notes', icon: Icons.description_outlined),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  onPressed: () async {
-                    if (nameCtrl.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('Exam name is required')),
-                      );
-                      return;
-                    }
-                    try {
-                      await api.createExamType({
-                        'name': nameCtrl.text.trim(),
-                        'language': langCtrl.text.trim().isEmpty ? 'English' : langCtrl.text.trim(),
-                        'description': descCtrl.text.trim(),
-                        'status': 'Active',
-                      });
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Exam type added successfully!'),
-                            backgroundColor: AppColors.green,
-                          ),
-                        );
-                        reload();
-                      }
-                    } catch (e) {
-                      if (ctx.mounted) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('Add', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.school_rounded, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Add',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _label('Exam Name *'),
+                const SizedBox(height: 6),
+                _dropdown<String>(
+                  value: selectedExam,
+                  hint: 'Select English exam',
+                  items: [
+                    ...englishExamNames.map((name) => DropdownMenuItem<String>(
+                          value: name,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.school_rounded, size: 18, color: Color(0xFF6B7280)),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(name, overflow: TextOverflow.ellipsis)),
+                            ],
+                          ),
+                        )),
+                    const DropdownMenuItem<String>(
+                      value: '__others__',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_rounded, size: 18, color: Color(0xFF6B7280)),
+                          SizedBox(width: 8),
+                          Text('Others'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setSheetState(() {
+                      selectedExam = value;
+                      if (value != '__others__') customExamCtrl.clear();
+                    });
+                  },
+                ),
+                if (selectedExam == '__others__') ...[
+                  const SizedBox(height: 14),
+                  _label('Enter Exam Name *'),
+                  const SizedBox(height: 6),
+                  _field(customExamCtrl, 'e.g. PTE, GRE, Duolingo', icon: Icons.edit_rounded),
+                ],
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () async {
+                      final examName = selectedExam == '__others__'
+                          ? customExamCtrl.text.trim()
+                          : (selectedExam ?? '').trim();
+                      if (examName.isEmpty || selectedExam == null) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(content: Text('Please select an exam or choose Others and enter a name')),
+                        );
+                        return;
+                      }
+                      try {
+                        await api.createExamType({
+                          'name': examName,
+                          'language': selectedExam == '__others__' ? 'Other' : 'English',
+                          // Description is intentionally not collected in the UI.
+                          'description': '',
+                          'status': 'Active',
+                        });
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Exam type added successfully!'),
+                              backgroundColor: AppColors.green,
+                            ),
+                          );
+                          reload();
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Add', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+    customExamCtrl.dispose();
   }
 
   Future<void> _showAddTeamDialog() async {
@@ -1207,7 +1256,7 @@ class _ExamsScreenState extends State<ExamsScreen>
         child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: 18),
-          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFF7A18), Color(0xFF9A3412)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Add', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
+          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF9A22C7), Color(0xFF9A3412)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Add', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
           const SizedBox(height: 22),
           _label('Team Name *'), const SizedBox(height: 6), _field(nameCtrl, 'e.g. CELPIP Partner Team', icon: Icons.groups_rounded),
           const SizedBox(height: 14), _label('Location'), const SizedBox(height: 6), _field(locationCtrl, 'Team location / service area', icon: Icons.location_on_outlined),
@@ -1296,7 +1345,7 @@ class _ExamsScreenState extends State<ExamsScreen>
   Widget build(BuildContext context) {
     final controller = tabController;
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF7),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
@@ -1307,7 +1356,7 @@ class _ExamsScreenState extends State<ExamsScreen>
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFF9F43)],
+              colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1660,7 +1709,7 @@ class _CandidateCard extends StatelessWidget {
       case 'completed': return AppColors.green;
       case 'cancelled': return AppColors.red;
       case 'absent': return AppColors.orange;
-      case 'rescheduled': return const Color(0xFFFF7A18);
+      case 'rescheduled': return const Color(0xFF9A22C7);
       default: return AppColors.orange;
     }
   }
@@ -1671,7 +1720,7 @@ class _CandidateCard extends StatelessWidget {
       case 'scheduled': return const Color(0xFFEDE9FE);
       case 'completed': return const Color(0xFFDCFCE7);
       case 'cancelled': return const Color(0xFFFFE4E6);
-      case 'absent': return const Color(0xFFFFEDD5);
+      case 'absent': return const Color(0xFFEDE9FE);
       case 'rescheduled': return const Color(0xFFEDE9FE);
       default: return const Color(0xFFFEF3C7);
     }
@@ -1719,7 +1768,7 @@ class _CandidateCard extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFEDD5),
+                    color: const Color(0xFFEDE9FE),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.person_off_rounded, color: Color(0xFFEA580C)),
@@ -1737,11 +1786,26 @@ class _CandidateCard extends StatelessWidget {
                     color: const Color(0xFFEDE9FE),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.event_repeat_rounded, color: Color(0xFFFF7A18)),
+                  child: const Icon(Icons.event_repeat_rounded, color: Color(0xFF9A22C7)),
                 ),
                 title: const Text('Rescheduled', style: TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: const Text('Candidate exam was moved to another date'),
                 onTap: () => Navigator.pop(ctx, 'Rescheduled'),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A)),
+                ),
+                title: const Text('Completed', style: TextStyle(fontWeight: FontWeight.w800)),
+                subtitle: const Text('Candidate completed the exam'),
+                onTap: () => Navigator.pop(ctx, 'Completed'),
               ),
             ],
           ),
@@ -1803,7 +1867,7 @@ class _CandidateCard extends StatelessWidget {
                 if (candidate.examType.isNotEmpty)
                   Text(candidate.examType, style: const TextStyle(color: Color(0xFF4B5563), fontSize: 12)),
                 if (candidate.teamName.isNotEmpty)
-                  Text('Team: ${candidate.teamName}', style: const TextStyle(color: Color(0xFFFF7A18), fontSize: 11.5, fontWeight: FontWeight.w700)),
+                  Text('Team: ${candidate.teamName}', style: const TextStyle(color: Color(0xFF9A22C7), fontSize: 11.5, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
                 Text(
                   [
@@ -1904,7 +1968,7 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
       case 'completed': return AppColors.green;
       case 'cancelled': return AppColors.red;
       case 'absent': return AppColors.orange;
-      case 'rescheduled': return const Color(0xFFFF7A18);
+      case 'rescheduled': return const Color(0xFF9A22C7);
       default: return AppColors.orange;
     }
   }
@@ -1913,7 +1977,7 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(width: 34, height: 34, decoration: BoxDecoration(color: const Color(0xFFFFF3E8), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 18, color: const Color(0xFFE85D04))),
+        Container(width: 34, height: 34, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 18, color: const Color(0xFF6C1FB0))),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700)),
@@ -1930,7 +1994,7 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE5E7EB)), boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4))]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFFFFF3E8), borderRadius: BorderRadius.circular(9)), child: Icon(icon, size: 15, color: const Color(0xFFE85D04))), const SizedBox(width: 9), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF6B7280), letterSpacing: .3))]),
+        Row(children: [Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(9)), child: Icon(icon, size: 15, color: const Color(0xFF6C1FB0))), const SizedBox(width: 9), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF6B7280), letterSpacing: .3))]),
         const SizedBox(height: 5),
         ...children,
       ]),
@@ -1962,14 +2026,14 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
     final status = candidate.status.isEmpty ? 'Registered' : candidate.status;
     final statusColor = _statusColor(status);
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF7),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 0,
         toolbarHeight: 64,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         title: const Text('Candidate Details', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-        flexibleSpace: Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFE85D04), Color(0xFFFF7A18), Color(0xFFFF9F43)]), borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)))),
+        flexibleSpace: Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)]), borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)))),
       ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 28), children: [
         Container(
@@ -1983,7 +2047,7 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
               Text(candidate.name, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
               const SizedBox(height: 4),
               Text(candidate.examType.isEmpty ? 'Exam candidate' : candidate.examType, style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
-              if (candidate.teamName.isNotEmpty) ...[const SizedBox(height: 3), Text('Team: ${candidate.teamName}', style: const TextStyle(fontSize: 11.5, color: Color(0xFFE85D04), fontWeight: FontWeight.w800))],
+              if (candidate.teamName.isNotEmpty) ...[const SizedBox(height: 3), Text('Team: ${candidate.teamName}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF6C1FB0), fontWeight: FontWeight.w800))],
             ])),
             Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: statusColor.withOpacity(.12), borderRadius: BorderRadius.circular(14)), child: Text(status, style: TextStyle(color: statusColor, fontSize: 10.5, fontWeight: FontWeight.w900))),
           ]),
@@ -2010,14 +2074,14 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE5E7EB)), boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4))]),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [const Icon(Icons.sticky_note_2_rounded, size: 20, color: Color(0xFFE85D04)), const SizedBox(width: 8), const Text('Remarks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)), const Spacer(), Text('${remarksCtrl.text.length}/500', style: const TextStyle(fontSize: 10.5, color: Color(0xFF9CA3AF)))]),
+            Row(children: [const Icon(Icons.sticky_note_2_rounded, size: 20, color: Color(0xFF6C1FB0)), const SizedBox(width: 8), const Text('Remarks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)), const Spacer(), Text('${remarksCtrl.text.length}/500', style: const TextStyle(fontSize: 10.5, color: Color(0xFF9CA3AF)))]),
             const SizedBox(height: 10),
             TextField(
               controller: remarksCtrl, maxLines: 6, maxLength: 500, onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(hintText: 'Add or edit remarks about this candidate...', alignLabelWithHint: true, filled: true, fillColor: const Color(0xFFFFFBF7), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFE5E7EB))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFE5E7EB))), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFFF7A18), width: 1.5))),
+              decoration: InputDecoration(hintText: 'Add or edit remarks about this candidate...', alignLabelWithHint: true, filled: true, fillColor: const Color(0xFFF7F5FD), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFE5E7EB))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFE5E7EB))), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFF9A22C7), width: 1.5))),
             ),
             const SizedBox(height: 2),
-            SizedBox(width: double.infinity, height: 50, child: FilledButton.icon(onPressed: saving ? null : _saveRemarks, style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE85D04), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_rounded), label: Text(saving ? 'Saving...' : 'Save Remarks', style: const TextStyle(fontWeight: FontWeight.w800)))),
+            SizedBox(width: double.infinity, height: 50, child: FilledButton.icon(onPressed: saving ? null : _saveRemarks, style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C1FB0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_rounded), label: Text(saving ? 'Saving...' : 'Save Remarks', style: const TextStyle(fontWeight: FontWeight.w800)))),
           ]),
         ),
       ]),

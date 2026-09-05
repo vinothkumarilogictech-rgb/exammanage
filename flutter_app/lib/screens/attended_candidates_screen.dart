@@ -85,7 +85,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
         'branch_name': candidate['branch_name'] ?? '',
         'attended_date': candidate['exam_date'] ?? '',
         'result': candidate['status'] ?? 'Registered',
-        'remarks': candidate['team_name'] ?? '',
+        'team_name': candidate['team_name'] ?? '',
+        'remarks': candidate['remarks'] ?? candidate['reason_note'] ?? '',
       });
     }).toList();
 
@@ -237,10 +238,10 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
             pw.Text('Filter: ${_exportFilterLabel()}${searchQuery.trim().isEmpty ? '' : ' | Search: ${searchQuery.trim()}'}'),
             pw.SizedBox(height: 14),
             pw.Table.fromTextArray(
-              headers: const ['Candidate', 'Roll No', 'Exam Type', 'Branch', 'Exam Date', 'Status', 'Remarks'],
+              headers: const ['Candidate', 'Team', 'Exam Type', 'Branch', 'Exam Date', 'Status', 'Remarks'],
               data: rows.map((r) => [
-                r.candidateName, r.registerNumber, r.examTypeName, r.branchName,
-                r.attendedDate, r.result, r.remarks,
+                r.candidateName, r.teamName.isNotEmpty ? r.teamName : '-', r.examTypeName, r.branchName,
+                r.attendedDate, r.result, r.remarks.isNotEmpty ? r.remarks : '-',
               ]).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white),
               headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
@@ -269,13 +270,13 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
       final workbook = ex.Excel.createExcel();
       final sheet = workbook['Attended Candidates'];
       sheet.appendRow([
-        ex.TextCellValue('Candidate'), ex.TextCellValue('Roll No'), ex.TextCellValue('Exam Type'),
+        ex.TextCellValue('Candidate'), ex.TextCellValue('Team'), ex.TextCellValue('Exam Type'),
         ex.TextCellValue('Branch'), ex.TextCellValue('Attended Date'), ex.TextCellValue('Result'), ex.TextCellValue('Remarks'),
       ]);
       for (final r in rows) {
         sheet.appendRow([
-          ex.TextCellValue(r.candidateName), ex.TextCellValue(r.registerNumber), ex.TextCellValue(r.examTypeName),
-          ex.TextCellValue(r.branchName), ex.TextCellValue(r.attendedDate), ex.TextCellValue(r.result), ex.TextCellValue(r.remarks),
+          ex.TextCellValue(r.candidateName), ex.TextCellValue(r.teamName.isNotEmpty ? r.teamName : '-'), ex.TextCellValue(r.examTypeName),
+          ex.TextCellValue(r.branchName), ex.TextCellValue(r.attendedDate), ex.TextCellValue(r.result), ex.TextCellValue(r.remarks.isNotEmpty ? r.remarks : '-'),
         ]);
       }
       final bytes = workbook.save();
@@ -300,7 +301,7 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F4FB),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 0,
         toolbarHeight: AppBarStyle.height,

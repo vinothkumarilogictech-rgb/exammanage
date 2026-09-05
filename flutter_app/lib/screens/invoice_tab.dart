@@ -182,7 +182,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
   Widget _emptyInvoices() => Container(
     width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 38, horizontal: 20),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE5E7EB))),
-    child: Column(children: [Container(width: 58, height: 58, decoration: BoxDecoration(color: const Color(0xFFFFE9D6), borderRadius: BorderRadius.circular(18)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 29)), const SizedBox(height: 12), const Text('No invoices found', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)), const SizedBox(height: 5), Text('Create an invoice for a bulk exam-voucher purchase.', style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5), textAlign: TextAlign.center), const SizedBox(height: 14), _smallAction(Icons.add_rounded, 'Create Invoice', _showAddInvoice)]),
+    child: Column(children: [Container(width: 58, height: 58, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(18)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 29)), const SizedBox(height: 12), const Text('No invoices found', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)), const SizedBox(height: 5), Text('Create an invoice for a bulk exam-voucher purchase.', style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5), textAlign: TextAlign.center), const SizedBox(height: 14), _smallAction(Icons.add_rounded, 'Create Invoice', _showAddInvoice)]),
   );
 
   Widget _invoiceCard(VoucherPurchaseInvoice invoice) {
@@ -194,7 +194,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7E5E4)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.025), blurRadius: 10, offset: const Offset(0, 3))]),
       child: Column(children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(width: 43, height: 43, decoration: BoxDecoration(color: const Color(0xFFFFE9D6), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 22)),
+          Container(width: 43, height: 43, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 22)),
           const SizedBox(width: 11),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(invoice.invoiceNumber, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5)),
@@ -275,7 +275,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
           child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(5)))),
             const SizedBox(height: 14),
-            Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFFFE9D6), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary)), const SizedBox(width: 11), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(existing == null ? 'Add' : 'Edit', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), Text('Bulk exam voucher purchase invoice', style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600))]))]),
+            Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary)), const SizedBox(width: 11), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(existing == null ? 'Add' : 'Edit', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), Text('Bulk exam voucher purchase invoice', style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600))]))]),
             const SizedBox(height: 18),
             _formLabel('Invoice Details'),
             const SizedBox(height: 8),
@@ -302,14 +302,14 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
               ]));
             }),
             const SizedBox(height: 4),
-            Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFFFFF7F0), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFFFE1CC))), child: Column(children: [
+            Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFFF7F5FD), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFEDE9FE))), child: Column(children: [
               _summaryRow('Subtotal', subtotal()), _summaryRow('Discount', -discount()), _summaryRow('Tax', tax()), const Divider(height: 18), _summaryRow('Grand Total', totalValue, bold: true),
             ])),
             const SizedBox(height: 16),
             _formLabel('Payment Details'), const SizedBox(height: 8),
             Row(children: [Expanded(child: DropdownButtonFormField<String>(value: paymentStatus, isExpanded: true, decoration: _decoration('Payment Status', Icons.payments_outlined), items: const ['Pending','Partial','Paid'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(), onChanged: (v) => setSheet(() => paymentStatus = v ?? 'Pending'))), const SizedBox(width: 8), Expanded(child: DropdownButtonFormField<String>(value: paymentMode, isExpanded: true, decoration: _decoration('Payment Mode', Icons.account_balance_rounded), items: const ['Cash','UPI','Card','Bank Transfer','Cheque','Other'].map((x) => DropdownMenuItem(value: x, child: Text(x, overflow: TextOverflow.ellipsis))).toList(), onChanged: (v) => setSheet(() => paymentMode = v ?? 'Bank Transfer')))]),
             const SizedBox(height: 8),
-            Row(children: [Expanded(child: _numberField(paid, 'Paid Amount', Icons.currency_rupee_rounded, onChanged: () => setSheet(() {}))), const SizedBox(width: 8), Expanded(child: Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFFE1CC))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Balance', style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, fontWeight: FontWeight.w700)), const SizedBox(height: 3), Text(_money(balanceValue), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))])))]),
+            Row(children: [Expanded(child: _numberField(paid, 'Paid Amount', Icons.currency_rupee_rounded, onChanged: () => setSheet(() {}))), const SizedBox(width: 8), Expanded(child: Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFEDE9FE))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Balance', style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, fontWeight: FontWeight.w700)), const SizedBox(height: 3), Text(_money(balanceValue), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))])))]),
             const SizedBox(height: 8),
             _field(reference, 'Payment Reference (optional)', Icons.confirmation_number_outlined), const SizedBox(height: 8), _field(notes, 'Notes (optional)', Icons.notes_rounded, maxLines: 2),
             const SizedBox(height: 16),
@@ -363,7 +363,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFFFE9D6), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary)),
+                    Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary)),
                     const SizedBox(width: 11),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(invoice.invoiceNumber, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)), Text(invoice.supplier, style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5))])),
                     Text(_money(invoice.totalAmount), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.primary)),

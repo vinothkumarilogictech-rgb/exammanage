@@ -27,7 +27,7 @@
     </div>
     <h1>Expense Report</h1>
     <div class="meta">
-        Branch: {{ filters.branch }} &nbsp;|&nbsp; Status: {{ filters.status }} &nbsp;|&nbsp;
+        Branch: {{ filters.branch }} &nbsp;|&nbsp;
         From: {{ filters.date_from }} &nbsp;To:&nbsp; {{ filters.date_to }} &nbsp;|&nbsp;
         Generated: {{ generated_at }}
     </div>
@@ -39,7 +39,6 @@
                 <th>Category</th>
                 <th>Amount</th>
                 <th>Payment Mode</th>
-                <th>Status</th>
             </tr>
         </thead>
         <tbody>
@@ -50,16 +49,15 @@
                 <td>{{ e.expense_category.name if e.expense_category else e.category }}</td>
                 <td>{{ '%.2f'|format(e.amount or 0) }}</td>
                 <td>{{ e.payment_mode or '-' }}</td>
-                <td>{{ e.status or 'Active' }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="6" style="text-align:center;color:#6b7280;">No expenses match the selected filters.</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:#6b7280;">No expenses match the selected filters.</td></tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr>
                 <td colspan="3">Total</td>
-                <td colspan="3">{{ '%.2f'|format(total) }}</td>
+                <td colspan="2">{{ '%.2f'|format(total) }}</td>
             </tr>
         </tfoot>
     </table>

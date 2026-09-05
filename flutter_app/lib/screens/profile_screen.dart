@@ -4,9 +4,9 @@ import '../providers/auth_provider.dart';
 import '../services/dio_client.dart';
 import '../services/session_service.dart';
 
-const _orange = Color(0xFFFF7A18);
-const _orangeDark = Color(0xFFE85D04);
-const _orangeSoft = Color(0xFFFFF1E7);
+const _brand = Color(0xFF9A22C7);
+const _brandDark = Color(0xFF6C1FB0);
+const _brandSoft = Color(0xFFEDE9FE);
 
 
 class ProfileScreen extends StatefulWidget {
@@ -408,7 +408,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   bottom: 8,
                 ),
                 child: ListTile(
-                  leading: Container(width: 46, height: 46, decoration: BoxDecoration(color: _orangeSoft, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.payments_outlined, color: _orangeDark)),
+                  leading: Container(width: 46, height: 46, decoration: BoxDecoration(color: _brandSoft, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.payments_outlined, color: _brandDark)),
                   title: Text(
                     '₹ $amount',
                     style: const TextStyle(
@@ -438,7 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final username = auth.username.isEmpty ? 'User' : auth.username;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF7),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 0,
         foregroundColor: Colors.white,
@@ -446,14 +446,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [_orangeDark, _orange, Color(0xFFFF9F43)],
+              colors: [_brandDark, _brand, Color(0xFFE0189E)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
             boxShadow: [
               BoxShadow(
-                color: Color(0x55FF7A18),
+                color: Color(0x559A22C7),
                 blurRadius: 24,
                 offset: Offset(0, 8),
               ),
@@ -463,10 +463,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: loading
           ? const Center(
-              child: CircularProgressIndicator(color: _orange),
+              child: CircularProgressIndicator(color: _brand),
             )
           : RefreshIndicator(
-              color: _orange,
+              color: _brand,
               onRefresh: _loadProfile,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -477,14 +477,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [_orangeDark, _orange, Color(0xFFFFA94D)],
+                        colors: [_brandDark, _brand, Color(0xFFE0189E)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x44FF7A18),
+                          color: Color(0x449A22C7),
                           blurRadius: 24,
                           offset: Offset(0, 12),
                         ),
@@ -585,10 +585,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFFE1CC)),
+                      border: Border.all(color: const Color(0xFFEDE9FE)),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x18FF7A18),
+                          color: Color(0x189A22C7),
                           blurRadius: 16,
                           offset: Offset(0, 7),
                         ),
@@ -603,10 +603,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: _orangeSoft,
+                          color: _brandSoft,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.logout_rounded, color: _orangeDark),
+                        child: const Icon(Icons.logout_rounded, color: _brandDark),
                       ),
                       title: const Text(
                         'Logout',
@@ -630,10 +630,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: _orangeSoft,
+            color: _brandSoft,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: _orangeDark, size: 20),
+          child: Icon(icon, color: _brandDark, size: 20),
         ),
         const SizedBox(width: 10),
         Text(
@@ -651,9 +651,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFFFE1CC)),
+        border: Border.all(color: const Color(0xFFEDE9FE)),
         boxShadow: const [
-          BoxShadow(color: Color(0x16FF7A18), blurRadius: 14, offset: Offset(0, 6)),
+          BoxShadow(color: Color(0x169A22C7), blurRadius: 14, offset: Offset(0, 6)),
         ],
       ),
       child: child,
@@ -673,10 +673,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _orangeSoft,
+            color: _brandSoft,
             borderRadius: BorderRadius.circular(15),
           ),
-          child: Icon(icon, color: _orangeDark),
+          child: Icon(icon, color: _brandDark),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
         subtitle: Padding(

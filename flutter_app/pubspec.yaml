@@ -32,3 +32,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/ilogictech_logo.jpeg
+    - assets/ilogictech_icon.png

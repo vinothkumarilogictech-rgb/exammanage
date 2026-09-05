@@ -75,8 +75,8 @@ class TomorrowBranchCandidates {
 
 class AttendedCandidate {
   final int attemptId, candidateId, attemptNumber;
-  final String candidateName, registerNumber, examTypeName, branchName, attendedDate, result, remarks;
-  AttendedCandidate({required this.attemptId, required this.candidateId, required this.attemptNumber, required this.candidateName, required this.registerNumber, required this.examTypeName, required this.branchName, required this.attendedDate, required this.result, required this.remarks});
+  final String candidateName, registerNumber, examTypeName, branchName, attendedDate, result, teamName, remarks;
+  AttendedCandidate({required this.attemptId, required this.candidateId, required this.attemptNumber, required this.candidateName, required this.registerNumber, required this.examTypeName, required this.branchName, required this.attendedDate, required this.result, required this.teamName, required this.remarks});
   factory AttendedCandidate.fromMap(Map<String, dynamic> m) => AttendedCandidate(
     attemptId: m['attempt_id'] ?? 0,
     candidateId: m['candidate_id'] ?? 0,
@@ -87,6 +87,7 @@ class AttendedCandidate {
     branchName: '${m['branch_name'] ?? ''}',
     attendedDate: '${m['attended_date'] ?? ''}',
     result: '${m['result'] ?? ''}',
+    teamName: '${m['team_name'] ?? ''}',
     remarks: '${m['remarks'] ?? ''}',
   );
 }

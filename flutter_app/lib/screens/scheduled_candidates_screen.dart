@@ -68,7 +68,7 @@ class _ScheduledCandidatesScreenState extends State<ScheduledCandidatesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
         elevation: 3,
         shadowColor: Colors.black26,
@@ -511,7 +511,7 @@ class _StatusBadge extends StatelessWidget {
       textColor = const Color(0xFFD97706); // Yellow / Amber
       bgColor = const Color(0xFFFEF3C7);
     } else if (s == 'scheduled') {
-      textColor = const Color(0xFFFF7A18); // Purple
+      textColor = const Color(0xFF9A22C7); // Purple
       bgColor = const Color(0xFFEDE9FE);
     } else if (s == 'no show' || s == 'no_show' || s == 'absent') {
       textColor = const Color(0xFFEA580C); // Orange

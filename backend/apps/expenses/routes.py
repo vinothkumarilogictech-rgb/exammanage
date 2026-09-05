@@ -316,12 +316,11 @@ def expense_export_pdf():
         styles = getSampleStyleSheet()
         elements = [
             Paragraph('Expense Report', styles['Title']),
-            Paragraph(f"Branch: {filters['branch']} | Status: {filters['status']} | "
-                      f"From: {filters['date_from']} To: {filters['date_to']}", styles['Normal']),
+            Paragraph(f"Branch: {filters['branch']} | From: {filters['date_from']} To: {filters['date_to']}", styles['Normal']),
             Paragraph(f"Generated: {generated_at}", styles['Normal']),
             Spacer(1, 10 * mm),
         ]
-        data = [['Date', 'Branch', 'Category', 'Amount', 'Payment Mode', 'Status']]
+        data = [['Date', 'Branch', 'Category', 'Amount', 'Payment Mode']]
         for e in rows:
             data.append([
                 e.date_incurred.strftime('%d-%b-%Y') if e.date_incurred else '-',
@@ -329,9 +328,8 @@ def expense_export_pdf():
                 e.expense_category.name if e.expense_category else e.category,
                 f"{e.amount:.2f}",
                 e.payment_mode or '-',
-                e.status or 'Active',
             ])
-        data.append(['', '', '', f"Total: {total:.2f}", '', ''])
+        data.append(['', '', '', f"Total: {total:.2f}", ''])
         table = Table(data, repeatRows=1)
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7c3aed')),
@@ -361,7 +359,7 @@ def expense_export_pdf():
 def expense_export_excel():
     rows = _filtered_expenses_from_args(request.args)
     total = sum(e.amount or 0 for e in rows if e.status != 'Cancelled')
-    columns = ['Expense ID', 'Date', 'Branch', 'Category', 'Amount', 'Payment Mode', 'Note', 'Status']
+    columns = ['Expense ID', 'Date', 'Branch', 'Category', 'Amount', 'Payment Mode', 'Note']
 
     try:
         from openpyxl import Workbook
@@ -379,9 +377,8 @@ def expense_export_excel():
                 e.amount or 0,
                 e.payment_mode or '',
                 e.description or '',
-                e.status or 'Active',
             ])
-        ws.append(['', '', '', '', total, '', '', 'Total'])
+        ws.append(['', '', '', '', total, '', 'Total'])
 
         buf = io.BytesIO()
         wb.save(buf)
@@ -404,9 +401,8 @@ def expense_export_excel():
                 e.amount or 0,
                 e.payment_mode or '',
                 e.description or '',
-                e.status or 'Active',
             ])
-        writer.writerow(['', '', '', '', total, '', '', 'Total'])
+        writer.writerow(['', '', '', '', total, '', 'Total'])
         response = make_response(buf.getvalue())
         response.headers['Content-Type'] = 'text/csv'
         response.headers['Content-Disposition'] = 'attachment; filename=expense_report.csv'
