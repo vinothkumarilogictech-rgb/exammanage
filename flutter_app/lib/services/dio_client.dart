@@ -235,6 +235,9 @@ class DioClient {
   Future<Response> updateCandidate(int id, Map<String, dynamic> data) =>
       dio.patch('${ApiConfig.candidatesPath}$id/', data: data);
 
+  Future<Response> deleteCandidate(int id) =>
+      dio.delete('${ApiConfig.candidatesPath}$id/');
+
   Future<Response> createSession(Map<String, dynamic> data) =>
       dio.post(ApiConfig.sessionsPath, data: data);
 

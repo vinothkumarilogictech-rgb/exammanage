@@ -124,6 +124,48 @@ class _ExamsScreenState extends State<ExamsScreen>
     }
   }
 
+  Future<void> _deleteCandidate(Candidate candidate) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Candidate'),
+        content: Text(
+          'Are you sure you want to delete "${candidate.name}"? '
+          'This will also remove their exam attempts and cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await api.deleteCandidate(candidate.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${candidate.name} deleted successfully.'),
+          backgroundColor: AppColors.green,
+        ),
+      );
+      reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to delete candidate: $e')),
+      );
+    }
+  }
+
   Future<List<Candidate>> loadCandidates() async {
     await _branchContext.ensureLoaded();
     final r = await api.candidates(branchId: _branchContext.selectedBranchId);
@@ -1273,6 +1315,45 @@ class _ExamsScreenState extends State<ExamsScreen>
     );
   }
 
+  Future<void> _showEditTeamDialog(ExamTeam team) async {
+    if (_examTypesList.isEmpty) await _loadLookups();
+    final nameCtrl = TextEditingController(text: team.name);
+    final locationCtrl = TextEditingController(text: team.location);
+    final phoneCtrl = TextEditingController(text: team.phone);
+    int? selectedExamTypeId = team.examTypeId;
+
+    await showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setSheetState) => Container(
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 18),
+          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF9A22C7), Color(0xFF9A3412)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.edit_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Edit Team', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
+          const SizedBox(height: 22),
+          _label('Team Name *'), const SizedBox(height: 6), _field(nameCtrl, 'e.g. CELPIP Partner Team', icon: Icons.groups_rounded),
+          const SizedBox(height: 14), _label('Location'), const SizedBox(height: 6), _field(locationCtrl, 'Team location / service area', icon: Icons.location_on_outlined),
+          const SizedBox(height: 14), _label('Phone Number'), const SizedBox(height: 6), _field(phoneCtrl, 'Team contact number', icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
+          const SizedBox(height: 14), _label('Exam Provided For'), const SizedBox(height: 6),
+          _dropdown<int>(value: selectedExamTypeId, hint: 'Select exam', items: _examTypesList.map((e) => DropdownMenuItem<int>(value: e['id'], child: Text('${e['name'] ?? ''}'))).toList(), onChanged: (v) => setSheetState(() => selectedExamTypeId = v)),
+          const SizedBox(height: 24),
+          SizedBox(width: double.infinity, height: 52, child: FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            onPressed: () async {
+              if (nameCtrl.text.trim().isEmpty) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Team name is required'))); return; }
+              try {
+                await api.updateTeam(team.id, {'name': nameCtrl.text.trim(), 'location': locationCtrl.text.trim(), 'phone': phoneCtrl.text.trim(), 'exam_type_id': selectedExamTypeId});
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team updated successfully!'), backgroundColor: AppColors.green)); reload(); }
+              } catch (e) { if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'))); }
+            }, icon: const Icon(Icons.save_rounded), label: const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          )),
+        ])),
+      )),
+    );
+  }
+
   Future<Map<String, dynamic>?> _loadTeamReport(ExamTeam team) async {
     try { final r = await api.teamReport(team.id); return Map<String, dynamic>.from(r.data['data'] ?? {}); }
     catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to load report: $e'))); return null; }
@@ -1494,6 +1575,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       onOpenDetails: _openCandidateDetails,
                       onEditRemarks: _showCandidateRemarks,
                       onEditCandidate: _showEditCandidateDialog,
+                      onDeleteCandidate: _deleteCandidate,
                     ),
               );
             },
@@ -1539,6 +1621,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                           itemBuilder: (c, i) => _TeamCard(
                             team: rows[i],
                             onReport: () => _showTeamReportActions(rows[i]),
+                            onEdit: () => _showEditTeamDialog(rows[i]),
                             onDelete: () async {
                               try { await api.deleteTeam(rows[i].id); reload(); }
                               catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
@@ -1743,13 +1826,14 @@ class _ExamsScreenState extends State<ExamsScreen>
 class _TeamCard extends StatelessWidget {
   final ExamTeam team;
   final VoidCallback onReport;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
-  const _TeamCard({required this.team, required this.onReport, required this.onDelete});
+  const _TeamCard({required this.team, required this.onReport, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     return Container(margin:const EdgeInsets.only(bottom:12),padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(20),border: Border.all(color: const Color(0xFFE5E7EB)),boxShadow:const[BoxShadow(color:Color(0x0D000000),blurRadius:14,offset:Offset(0,5))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[Container(width:48,height:48,decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFEDE9FE),Color(0xFFF5F3FF)]),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.groups_rounded,color:AppColors.primary,size:25)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(team.name,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(team.examTypeName.isEmpty?'Any exam':team.examTypeName,style:const TextStyle(fontSize:12.5,color:Color(0xFF6B7280),fontWeight:FontWeight.w600))])),PopupMenuButton<String>(onSelected:(v){if(v=='report')onReport();else if(v=='delete')onDelete();},itemBuilder:(ctx)=>const[PopupMenuItem(value:'report',child:Text('Team Report')),PopupMenuItem(value:'delete',child:Text('Delete'))])]),
+      Row(children:[Container(width:48,height:48,decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFEDE9FE),Color(0xFFF5F3FF)]),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.groups_rounded,color:AppColors.primary,size:25)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(team.name,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(team.examTypeName.isEmpty?'Any exam':team.examTypeName,style:const TextStyle(fontSize:12.5,color:Color(0xFF6B7280),fontWeight:FontWeight.w600))])),PopupMenuButton<String>(onSelected:(v){if(v=='report')onReport();else if(v=='edit')onEdit();else if(v=='delete')onDelete();},itemBuilder:(ctx)=>const[PopupMenuItem(value:'report',child:Text('Team Report')),PopupMenuItem(value:'edit',child:Text('Edit')),PopupMenuItem(value:'delete',child:Text('Delete'))])]),
       const SizedBox(height:14),Wrap(spacing:8,runSpacing:8,children:[_teamMeta(Icons.location_on_outlined,team.location.isEmpty?'Location not set':team.location),_teamMeta(Icons.phone_outlined,team.phone.isEmpty?'Phone not set':team.phone),_teamMeta(Icons.people_alt_outlined,'${team.candidateCount} candidates')]),
       const SizedBox(height:14),SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:onReport,icon:const Icon(Icons.download_rounded,size:18),label:const Text('Team Report — PDF / Excel'),style:OutlinedButton.styleFrom(foregroundColor:AppColors.primary,side:const BorderSide(color:Color(0xFFD8B4FE)),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)))))
     ]));
@@ -1859,6 +1943,7 @@ class _CandidateCard extends StatelessWidget {
   final Future<void> Function(Candidate candidate) onOpenDetails;
   final Future<void> Function(Candidate candidate) onEditRemarks;
   final Future<void> Function(Candidate candidate) onEditCandidate;
+  final Future<void> Function(Candidate candidate) onDeleteCandidate;
 
   const _CandidateCard({
     required this.candidate,
@@ -1866,6 +1951,7 @@ class _CandidateCard extends StatelessWidget {
     required this.onOpenDetails,
     required this.onEditRemarks,
     required this.onEditCandidate,
+    required this.onDeleteCandidate,
   });
 
   Color _statusColor(String s) {
@@ -2098,6 +2184,19 @@ class _CandidateCard extends StatelessWidget {
               child: const Padding(
                 padding: EdgeInsets.all(7),
                 child: Icon(Icons.edit_rounded, size: 15, color: AppColors.primary),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Material(
+            color: const Color(0xFFFFE4E6),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: () => onDeleteCandidate(candidate),
+              borderRadius: BorderRadius.circular(12),
+              child: const Padding(
+                padding: EdgeInsets.all(7),
+                child: Icon(Icons.delete_outline_rounded, size: 15, color: AppColors.red),
               ),
             ),
           ),
