@@ -10,6 +10,18 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+
+
+class EmployeeCredential(db.Model):
+    __tablename__ = 'employee_credential'
+    id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), unique=True, nullable=False)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    employee = db.relationship('Employee', backref=db.backref('credential', uselist=False))
 class Bank(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     account_name = db.Column(db.String(100), nullable=True)
@@ -548,6 +560,53 @@ class Voucher(db.Model):
     @property
     def profit(self):
         return (self.selling_price or 0) - (self.purchase_cost or 0)
+
+
+class VoucherPurchaseInvoice(db.Model):
+    """Financial invoice records for bulk exam-voucher purchases.
+
+    This is intentionally separate from VoucherBatch/Voucher so invoice
+    bookkeeping does not duplicate voucher inventory or assignment state.
+    """
+    __tablename__ = 'voucher_purchase_invoice'
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_number = db.Column(db.String(80), unique=True, nullable=False)
+    supplier = db.Column(db.String(150), nullable=False)
+    invoice_date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    branch_id = db.Column(db.Integer, db.ForeignKey('branch.id'), nullable=False)
+    payment_status = db.Column(db.String(20), nullable=False, default='Pending')
+    payment_mode = db.Column(db.String(50), nullable=True)
+    payment_reference = db.Column(db.String(150), nullable=True)
+    subtotal = db.Column(db.Float, nullable=False, default=0.0)
+    discount = db.Column(db.Float, nullable=False, default=0.0)
+    tax = db.Column(db.Float, nullable=False, default=0.0)
+    total_amount = db.Column(db.Float, nullable=False, default=0.0)
+    paid_amount = db.Column(db.Float, nullable=False, default=0.0)
+    balance_amount = db.Column(db.Float, nullable=False, default=0.0)
+    notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='Active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    branch = db.relationship('Branch', backref=db.backref('voucher_purchase_invoices', lazy=True))
+    items = db.relationship('VoucherPurchaseInvoiceItem', backref='invoice', lazy=True,
+                            cascade='all, delete-orphan', order_by='VoucherPurchaseInvoiceItem.id')
+
+
+class VoucherPurchaseInvoiceItem(db.Model):
+    __tablename__ = 'voucher_purchase_invoice_item'
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('voucher_purchase_invoice.id'), nullable=False)
+    exam_type_id = db.Column(db.Integer, db.ForeignKey('exam_type.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    unit_price = db.Column(db.Float, nullable=False, default=0.0)
+    discount = db.Column(db.Float, nullable=False, default=0.0)
+    tax = db.Column(db.Float, nullable=False, default=0.0)
+    total_amount = db.Column(db.Float, nullable=False, default=0.0)
+
+    exam_type = db.relationship('ExamType')
 
 
 class ExpenseCategory(db.Model):

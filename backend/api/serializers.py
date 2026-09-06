@@ -38,10 +38,11 @@ def team_dict(t):
 
 def candidate_dict(c):
     return {'id': c.id, 'name': c.name, 'email': c.email, 'phone': c.phone, 'register_number': c.register_number,
-            'test_type': c.test_type, 'exam_date': c.exam_date, 'status': c.status, 'branch_id': c.branch_id,
+            'test_type': c.test_type, 'exam_date': c.exam_date, 'status': ('Not Completed' if (c.status or '').strip().lower() == 'absent' else c.status), 'branch_id': c.branch_id,
             'branch_name': c.branch.branch_name if c.branch else None, 'exam_type_id': c.exam_type_id,
             'exam_type_name': c.exam_type.name if c.exam_type else None, 'team_id': c.team_id,
             'team_name': c.team.name if c.team else None, 'team_location': c.team.location if c.team else None,
+            'remarks': c.reason_note or '',
             'created_at': iso(c.created_at)}
 
 def attempt_dict(a):
@@ -65,6 +66,43 @@ def expense_dict(e):
             'branch_name': e.branch.branch_name if e.branch else None, 'payment_mode': e.payment_mode,
             'receipt_file': e.receipt_file, 'status': e.status, 'created_at': iso(e.created_at), 'updated_at': iso(e.updated_at)}
 
+def voucher_purchase_invoice_dict(inv):
+    return {
+        'id': inv.id,
+        'invoice_number': inv.invoice_number,
+        'supplier': inv.supplier,
+        'invoice_date': iso(inv.invoice_date),
+        'branch_id': inv.branch_id,
+        'branch_name': inv.branch.branch_name if inv.branch else None,
+        'payment_status': inv.payment_status,
+        'payment_mode': inv.payment_mode,
+        'payment_reference': inv.payment_reference,
+        'subtotal': inv.subtotal or 0,
+        'discount': inv.discount or 0,
+        'tax': inv.tax or 0,
+        'total_amount': inv.total_amount or 0,
+        'paid_amount': inv.paid_amount or 0,
+        'balance_amount': inv.balance_amount or 0,
+        'notes': inv.notes,
+        'status': inv.status,
+        'created_at': iso(inv.created_at),
+        'updated_at': iso(inv.updated_at),
+        'items': [
+            {
+                'id': item.id,
+                'exam_type_id': item.exam_type_id,
+                'exam_name': item.exam_type.name if item.exam_type else '-',
+                'quantity': item.quantity,
+                'unit_price': item.unit_price or 0,
+                'discount': item.discount or 0,
+                'tax': item.tax or 0,
+                'total_amount': item.total_amount or 0,
+            }
+            for item in inv.items
+        ],
+    }
+
+
 def budget_dict(b):
     return {'id': b.id, 'branch_id': b.branch_id, 'category_id': b.category_id, 'period_year': b.period_year,
             'period_month': b.period_month, 'budget_amount': b.budget_amount}
@@ -74,6 +112,7 @@ def employee_dict(e):
     return {
         'id': e.id, 'employee_id': e.employee_id, 'employee_code': e.employee_id,
         'full_name': e.full_name, 'name': e.full_name, 'designation': e.designation,
+        'username': e.credential.username if getattr(e, 'credential', None) else None,
         'branch_id': e.branch_id, 'branch_name': e.branch.branch_name if e.branch else None,
         'contact_number': e.contact_number, 'phone': e.contact_number, 'email': e.email,
         'joining_date': iso(e.joining_date), 'address': e.address,

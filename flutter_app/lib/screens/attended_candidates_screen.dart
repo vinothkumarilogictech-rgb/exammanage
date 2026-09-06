@@ -85,7 +85,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
         'branch_name': candidate['branch_name'] ?? '',
         'attended_date': candidate['exam_date'] ?? '',
         'result': candidate['status'] ?? 'Registered',
-        'remarks': candidate['team_name'] ?? '',
+        'team_name': candidate['team_name'] ?? '',
+        'remarks': candidate['remarks'] ?? candidate['reason_note'] ?? '',
       });
     }).toList();
 
@@ -213,7 +214,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
     final data = await future;
     final allRows = data['rows'] as List<AttendedCandidate>? ?? [];
     final q = searchQuery.trim().toLowerCase();
-    return allRows.where((r) {
+
+    final rows = allRows.where((r) {
       if (q.isEmpty) return true;
       return r.candidateName.toLowerCase().contains(q) ||
           r.registerNumber.toLowerCase().contains(q) ||
@@ -221,6 +223,86 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
           r.examTypeName.toLowerCase().contains(q) ||
           r.result.toLowerCase().contains(q);
     }).toList();
+
+    // Always export in chronological order: oldest date -> newest date.
+    // Invalid/missing dates are placed at the end instead of breaking sorting.
+    rows.sort((a, b) {
+      final da = DateTime.tryParse(a.attendedDate);
+      final db = DateTime.tryParse(b.attendedDate);
+      if (da == null && db == null) return 0;
+      if (da == null) return 1;
+      if (db == null) return -1;
+      return da.compareTo(db);
+    });
+
+    return rows;
+  }
+
+  String _exportDate(String value) {
+    final d = DateTime.tryParse(value);
+    if (d == null) return value.isEmpty ? '-' : value;
+    return '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+  }
+
+  // Tallies candidates per team (unassigned candidates are grouped under
+  // 'Unassigned'), preserving first-seen order, and renders it as a bordered
+  // summary block matching the app's report styling, with a shaded Total row.
+  pw.Widget _buildTeamSummaryBlock(List<AttendedCandidate> rows) {
+    final counts = <String, int>{};
+    for (final r in rows) {
+      final key = r.teamName.trim().isEmpty ? 'Unassigned' : r.teamName.trim();
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    pw.Widget countRow(String label, int count, {bool isTotal = false}) {
+      return pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: pw.BoxDecoration(
+          color: isTotal ? const pdf.PdfColor.fromInt(0xFFF3F4F6) : pdf.PdfColors.white,
+          border: const pw.Border(top: pw.BorderSide(color: pdf.PdfColors.grey300, width: 0.5)),
+        ),
+        child: pw.RichText(
+          text: pw.TextSpan(
+            children: [
+              pw.TextSpan(
+                text: isTotal ? label : label.toUpperCase(),
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5),
+              ),
+              pw.TextSpan(
+                text: ' - $count candidate${count == 1 ? '' : 's'}',
+                style: const pw.TextStyle(fontSize: 9.5),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: pdf.PdfColors.grey400, width: 0.5),
+        borderRadius: pw.BorderRadius.circular(4),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
+            child: pw.Text(
+              'Team-wise Candidate Count',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: pdf.PdfColors.white),
+            ),
+          ),
+          for (final entry in counts.entries) countRow(entry.key, entry.value),
+          countRow('Total', rows.length, isTotal: true),
+        ],
+      ),
+    );
   }
 
   Future<void> _exportPdf() async {
@@ -234,20 +316,35 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
           build: (context) => [
             pw.Text('Attended Candidates', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 6),
+            pw.Text('Branch: ${_branchContext.selectedBranchName}'),
+            pw.SizedBox(height: 4),
             pw.Text('Filter: ${_exportFilterLabel()}${searchQuery.trim().isEmpty ? '' : ' | Search: ${searchQuery.trim()}'}'),
             pw.SizedBox(height: 14),
             pw.Table.fromTextArray(
-              headers: const ['Candidate', 'Roll No', 'Exam Type', 'Branch', 'Exam Date', 'Status', 'Remarks'],
-              data: rows.map((r) => [
-                r.candidateName, r.registerNumber, r.examTypeName, r.branchName,
-                r.attendedDate, r.result, r.remarks,
-              ]).toList(),
+              headers: const ['S.No', 'Date', 'Candidate Name', 'Team', 'Exam Type', 'Status', 'Remarks'],
+              data: rows.asMap().entries.map((entry) {
+                final index = entry.key;
+                final r = entry.value;
+                return [
+                  '${index + 1}',
+                  _exportDate(r.attendedDate),
+                  r.candidateName,
+                  r.teamName.isNotEmpty ? r.teamName : '-',
+                  r.examTypeName,
+                  r.result,
+                  r.remarks.isNotEmpty ? r.remarks : '-',
+                ];
+              }).toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white),
               headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
+              headerAlignment: pw.Alignment.center,
               cellStyle: const pw.TextStyle(fontSize: 8),
+              cellAlignment: pw.Alignment.center,
               cellPadding: const pw.EdgeInsets.all(5),
               border: pw.TableBorder.all(color: pdf.PdfColors.grey400, width: 0.5),
             ),
+            pw.SizedBox(height: 20),
+            _buildTeamSummaryBlock(rows),
           ],
         ),
       );
@@ -269,13 +366,21 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
       final workbook = ex.Excel.createExcel();
       final sheet = workbook['Attended Candidates'];
       sheet.appendRow([
-        ex.TextCellValue('Candidate'), ex.TextCellValue('Roll No'), ex.TextCellValue('Exam Type'),
-        ex.TextCellValue('Branch'), ex.TextCellValue('Attended Date'), ex.TextCellValue('Result'), ex.TextCellValue('Remarks'),
+        ex.TextCellValue('S.No'), ex.TextCellValue('Date'), ex.TextCellValue('Candidate Name'),
+        ex.TextCellValue('Team'), ex.TextCellValue('Exam Type'), ex.TextCellValue('Branch'),
+        ex.TextCellValue('Status'), ex.TextCellValue('Remarks'),
       ]);
-      for (final r in rows) {
+      for (final entry in rows.asMap().entries) {
+        final r = entry.value;
         sheet.appendRow([
-          ex.TextCellValue(r.candidateName), ex.TextCellValue(r.registerNumber), ex.TextCellValue(r.examTypeName),
-          ex.TextCellValue(r.branchName), ex.TextCellValue(r.attendedDate), ex.TextCellValue(r.result), ex.TextCellValue(r.remarks),
+          ex.TextCellValue('${entry.key + 1}'),
+          ex.TextCellValue(_exportDate(r.attendedDate)),
+          ex.TextCellValue(r.candidateName),
+          ex.TextCellValue(r.teamName.isNotEmpty ? r.teamName : '-'),
+          ex.TextCellValue(r.examTypeName),
+          ex.TextCellValue(r.branchName),
+          ex.TextCellValue(r.result),
+          ex.TextCellValue(r.remarks.isNotEmpty ? r.remarks : '-'),
         ]);
       }
       final bytes = workbook.save();
