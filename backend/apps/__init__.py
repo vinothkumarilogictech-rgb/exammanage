@@ -123,6 +123,9 @@ def ensure_expense_columns(app):
             "status": "VARCHAR(20) DEFAULT 'Active'",
             "created_at": "DATETIME",
             "updated_at": "DATETIME",
+            "payment_status": "VARCHAR(20) DEFAULT 'Paid'",
+            "paid_amount": "FLOAT",
+            "payment_reference": "VARCHAR(100)",
         }
 
         for column_name, column_type in migrations.items():
@@ -370,6 +373,23 @@ def create_app():
                         "UPDATE voucher_sale_history SET paid_amount = final_amount "
                         "WHERE payment_status = 'Paid'"
                     ))
+            if 'expense' in insp.get_table_names():
+                cols = {c['name'] for c in insp.get_columns('expense')}
+                if 'payment_status' not in cols:
+                    db.session.execute(text(
+                        "ALTER TABLE expense ADD payment_status VARCHAR(20) NOT NULL "
+                        "CONSTRAINT DF_expense_payment_status DEFAULT 'Paid'"
+                    ))
+                if 'paid_amount' not in cols:
+                    db.session.execute(text("ALTER TABLE expense ADD paid_amount FLOAT NULL"))
+                if 'payment_reference' not in cols:
+                    db.session.execute(text("ALTER TABLE expense ADD payment_reference VARCHAR(100) NULL"))
+                db.session.commit()
+                # Backfill: every invoice/expense created before this column existed was
+                # always treated as fully paid, so mirror that for old rows only.
+                db.session.execute(text(
+                    "UPDATE expense SET paid_amount = amount WHERE paid_amount IS NULL"
+                ))
             db.session.commit()
         except Exception:
             db.session.rollback()

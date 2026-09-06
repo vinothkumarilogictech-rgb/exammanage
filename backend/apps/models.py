@@ -145,6 +145,14 @@ class Expense(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # --- Voucher purchase invoice payment tracking ---
+    # 'status' above only tracks Active/Cancelled; these track whether the
+    # invoice itself has been fully paid, so voucher-purchase invoices can
+    # be Pending/Partial/Paid the same way voucher sales are.
+    payment_status = db.Column(db.String(20), default='Paid')  # Paid / Pending / Partial
+    paid_amount = db.Column(db.Float, nullable=True)
+    payment_reference = db.Column(db.String(100), nullable=True)
+
     branch = db.relationship('Branch', backref='expenses')
     expense_category = db.relationship('ExpenseCategory', backref='expenses')
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=True, index=True)
@@ -153,6 +161,7 @@ class Expense(db.Model):
     # `note` is the BRD's name for this field; it's the same column as the
     # pre-existing `description` so old records/routes keep working.
     note = synonym('description')
+
 
 class Setting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
