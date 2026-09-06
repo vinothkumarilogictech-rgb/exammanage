@@ -220,6 +220,9 @@ class DioClient {
   Future<Response> purchaseVouchers(Map<String, dynamic> data) => dio.post(ApiConfig.voucherPurchasePath, data: data);
   Future<Response> assignVoucher(int id, Map<String, dynamic> data) => dio.post('${ApiConfig.vouchersPath}$id/assign/', data: data);
   Future<Response> sellVoucher(Map<String, dynamic> data) => dio.post(ApiConfig.voucherSellPath, data: data);
+  Future<Response> updateVoucherPayment(int voucherId, Map<String, dynamic> data) =>
+      dio.post(ApiConfig.voucherPaymentPath(voucherId), data: data);
+  Future<Response> deleteCandidate(int id) => dio.delete('${ApiConfig.candidatesPath}$id/');
   Future<Response> voucherStudents() => dio.get(ApiConfig.voucherStudentsPath);
   Future<Response> voucherHistory({int? branchId}) => dio.get(ApiConfig.voucherHistoryPath, queryParameters: {if (branchId != null) 'branch_id': branchId});
   Future<Response> voucherDetails(int id) => dio.get('${ApiConfig.vouchersPath}$id/details/');
@@ -234,9 +237,6 @@ class DioClient {
 
   Future<Response> updateCandidate(int id, Map<String, dynamic> data) =>
       dio.patch('${ApiConfig.candidatesPath}$id/', data: data);
-
-  Future<Response> deleteCandidate(int id) =>
-      dio.delete('${ApiConfig.candidatesPath}$id/');
 
   Future<Response> createSession(Map<String, dynamic> data) =>
       dio.post(ApiConfig.sessionsPath, data: data);

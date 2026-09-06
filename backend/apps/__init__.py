@@ -355,9 +355,25 @@ def create_app():
                 cols = {c['name'] for c in insp.get_columns('expense')}
                 if 'employee_id' not in cols:
                     db.session.execute(text("ALTER TABLE expense ADD employee_id INT NULL"))
+            if 'voucher_sale_history' in insp.get_table_names():
+                cols = {c['name'] for c in insp.get_columns('voucher_sale_history')}
+                if 'paid_amount' not in cols:
+                    db.session.execute(text(
+                        "ALTER TABLE voucher_sale_history ADD paid_amount FLOAT NOT NULL "
+                        "CONSTRAINT DF_voucher_sale_history_paid_amount DEFAULT 0"
+                    ))
+                    db.session.commit()
+                    # Backfill: fully-paid sales -> paid_amount = final_amount. Existing
+                    # 'Partial' rows are left at 0 since the amount actually paid so far
+                    # was never recorded before this column existed; review those manually.
+                    db.session.execute(text(
+                        "UPDATE voucher_sale_history SET paid_amount = final_amount "
+                        "WHERE payment_status = 'Paid'"
+                    ))
             db.session.commit()
         except Exception:
             db.session.rollback()
+            app.logger.exception("Additive SQL Server migration failed — some columns may be missing.")
 
     # Register only the four enabled workspace modules.
     from apps.branches.routes import branches_bp
