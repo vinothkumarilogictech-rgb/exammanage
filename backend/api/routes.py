@@ -1766,77 +1766,51 @@ def voucher_sell_api():
         return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(latest)}, 'Payment updated.')
 
 
-    @api_bp.post('/vouchers/<int:voucher_id>/assign/')
-    @api_token_required
-    def voucher_assign_api(voucher_id):
-        # Backward-compatible endpoint for older clients. New UI uses /sell/ and
-        # never reads/writes Exam Management Candidate records.
-        d = body()
-        if d.get('student_name'):
-            d['voucher_id'] = voucher_id
-            return voucher_sell_api()
-        return fail('Voucher sales now require voucher student details. Use the Sell Voucher form.', 422)
-
-
-    @api_bp.post('/vouchers/<int:voucher_id>/use/')
-    @api_token_required
-    def voucher_use_api(voucher_id):
-        v = Voucher.query.get_or_404(voucher_id)
-        if v.status not in ('Sold', 'Assigned'):
-            return fail('Only sold vouchers can be marked as used.', 409)
-        v.status = 'Used'
-        v.used_at = datetime.utcnow()
-        db.session.commit()
-        return ok(_voucher_json(v), 'Voucher marked as used.')
-
     @api_bp.post('/notifications/device-token/')
     @api_token_required
     def register_device_token():
         data = body()
 
-        token = (data.get('token') or '').strip()
-        platform = (data.get('platform') or 'android').strip().lower()
+    token = (data.get('token') or '').strip()
+    platform = (data.get('platform') or 'android').strip().lower()
 
-        if not token:
-            return fail('FCM device token is required.', 400)
+    if not token:
+        return fail('FCM device token is required.', 400)
 
-        identity = g.api_identity
+    identity = g.api_identity
+    user_type = identity.get('role', 'Admin')
 
-        user_type = identity.get('role', 'Admin')
+    try:
+        user_id = int(identity.get('sub'))
+    except (TypeError, ValueError):
+        return fail('Invalid user identity.', 401)
 
-        try:
-            user_id = int(identity.get('sub'))
-        except (TypeError, ValueError):
-            return fail('Invalid user identity.', 401)
+    device = DeviceToken.query.filter_by(token=token).first()
 
-        device = DeviceToken.query.filter_by(token=token).first()
-
-        if device:
-            device.user_type = user_type
-            device.user_id = user_id
-            device.platform = platform
-            device.is_active = True
-            device.updated_at = datetime.utcnow()
-
-            db.session.commit()
-
-            return ok(
-                message='FCM device token updated successfully.'
-            )
-
-        device = DeviceToken(
-            user_type=user_type,
-            user_id=user_id,
-            token=token,
-            platform=platform,
-            is_active=True
-        )
-
-        db.session.add(device)
+    if device:
+        device.user_type = user_type
+        device.user_id = user_id
+        device.platform = platform
+        device.is_active = True
+        device.updated_at = datetime.utcnow()
         db.session.commit()
 
         return ok(
-            message='FCM device token registered successfully.',
-            status=201
+            message='FCM device token updated successfully.'
         )
-        
+
+    device = DeviceToken(
+        user_type=user_type,
+        user_id=user_id,
+        token=token,
+        platform=platform,
+        is_active=True
+    )
+
+    db.session.add(device)
+    db.session.commit()
+
+    return ok(
+        message='FCM device token registered successfully.',
+        status=201
+    )

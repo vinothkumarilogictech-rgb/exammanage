@@ -18,6 +18,17 @@ import 'services/dio_client.dart';
 
 
 // ============================================================
+// FCM TOKEN STATE
+// ============================================================
+
+String? _latestFcmToken;
+
+bool _isRegisteringFcmToken = false;
+
+String? _lastRegisteredFcmToken;
+
+
+// ============================================================
 // FIREBASE FCM BACKGROUND MESSAGE HANDLER
 // ============================================================
 
@@ -46,42 +57,149 @@ Future<void> firebaseMessagingBackgroundHandler(
 // REGISTER FCM TOKEN WITH BACKEND
 // ============================================================
 
-Future<void> registerFcmTokenWithBackend(String token) async {
+Future<void> registerFcmTokenWithBackend(
+    String token) async {
   try {
-    final dioClient = DioClient();
-
     // --------------------------------------------------------
-    // Check whether user is logged in
+    // Prevent duplicate simultaneous registration
     // --------------------------------------------------------
 
-    final accessToken = await dioClient.readAccessToken();
-
-    if (accessToken == null || accessToken.isEmpty) {
+    if (_isRegisteringFcmToken) {
       debugPrint(
-        'FCM TOKEN NOT REGISTERED - USER NOT LOGGED IN',
+        'FCM REGISTRATION ALREADY IN PROGRESS',
       );
       return;
     }
 
     // --------------------------------------------------------
-    // Send FCM token to Flask backend
+    // If same token was already registered
     // --------------------------------------------------------
 
-    final response = await dioClient.registerDeviceToken(
+    if (_lastRegisteredFcmToken == token) {
+      debugPrint(
+        'FCM TOKEN ALREADY REGISTERED',
+      );
+      return;
+    }
+
+    _isRegisteringFcmToken = true;
+
+    final dioClient = DioClient();
+
+    // --------------------------------------------------------
+    // Check access token
+    // --------------------------------------------------------
+
+    final accessToken =
+        await dioClient.readAccessToken();
+
+    if (accessToken == null ||
+        accessToken.isEmpty) {
+      debugPrint(
+        'FCM TOKEN NOT REGISTERED - USER NOT LOGGED IN',
+      );
+
+      _isRegisteringFcmToken = false;
+      return;
+    }
+
+    // --------------------------------------------------------
+    // Register FCM token with Flask backend
+    // --------------------------------------------------------
+
+    debugPrint('==============================================');
+    debugPrint(
+      'REGISTERING FCM TOKEN WITH BACKEND...',
+    );
+    debugPrint('Token: $token');
+    debugPrint('==============================================');
+
+    final response =
+        await dioClient.registerDeviceToken(
       token: token,
       platform: 'android',
     );
 
-    debugPrint('==============================================');
-    debugPrint('FCM TOKEN REGISTERED IN BACKEND');
-    debugPrint('Status: ${response.statusCode}');
-    debugPrint('Response: ${response.data}');
-    debugPrint('==============================================');
+    // --------------------------------------------------------
+    // Success
+    // --------------------------------------------------------
+
+    if (response.statusCode == 200 ||
+        response.statusCode == 201) {
+      _lastRegisteredFcmToken = token;
+
+      debugPrint('==============================================');
+      debugPrint(
+        'FCM TOKEN REGISTERED IN BACKEND',
+      );
+      debugPrint(
+        'Status: ${response.statusCode}',
+      );
+      debugPrint(
+        'Response: ${response.data}',
+      );
+      debugPrint('==============================================');
+    } else {
+      debugPrint('==============================================');
+      debugPrint(
+        'FCM TOKEN REGISTRATION FAILED',
+      );
+      debugPrint(
+        'Status: ${response.statusCode}',
+      );
+      debugPrint(
+        'Response: ${response.data}',
+      );
+      debugPrint('==============================================');
+    }
   } catch (e) {
     debugPrint('==============================================');
-    debugPrint('FCM TOKEN REGISTER FAILED');
+    debugPrint(
+      'FCM TOKEN REGISTER FAILED',
+    );
     debugPrint('$e');
     debugPrint('==============================================');
+  } finally {
+    _isRegisteringFcmToken = false;
+  }
+}
+
+
+// ============================================================
+// REGISTER TOKEN ONLY WHEN USER IS LOGGED IN
+// ============================================================
+
+Future<void> registerFcmTokenIfLoggedIn(
+    AuthProvider auth) async {
+  try {
+    if (!auth.authenticated) {
+      debugPrint(
+        'FCM REGISTRATION WAITING - USER NOT LOGGED IN',
+      );
+      return;
+    }
+
+    if (_latestFcmToken == null ||
+        _latestFcmToken!.isEmpty) {
+      debugPrint(
+        'FCM REGISTRATION WAITING - TOKEN NOT AVAILABLE',
+      );
+      return;
+    }
+
+    debugPrint('==============================================');
+    debugPrint(
+      'USER LOGGED IN - REGISTERING FCM TOKEN',
+    );
+    debugPrint('==============================================');
+
+    await registerFcmTokenWithBackend(
+      _latestFcmToken!,
+    );
+  } catch (e) {
+    debugPrint(
+      'FCM login registration error: $e',
+    );
   }
 }
 
@@ -93,6 +211,7 @@ Future<void> registerFcmTokenWithBackend(String token) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+
   // ----------------------------------------------------------
   // Initialize Firebase
   // ----------------------------------------------------------
@@ -101,8 +220,14 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    debugPrint('==============================================');
+    debugPrint('FIREBASE INITIALIZED');
+    debugPrint('==============================================');
   } catch (e) {
-    debugPrint('Firebase initialization error: $e');
+    debugPrint(
+      'Firebase initialization error: $e',
+    );
   }
 
 
@@ -115,7 +240,9 @@ Future<void> main() async {
       await NotificationService.initialize();
 
       debugPrint('==============================================');
-      debugPrint('LOCAL NOTIFICATION SERVICE INITIALIZED');
+      debugPrint(
+        'LOCAL NOTIFICATION SERVICE INITIALIZED',
+      );
       debugPrint('==============================================');
     } catch (e) {
       debugPrint(
@@ -126,7 +253,7 @@ Future<void> main() async {
 
 
   // ----------------------------------------------------------
-  // FCM setup
+  // FCM SETUP
   // ----------------------------------------------------------
 
   if (!kIsWeb) {
@@ -140,39 +267,52 @@ Future<void> main() async {
       );
 
 
-      final messaging = FirebaseMessaging.instance;
+      final messaging =
+          FirebaseMessaging.instance;
 
 
       // ------------------------------------------------------
       // Notification permission
       // ------------------------------------------------------
 
-      await messaging.requestPermission(
+      final permission =
+          await messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
         provisional: false,
       );
 
+      debugPrint('==============================================');
+      debugPrint(
+        'FCM PERMISSION STATUS',
+      );
+      debugPrint(
+        '${permission.authorizationStatus}',
+      );
+      debugPrint('==============================================');
+
 
       // ------------------------------------------------------
       // Get FCM device token
       // ------------------------------------------------------
 
-      final token = await messaging.getToken();
-
-      debugPrint('==============================================');
-      debugPrint('FCM DEVICE TOKEN');
-      debugPrint('$token');
-      debugPrint('==============================================');
+      final token =
+          await messaging.getToken();
 
 
-      // ------------------------------------------------------
-      // Register token with backend
-      // ------------------------------------------------------
+      if (token != null &&
+          token.isNotEmpty) {
+        _latestFcmToken = token;
 
-      if (token != null && token.isNotEmpty) {
-        await registerFcmTokenWithBackend(token);
+        debugPrint('==============================================');
+        debugPrint('FCM DEVICE TOKEN');
+        debugPrint(token);
+        debugPrint('==============================================');
+      } else {
+        debugPrint(
+          'FCM TOKEN IS NULL OR EMPTY',
+        );
       }
 
 
@@ -184,11 +324,32 @@ Future<void> main() async {
         (newToken) async {
           debugPrint('==============================================');
           debugPrint('FCM TOKEN REFRESHED');
-          debugPrint('$newToken');
+          debugPrint(newToken);
           debugPrint('==============================================');
 
-          // Send refreshed token to backend
-          await registerFcmTokenWithBackend(newToken);
+          // Save latest token
+          _latestFcmToken = newToken;
+
+          // --------------------------------------------------
+          // Try registering refreshed token
+          // If user is logged in, it will register.
+          // --------------------------------------------------
+
+          final dioClient = DioClient();
+
+          final accessToken =
+              await dioClient.readAccessToken();
+
+          if (accessToken != null &&
+              accessToken.isNotEmpty) {
+            await registerFcmTokenWithBackend(
+              newToken,
+            );
+          } else {
+            debugPrint(
+              'REFRESHED TOKEN WAITING FOR LOGIN',
+            );
+          }
         },
       );
 
@@ -200,7 +361,9 @@ Future<void> main() async {
       FirebaseMessaging.onMessage.listen(
         (RemoteMessage message) async {
           debugPrint('==============================================');
-          debugPrint('FOREGROUND NOTIFICATION RECEIVED');
+          debugPrint(
+            'FOREGROUND NOTIFICATION RECEIVED',
+          );
           debugPrint('==============================================');
 
           debugPrint(
@@ -222,7 +385,8 @@ Future<void> main() async {
           // Show local notification while app is open
           // --------------------------------------------------
 
-          final notification = message.notification;
+          final notification =
+              message.notification;
 
           if (notification != null) {
             try {
@@ -252,7 +416,9 @@ Future<void> main() async {
       FirebaseMessaging.onMessageOpenedApp.listen(
         (RemoteMessage message) {
           debugPrint('==============================================');
-          debugPrint('NOTIFICATION TAPPED');
+          debugPrint(
+            'NOTIFICATION TAPPED',
+          );
           debugPrint('==============================================');
 
           debugPrint(
@@ -282,11 +448,14 @@ Future<void> main() async {
       // ------------------------------------------------------
 
       final initialMessage =
-          await FirebaseMessaging.instance.getInitialMessage();
+          await FirebaseMessaging.instance
+              .getInitialMessage();
 
       if (initialMessage != null) {
         debugPrint('==============================================');
-        debugPrint('APP OPENED FROM NOTIFICATION');
+        debugPrint(
+          'APP OPENED FROM NOTIFICATION',
+        );
         debugPrint('==============================================');
 
         debugPrint(
@@ -309,7 +478,9 @@ Future<void> main() async {
         // initialMessage.data['payment_id']
       }
     } catch (e) {
-      debugPrint('FCM setup error: $e');
+      debugPrint(
+        'FCM setup error: $e',
+      );
     }
   }
 
@@ -321,6 +492,54 @@ Future<void> main() async {
   final auth = AuthProvider();
 
   await auth.checkSession();
+
+
+  // ==========================================================
+  // IMPORTANT FCM + LOGIN CONNECTION
+  // ==========================================================
+
+  // ----------------------------------------------------------
+  // If user is already logged in
+  // ----------------------------------------------------------
+
+  if (auth.authenticated) {
+    debugPrint('==============================================');
+    debugPrint(
+      'USER ALREADY LOGGED IN',
+    );
+    debugPrint(
+      'CHECKING FCM TOKEN REGISTRATION...',
+    );
+    debugPrint('==============================================');
+
+    await registerFcmTokenIfLoggedIn(auth);
+  }
+
+
+  // ----------------------------------------------------------
+  // Listen for login/logout changes
+  //
+  // When LoginScreen successfully logs in and
+  // AuthProvider calls notifyListeners(), this listener
+  // automatically runs.
+  // ----------------------------------------------------------
+
+  auth.addListener(() {
+    debugPrint('==============================================');
+    debugPrint(
+      'AUTH STATE CHANGED',
+    );
+    debugPrint(
+      'Authenticated: ${auth.authenticated}',
+    );
+    debugPrint('==============================================');
+
+    if (auth.authenticated) {
+      unawaited(
+        registerFcmTokenIfLoggedIn(auth),
+      );
+    }
+  });
 
 
   // ----------------------------------------------------------
@@ -380,7 +599,8 @@ class StartupSplash extends StatefulWidget {
 }
 
 
-class _StartupSplashState extends State<StartupSplash>
+class _StartupSplashState
+    extends State<StartupSplash>
     with SingleTickerProviderStateMixin {
 
   late final AnimationController _controller;
@@ -509,7 +729,8 @@ class _StartupSplashState extends State<StartupSplash>
                 scale: _scale,
 
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize:
+                      MainAxisSize.min,
 
                   children: [
 
@@ -531,7 +752,8 @@ class _StartupSplashState extends State<StartupSplash>
 
                         fontSize: 32,
 
-                        fontWeight: FontWeight.w900,
+                        fontWeight:
+                            FontWeight.w900,
 
                         letterSpacing: 1.4,
                       ),
@@ -544,7 +766,8 @@ class _StartupSplashState extends State<StartupSplash>
 
 
                     Row(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisSize:
+                          MainAxisSize.min,
 
                       children: [
 
@@ -553,8 +776,8 @@ class _StartupSplashState extends State<StartupSplash>
 
                           height: 1,
 
-                          color:
-                              Colors.white.withOpacity(.45),
+                          color: Colors.white
+                              .withOpacity(.45),
                         ),
 
 
@@ -567,12 +790,13 @@ class _StartupSplashState extends State<StartupSplash>
                           'SMART SOLUTIONS',
 
                           style: TextStyle(
-                            color:
-                                Colors.white.withOpacity(.78),
+                            color: Colors.white
+                                .withOpacity(.78),
 
                             fontSize: 10,
 
-                            fontWeight: FontWeight.w700,
+                            fontWeight:
+                                FontWeight.w700,
 
                             letterSpacing: 3.0,
                           ),
@@ -589,8 +813,8 @@ class _StartupSplashState extends State<StartupSplash>
 
                           height: 1,
 
-                          color:
-                              Colors.white.withOpacity(.45),
+                          color: Colors.white
+                              .withOpacity(.45),
                         ),
                       ],
                     ),
@@ -606,9 +830,12 @@ class _StartupSplashState extends State<StartupSplash>
 
                       height: 4,
 
-                      decoration: BoxDecoration(
+                      decoration:
+                          BoxDecoration(
                         borderRadius:
-                            BorderRadius.circular(20),
+                            BorderRadius.circular(
+                          20,
+                        ),
 
                         gradient:
                             const LinearGradient(
@@ -618,9 +845,11 @@ class _StartupSplashState extends State<StartupSplash>
                           ],
                         ),
 
-                        boxShadow: const [
+                        boxShadow:
+                            const [
                           BoxShadow(
-                            color: Color(0xFF9A22C7),
+                            color:
+                                Color(0xFF9A22C7),
 
                             blurRadius: 16,
 
@@ -640,12 +869,13 @@ class _StartupSplashState extends State<StartupSplash>
                       'EXAM MANAGEMENT',
 
                       style: TextStyle(
-                        color:
-                            Colors.white.withOpacity(.58),
+                        color: Colors.white
+                            .withOpacity(.58),
 
                         fontSize: 11,
 
-                        fontWeight: FontWeight.w700,
+                        fontWeight:
+                            FontWeight.w700,
 
                         letterSpacing: 2.4,
                       ),
@@ -667,15 +897,17 @@ class _StartupSplashState extends State<StartupSplash>
             child: Text(
               'Loading your secure workspace',
 
-              textAlign: TextAlign.center,
+              textAlign:
+                  TextAlign.center,
 
               style: TextStyle(
-                color:
-                    Colors.white.withOpacity(.42),
+                color: Colors.white
+                    .withOpacity(.42),
 
                 fontSize: 11,
 
-                fontWeight: FontWeight.w500,
+                fontWeight:
+                    FontWeight.w500,
 
                 letterSpacing: .4,
               ),
@@ -714,7 +946,8 @@ class RootScreen extends StatelessWidget {
 // BRAND MARK
 // ============================================================
 
-class _BrandMark extends StatelessWidget {
+class _BrandMark
+    extends StatelessWidget {
 
   final double size;
 
@@ -738,7 +971,8 @@ class _BrandMark extends StatelessWidget {
         shape: BoxShape.circle,
 
         border: Border.all(
-          color: Colors.white.withOpacity(.24),
+          color: Colors.white
+              .withOpacity(.24),
 
           width: 1.5,
         ),
@@ -772,7 +1006,8 @@ class _BrandMark extends StatelessWidget {
 // SPLASH BACKGROUND
 // ============================================================
 
-class _SplashBackground extends StatelessWidget {
+class _SplashBackground
+    extends StatelessWidget {
 
   const _SplashBackground();
 
@@ -791,7 +1026,8 @@ class _SplashBackground extends StatelessWidget {
 // SPLASH PAINTER
 // ============================================================
 
-class _SplashPainter extends CustomPainter {
+class _SplashPainter
+    extends CustomPainter {
 
   @override
   void paint(
@@ -808,11 +1044,14 @@ class _SplashPainter extends CustomPainter {
     // --------------------------------------------------------
 
     final base = Paint()
-      ..shader = const LinearGradient(
+      ..shader =
+          const LinearGradient(
 
-        begin: Alignment.topLeft,
+        begin:
+            Alignment.topLeft,
 
-        end: Alignment.bottomRight,
+        end:
+            Alignment.bottomRight,
 
         colors: [
           Color(0xFF120B4A),
@@ -866,7 +1105,8 @@ class _SplashPainter extends CustomPainter {
     for (final glow in glows) {
 
       final paint = Paint()
-        ..shader = RadialGradient(
+        ..shader =
+            RadialGradient(
 
           colors: [
             const Color(0xFF9A22C7)
@@ -945,9 +1185,13 @@ class _SplashPainter extends CustomPainter {
           Colors.white.withOpacity(.13);
 
 
-    for (int row = 0; row < 8; row++) {
+    for (int row = 0;
+        row < 8;
+        row++) {
 
-      for (int col = 0; col < 6; col++) {
+      for (int col = 0;
+          col < 6;
+          col++) {
 
         canvas.drawCircle(
 
