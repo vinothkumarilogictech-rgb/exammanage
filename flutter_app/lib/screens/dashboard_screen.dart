@@ -27,12 +27,22 @@ class DashboardScreenState extends State<DashboardScreen> {
   late Future<Map<String, dynamic>> future;
   late final BranchContext _branchContext;
 
+  // Voucher sales that are still Pending / Partial (balance_amount > 0),
+  // shown via the notification bell in the app bar.
+  List<Map<String, dynamic>> _pendingSales = [];
+  // Voucher-purchase invoices that are still Pending / Partial, shown in
+  // the same notification bell alongside pending voucher sales.
+  List<Map<String, dynamic>> _pendingInvoices = [];
+
+  int get _pendingCount => _pendingSales.length + _pendingInvoices.length;
+
   @override
   void initState() {
     super.initState();
     _branchContext = context.read<BranchContext>();
     _branchContext.addListener(_onBranchChanged);
     future = load();
+    _loadPendingSales();
   }
 
   void _onBranchChanged() {
@@ -40,6 +50,341 @@ class DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       future = load();
     });
+    _loadPendingSales();
+  }
+
+  // ================================================================
+  // PENDING / PARTIAL PAYMENTS — voucher sales + purchase invoices
+  // (notification bell)
+  // ================================================================
+
+  Future<void> _loadPendingSales() async {
+    try {
+      await _branchContext.ensureLoaded();
+      final branchId = _branchContext.selectedBranchId;
+      final results = await Future.wait([
+        api.voucherHistory(branchId: branchId),
+        api.invoices(branchId: branchId),
+      ]);
+
+      final saleRows = (results[0].data['data'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((h) {
+            final status = '${h['payment_status'] ?? ''}';
+            final balance = double.tryParse('${h['balance_amount'] ?? 0}') ?? 0;
+            return balance > 0 || status == 'Pending' || status == 'Partial';
+          })
+          .toList();
+      saleRows.sort((a, b) => '${b['sold_at'] ?? ''}'.compareTo('${a['sold_at'] ?? ''}'));
+
+      final invoiceRows = (results[1].data['data'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((inv) {
+            final invStatus = '${inv['status'] ?? ''}';
+            final status = '${inv['payment_status'] ?? ''}';
+            final balance = double.tryParse('${inv['balance_amount'] ?? 0}') ?? 0;
+            return invStatus == 'Active' && (balance > 0 || status == 'Pending' || status == 'Partial');
+          })
+          .toList();
+      invoiceRows.sort((a, b) => '${b['invoice_date'] ?? ''}'.compareTo('${a['invoice_date'] ?? ''}'));
+
+      if (mounted) setState(() {
+        _pendingSales = saleRows;
+        _pendingInvoices = invoiceRows;
+      });
+    } catch (_) {
+      // Silently ignore — the bell just stays at its last known count.
+    }
+  }
+
+  String _fullMoney(dynamic value) {
+    final n = double.tryParse('${value ?? 0}') ?? 0;
+    return '₹${n.toStringAsFixed(2)}';
+  }
+
+  String _saleDateTime(dynamic value) {
+    if (value == null || '$value'.isEmpty) return '-';
+    final d = DateTime.tryParse('$value')?.toLocal();
+    if (d == null) return '$value';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
+  }
+
+  List<Map<String, dynamic>> _combinedPendingItems() {
+    final combined = <Map<String, dynamic>>[
+      for (final s in _pendingSales)
+        {
+          '_kind': 'sale',
+          '_data': s,
+          '_date': '${s['sold_at'] ?? ''}',
+          'title': '${s['student_name'] ?? '-'}',
+          'subtitle': '${s['voucher_code'] ?? '-'}',
+          'status': '${s['payment_status'] ?? ''}',
+          'balance': s['balance_amount'],
+        },
+      for (final inv in _pendingInvoices)
+        {
+          '_kind': 'invoice',
+          '_data': inv,
+          '_date': '${inv['invoice_date'] ?? ''}',
+          'title': '${inv['supplier'] ?? '-'}',
+          'subtitle': 'Invoice ${inv['invoice_number'] ?? '-'}',
+          'status': '${inv['payment_status'] ?? ''}',
+          'balance': inv['balance_amount'],
+        },
+    ];
+    combined.sort((a, b) => '${b['_date']}'.compareTo('${a['_date']}'));
+    return combined;
+  }
+
+  void _showPendingPaymentsSheet() {
+    final items = _combinedPendingItems();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * .85),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
+            const SizedBox(height: 14),
+            Row(children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: const Color(0xFF9A22C7).withOpacity(.10), borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.notifications_rounded, color: Color(0xFF9A22C7)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Pending & Partial Payments', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+                  Text('${items.length} item${items.length == 1 ? '' : 's'} with amount due (sales + invoices)',
+                      style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600)),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            Flexible(
+              child: items.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Column(children: [
+                          Icon(Icons.check_circle_outline_rounded, size: 48, color: Colors.grey.shade300),
+                          const SizedBox(height: 10),
+                          Text('No pending or partial payments', style: TextStyle(color: Colors.grey.shade500)),
+                        ]),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) {
+                        final item = items[i];
+                        final kind = item['_kind'];
+                        final status = '${item['status'] ?? ''}';
+                        final isPending = status == 'Pending';
+                        final color = isPending ? AppColors.red : AppColors.orange;
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            if (kind == 'invoice') {
+                              _showInvoiceDetailsSheet(Map<String, dynamic>.from(item['_data']));
+                            } else {
+                              _showSaleDetailsSheet(Map<String, dynamic>.from(item['_data']));
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7F5FD),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: color.withOpacity(.25)),
+                            ),
+                            child: Row(children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(12)),
+                                child: Icon(
+                                  kind == 'invoice'
+                                      ? Icons.receipt_long_rounded
+                                      : (isPending ? Icons.error_outline_rounded : Icons.hourglass_bottom_rounded),
+                                  color: color,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('${item['title']}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                                  const SizedBox(height: 2),
+                                  Text('${item['subtitle']}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                ]),
+                              ),
+                              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(color: color.withOpacity(.14), borderRadius: BorderRadius.circular(20)),
+                                  child: Text(status, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: color)),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(_fullMoney(item['balance']), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: color)),
+                              ]),
+                              const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSaleDetailsSheet(Map<String, dynamic> s) {
+    final status = '${s['payment_status'] ?? ''}';
+    final color = status == 'Pending' ? AppColors.red : (status == 'Partial' ? AppColors.orange : AppColors.green);
+
+    Widget row(String label, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(width: 128, child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13))),
+            Expanded(child: Text(value.isEmpty ? '-' : value, style: const TextStyle(fontWeight: FontWeight.w700))),
+          ]),
+        );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * .88),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
+              const SizedBox(height: 14),
+              Row(children: [
+                Container(width: 46, height: 46, decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(14)), child: Icon(Icons.receipt_long_rounded, color: color)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${s['student_name'] ?? '-'}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+                  Text('${s['voucher_code'] ?? '-'}', style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600)),
+                ])),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: color.withOpacity(.14), borderRadius: BorderRadius.circular(20)),
+                  child: Text(status, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: color)),
+                ),
+              ]),
+              const Divider(height: 28),
+              row('Mobile', '${s['mobile'] ?? ''}'),
+              row('Email', '${s['email'] ?? ''}'),
+              row('Address', '${s['address'] ?? ''}'),
+              row('ID Number', '${s['id_number'] ?? ''}'),
+              const Divider(height: 28),
+              row('Selling Price', _fullMoney(s['selling_price'])),
+              row('Discount', _fullMoney(s['discount'])),
+              row('Final Amount', _fullMoney(s['final_amount'])),
+              row('Paid Amount', _fullMoney(s['paid_amount'])),
+              row('Pending Amount', _fullMoney(s['balance_amount'])),
+              row('Payment Mode', '${s['payment_mode'] ?? ''}'),
+              row('Payment Reference', '${s['payment_reference'] ?? ''}'),
+              row('Sold At', _saleDateTime(s['sold_at'])),
+              row('Notes', '${s['notes'] ?? ''}'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showInvoiceDetailsSheet(Map<String, dynamic> inv) {
+    final status = '${inv['payment_status'] ?? ''}';
+    final color = status == 'Pending' ? AppColors.red : (status == 'Partial' ? AppColors.orange : AppColors.green);
+    final items = (inv['items'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
+
+    Widget row(String label, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(width: 128, child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13))),
+            Expanded(child: Text(value.isEmpty ? '-' : value, style: const TextStyle(fontWeight: FontWeight.w700))),
+          ]),
+        );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * .88),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
+              const SizedBox(height: 14),
+              Row(children: [
+                Container(width: 46, height: 46, decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(14)), child: Icon(Icons.receipt_long_rounded, color: color)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${inv['invoice_number'] ?? '-'}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+                  Text('${inv['supplier'] ?? '-'}', style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600)),
+                ])),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: color.withOpacity(.14), borderRadius: BorderRadius.circular(20)),
+                  child: Text(status, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: color)),
+                ),
+              ]),
+              const Divider(height: 28),
+              row('Branch', '${inv['branch_name'] ?? ''}'),
+              row('Invoice Date', _saleDateTime(inv['invoice_date'])),
+              const SizedBox(height: 8),
+              const Text('Items', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 7),
+              ...items.map((x) => Container(
+                    margin: const EdgeInsets.only(bottom: 7),
+                    padding: const EdgeInsets.all(11),
+                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
+                    child: Row(children: [
+                      Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${x['exam_name'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                        Text('${x['quantity'] ?? 0} × ${_fullMoney(x['unit_price'])}', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                      ])),
+                      Text(_fullMoney(x['total_amount']), style: const TextStyle(fontWeight: FontWeight.w900)),
+                    ]),
+                  )),
+              const Divider(height: 24),
+              row('Subtotal', _fullMoney(inv['subtotal'])),
+              row('Grand Total', _fullMoney(inv['total_amount'])),
+              row('Paid Amount', _fullMoney(inv['paid_amount'])),
+              row('Pending Amount', _fullMoney(inv['balance_amount'])),
+              row('Payment Mode', '${inv['payment_mode'] ?? ''}'),
+              row('Payment Reference', '${inv['payment_reference'] ?? ''}'),
+              row('Notes', '${inv['notes'] ?? ''}'),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -189,6 +534,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       future = load();
     });
+    _loadPendingSales();
   }
 
   String prettyDate(String value) {
@@ -1473,6 +1819,35 @@ class DashboardScreenState extends State<DashboardScreen> {
         ),
 
         actions: [
+          IconButton(
+            tooltip: 'Pending Payments',
+            onPressed: _showPendingPaymentsSheet,
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications_rounded),
+                if (_pendingCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.red,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF9A22C7), width: 1.4),
+                      ),
+                      child: Text(
+                        _pendingCount > 99 ? '99+' : '$_pendingCount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           IconButton(
             tooltip: 'Profile',
             onPressed: () {

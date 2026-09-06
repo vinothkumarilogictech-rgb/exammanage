@@ -1184,6 +1184,19 @@ def _invoice_json(batch):
     expense = Expense.query.get(batch.expense_id) if getattr(batch, 'expense_id', None) else None
     payment_mode = expense.payment_mode if expense else ''
     status = 'Cancelled' if expense and expense.status == 'Inactive' else 'Active'
+
+    if status == 'Cancelled':
+        payment_status = 'Cancelled'
+        paid_amount = 0.0
+    else:
+        payment_status = (expense.payment_status if expense and expense.payment_status else 'Paid')
+        if expense and expense.paid_amount is not None:
+            paid_amount = float(expense.paid_amount)
+        else:
+            # Old rows created before paid_amount existed were always fully paid.
+            paid_amount = total
+    balance_amount = max(total - paid_amount, 0.0) if status == 'Active' else 0.0
+
     return {
         'id': batch.id,
         'invoice_number': batch.batch_number,
@@ -1191,15 +1204,15 @@ def _invoice_json(batch):
         'invoice_date': batch.purchase_date.isoformat() if batch.purchase_date else '',
         'branch_id': batch.branch_id or 0,
         'branch_name': batch.branch.branch_name if batch.branch else '',
-        'payment_status': 'Paid' if status == 'Active' else 'Cancelled',
+        'payment_status': payment_status,
         'payment_mode': payment_mode or '',
-        'payment_reference': '',
+        'payment_reference': (expense.payment_reference or '') if expense else '',
         'subtotal': total,
         'discount': 0,
         'tax': 0,
         'total_amount': total,
-        'paid_amount': total if status == 'Active' else 0,
-        'balance_amount': 0,
+        'paid_amount': paid_amount,
+        'balance_amount': balance_amount,
         'notes': batch.notes or '',
         'status': status,
         'items': list(grouped.values()),
@@ -1234,7 +1247,20 @@ def expense_invoice_create_api():
         return fail('At least one invoice item is required.', 422)
     bid = d.get('branch_id')
     branch_id = int(bid) if str(bid).isdigit() else None
-    created = []
+
+    # One invoice number -> one VoucherBatch row (batch_number is UNIQUE in
+    # the database). Previously a new VoucherBatch was created per line
+    # item, all sharing the same batch_number, which crashed with a 500
+    # (UNIQUE KEY violation) the moment an invoice had more than one item,
+    # and also silently threw a 500 whenever the entered invoice number
+    # matched one already used by an earlier invoice.
+    invoice_number = str(d.get('invoice_number') or '').strip() or f'INV-{datetime.utcnow().strftime("%Y%m%d%H%M%S%f")}'
+    if VoucherBatch.query.filter_by(batch_number=invoice_number).first():
+        return fail(f'Invoice number "{invoice_number}" is already used by another invoice. Please enter a different invoice number.', 422)
+
+    validated_items = []
+    total_quantity = 0
+    total_cost = 0.0
     for item in items:
         exam_type_id = item.get('exam_type_id')
         if not str(exam_type_id).isdigit():
@@ -1249,38 +1275,66 @@ def expense_invoice_create_api():
             return fail('Invalid invoice quantity or unit price.', 422)
         if quantity <= 0 or unit_price <= 0:
             return fail('Invoice quantity and unit price must be greater than 0.', 422)
-        batch = VoucherBatch(
-            batch_number=str(d.get('invoice_number') or '').strip() or f'INV-{datetime.utcnow().strftime("%Y%m%d%H%M%S%f")}',
-            supplier=str(d.get('supplier') or '').strip() or None,
-            purchase_date=datetime.strptime(d.get('invoice_date'), '%Y-%m-%d').date() if d.get('invoice_date') else datetime.utcnow().date(),
-            quantity=quantity,
-            cost_per_voucher=unit_price,
-            default_selling_price=unit_price,
-            total_cost=quantity * unit_price,
-            notes=str(d.get('notes') or '').strip() or None,
-            branch_id=branch_id,
-        )
-        db.session.add(batch); db.session.flush()
-        cat = ExpenseCategory.query.filter(func.lower(ExpenseCategory.name) == 'exam voucher purchase').first()
-        if not cat:
-            cat = ExpenseCategory(name='Exam Voucher Purchase', status='Active'); db.session.add(cat); db.session.flush()
-        expense = Expense(
-            category=cat.name, category_id=cat.id, amount=quantity * unit_price,
-            description=f'Voucher purchase invoice - {batch.batch_number} ({quantity} vouchers, {exam.name})',
-            date_incurred=datetime.combine(batch.purchase_date, datetime.min.time()),
-            branch_id=branch_id, payment_mode=d.get('payment_mode') or 'Other', status='Active'
-        )
-        db.session.add(expense); db.session.flush(); batch.expense_id = expense.id
-        import uuid
+        validated_items.append((exam, quantity, unit_price))
+        total_quantity += quantity
+        total_cost += quantity * unit_price
+
+    batch = VoucherBatch(
+        batch_number=invoice_number,
+        supplier=str(d.get('supplier') or '').strip() or None,
+        purchase_date=datetime.strptime(d.get('invoice_date'), '%Y-%m-%d').date() if d.get('invoice_date') else datetime.utcnow().date(),
+        quantity=total_quantity,
+        cost_per_voucher=(total_cost / total_quantity) if total_quantity else 0,
+        default_selling_price=(total_cost / total_quantity) if total_quantity else 0,
+        total_cost=total_cost,
+        notes=str(d.get('notes') or '').strip() or None,
+        branch_id=branch_id,
+    )
+    db.session.add(batch); db.session.flush()
+
+    cat = ExpenseCategory.query.filter(func.lower(ExpenseCategory.name) == 'exam voucher purchase').first()
+    if not cat:
+        cat = ExpenseCategory(name='Exam Voucher Purchase', status='Active'); db.session.add(cat); db.session.flush()
+    item_summary = ', '.join(f'{quantity} {exam.name}' for exam, quantity, _ in validated_items)
+
+    payment_status = str(d.get('payment_status') or 'Paid').strip()
+    if payment_status not in ('Paid', 'Pending', 'Partial'):
+        payment_status = 'Paid'
+    if payment_status == 'Paid':
+        paid_amount = total_cost
+    elif payment_status == 'Pending':
+        paid_amount = 0.0
+    else:
+        try:
+            paid_amount = float(d.get('paid_amount') or 0)
+        except (ValueError, TypeError):
+            paid_amount = 0.0
+        if paid_amount < 0 or paid_amount > total_cost:
+            return fail('Paid amount must be between 0 and the grand total.', 422)
+        if paid_amount <= 0 or paid_amount >= total_cost:
+            return fail('Enter an amount paid that is less than the grand total for Partial.', 422)
+
+    expense = Expense(
+        category=cat.name, category_id=cat.id, amount=total_cost,
+        description=f'Voucher purchase invoice - {batch.batch_number} ({item_summary})',
+        date_incurred=datetime.combine(batch.purchase_date, datetime.min.time()),
+        branch_id=branch_id, payment_mode=d.get('payment_mode') or 'Other', status='Active',
+        payment_status=payment_status, paid_amount=paid_amount,
+        payment_reference=str(d.get('payment_reference') or '').strip() or None,
+    )
+    db.session.add(expense); db.session.flush(); batch.expense_id = expense.id
+
+    import uuid
+    for exam, quantity, unit_price in validated_items:
         for _ in range(quantity):
             code = f'VCH-{datetime.utcnow().strftime("%Y%m%d")}-{uuid.uuid4().hex[:8].upper()}'
             while Voucher.query.filter_by(voucher_code=code).first():
                 code = f'VCH-{datetime.utcnow().strftime("%Y%m%d")}-{uuid.uuid4().hex[:8].upper()}'
             db.session.add(Voucher(voucher_code=code, batch_id=batch.id, purchase_cost=unit_price,
                                    selling_price=unit_price, branch_id=branch_id, exam_type_id=exam.id, status='Available'))
-        created.append(batch)
+
     db.session.commit()
-    return ok(_invoice_json(created[0]), 'Invoice created successfully.', 201)
+    return ok(_invoice_json(batch), 'Invoice created successfully.', 201)
 
 
 @api_bp.put('/expenses/invoices/<int:invoice_id>/')
@@ -1301,6 +1355,28 @@ def expense_invoice_update_api(invoice_id):
         expense = Expense.query.get(batch.expense_id)
         if expense and 'payment_mode' in d:
             expense.payment_mode = d.get('payment_mode') or 'Other'
+        if expense and 'payment_reference' in d:
+            expense.payment_reference = str(d.get('payment_reference') or '').strip() or None
+        if expense and 'payment_status' in d:
+            total_cost = float(batch.total_cost or 0)
+            payment_status = str(d.get('payment_status') or 'Paid').strip()
+            if payment_status not in ('Paid', 'Pending', 'Partial'):
+                payment_status = 'Paid'
+            if payment_status == 'Paid':
+                paid_amount = total_cost
+            elif payment_status == 'Pending':
+                paid_amount = 0.0
+            else:
+                try:
+                    paid_amount = float(d.get('paid_amount') or 0)
+                except (ValueError, TypeError):
+                    paid_amount = 0.0
+                if paid_amount < 0 or paid_amount > total_cost:
+                    return fail('Paid amount must be between 0 and the grand total.', 422)
+                if paid_amount <= 0 or paid_amount >= total_cost:
+                    return fail('Enter an amount paid that is less than the grand total for Partial.', 422)
+            expense.payment_status = payment_status
+            expense.paid_amount = paid_amount
     db.session.commit()
     return ok(_invoice_json(batch), 'Invoice updated successfully.')
 
