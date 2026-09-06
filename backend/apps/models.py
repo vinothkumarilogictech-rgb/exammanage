@@ -525,6 +525,7 @@ class VoucherSaleHistory(db.Model):
     selling_price = db.Column(db.Float, nullable=False, default=0.0)
     discount = db.Column(db.Float, nullable=False, default=0.0)
     final_amount = db.Column(db.Float, nullable=False, default=0.0)
+    paid_amount = db.Column(db.Float, nullable=False, default=0.0)
     payment_status = db.Column(db.String(20), nullable=False, default='Pending')
     payment_mode = db.Column(db.String(50), nullable=True)
     payment_reference = db.Column(db.String(150), nullable=True)
@@ -532,6 +533,10 @@ class VoucherSaleHistory(db.Model):
     sold_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     voucher = db.relationship('Voucher', backref=db.backref('sale_history', lazy=True))
+
+    @property
+    def balance_amount(self):
+        return max(0.0, (self.final_amount or 0.0) - (self.paid_amount or 0.0))
 
 
 class Voucher(db.Model):

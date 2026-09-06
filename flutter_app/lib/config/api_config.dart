@@ -14,9 +14,17 @@ class ApiConfig {
   static const String _dartDefineUrl =
       String.fromEnvironment('API_SERVER_URL');
 
-   static const String baseUrl = 'http://localhost:5001';
-      
-  ///static const String baseUrl = 'https://exam.ilogicigroup.com';
+  static String get baseUrl {
+    if (_dartDefineUrl.isNotEmpty) {
+      return _dartDefineUrl.replaceFirst(RegExp(r'/$'), '');
+    }
+
+    if (kIsWeb) {
+      return 'http://localhost:5001';
+    }
+
+    return 'http://10.0.2.2:5000';
+  }
 
   static const String apiBasePath = '/api/v1';
 
@@ -45,4 +53,5 @@ class ApiConfig {
   static const String voucherSellPath = '/vouchers/sell/';
   static const String voucherStudentsPath = '/vouchers/students/';
   static const String voucherHistoryPath = '/vouchers/history/';
+  static String voucherPaymentPath(int voucherId) => '/vouchers/$voucherId/payment/';
 }

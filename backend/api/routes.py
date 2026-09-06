@@ -1367,6 +1367,8 @@ def _voucher_json(v):
         'sold_at': latest.sold_at.isoformat() if latest else None,
         'sale_id': latest.id if latest else None,
         'sale_final_amount': latest.final_amount if latest else None,
+        'sale_paid_amount': latest.paid_amount if latest else None,
+        'sale_balance_amount': latest.balance_amount if latest else None,
     }
 
 
@@ -1386,6 +1388,8 @@ def _voucher_history_json(h):
         'selling_price': h.selling_price,
         'discount': h.discount,
         'final_amount': h.final_amount,
+        'paid_amount': h.paid_amount,
+        'balance_amount': h.balance_amount,
         'payment_status': h.payment_status,
         'payment_mode': h.payment_mode,
         'payment_reference': h.payment_reference,
@@ -1440,6 +1444,7 @@ def voucher_dashboard_api():
     histories = history_q.all()
     sales = sum(float(h.final_amount or 0) for h in histories)
     cost = sum(float(h.voucher.purchase_cost or 0) for h in histories)
+    pending = sum(float(h.balance_amount or 0) for h in histories)
     return ok({
         'purchased': purchased,
         'available': available,
@@ -1447,6 +1452,7 @@ def voucher_dashboard_api():
         'used': used,
         'purchase_cost': purchase_cost,
         'sales_revenue': sales,
+        'pending_amount': pending,
         'realized_profit': sales - cost,
         'stock_value': sum(float(v.purchase_cost or 0) for v in q.filter(Voucher.status == 'Available').all()),
         'sale_count': len(histories),
@@ -1569,6 +1575,25 @@ def voucher_sell_api():
         return fail('Invalid selling price or discount.', 422)
     final_amount = max(0.0, selling - discount)
 
+    payment_status = str(d.get('payment_status') or 'Pending')
+    try:
+        if d.get('paid_amount') is not None:
+            paid_amount = float(d.get('paid_amount'))
+        elif payment_status == 'Paid':
+            paid_amount = final_amount
+        elif payment_status == 'Pending':
+            paid_amount = 0.0
+        else:
+            paid_amount = 0.0
+    except (ValueError, TypeError):
+        return fail('Invalid paid amount.', 422)
+    if paid_amount < 0 or paid_amount > final_amount:
+        return fail('Paid amount must be between 0 and the final amount.', 422)
+    if payment_status == 'Paid' and round(paid_amount, 2) != round(final_amount, 2):
+        paid_amount = final_amount
+    if payment_status == 'Pending' and paid_amount != 0:
+        paid_amount = 0.0
+
     # Reuse a voucher-only student by mobile/email when possible; otherwise create one.
     student = None
     if mobile:
@@ -1590,7 +1615,8 @@ def voucher_sell_api():
         voucher_id=v.id, voucher_student_id=student.id,
         student_name=name, mobile=mobile, email=email, address=address, id_number=id_number,
         selling_price=selling, discount=discount, final_amount=final_amount,
-        payment_status=str(d.get('payment_status') or 'Pending'),
+        paid_amount=paid_amount,
+        payment_status=payment_status,
         payment_mode=str(d.get('payment_mode') or '').strip() or None,
         payment_reference=str(d.get('payment_reference') or '').strip() or None,
         notes=str(d.get('notes') or '').strip() or None,
@@ -1606,6 +1632,58 @@ def voucher_sell_api():
     v.selling_price = selling
     db.session.commit()
     return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(history)}, 'Voucher sold successfully.', 201)
+
+
+@api_bp.post('/vouchers/<int:voucher_id>/payment/')
+@api_token_required
+def voucher_payment_update_api(voucher_id):
+    v = Voucher.query.get_or_404(voucher_id)
+    latest = (VoucherSaleHistory.query.filter_by(voucher_id=v.id)
+              .order_by(VoucherSaleHistory.sold_at.desc(), VoucherSaleHistory.id.desc()).first())
+    if not latest:
+        return fail('This voucher has no sale record to update.', 409)
+
+    d = body()
+    payment_status = str(d.get('payment_status') or latest.payment_status)
+    if payment_status not in ('Paid', 'Pending', 'Partial'):
+        return fail('Payment status must be Paid, Pending, or Partial.', 422)
+
+    try:
+        if d.get('paid_amount') is not None:
+            paid_amount = float(d.get('paid_amount'))
+        elif payment_status == 'Paid':
+            paid_amount = latest.final_amount
+        elif payment_status == 'Pending':
+            paid_amount = 0.0
+        else:
+            paid_amount = latest.paid_amount or 0.0
+    except (ValueError, TypeError):
+        return fail('Invalid paid amount.', 422)
+
+    if paid_amount < 0 or paid_amount > latest.final_amount:
+        return fail('Paid amount must be between 0 and the final amount.', 422)
+    if payment_status == 'Paid':
+        paid_amount = latest.final_amount
+    if payment_status == 'Pending':
+        paid_amount = 0.0
+    if payment_status == 'Partial' and (paid_amount <= 0 or paid_amount >= latest.final_amount):
+        return fail('Enter an amount paid that is less than the final amount for a Partial status.', 422)
+
+    latest.payment_status = payment_status
+    latest.paid_amount = paid_amount
+    if d.get('payment_mode') is not None:
+        latest.payment_mode = str(d.get('payment_mode')).strip() or None
+    if d.get('payment_reference') is not None:
+        latest.payment_reference = str(d.get('payment_reference')).strip() or None
+    if d.get('notes') is not None:
+        latest.notes = str(d.get('notes')).strip() or None
+
+    v.payment_status = latest.payment_status
+    v.payment_mode = latest.payment_mode
+    v.payment_reference = latest.payment_reference
+    v.notes = latest.notes
+    db.session.commit()
+    return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(latest)}, 'Payment updated.')
 
 
 @api_bp.post('/vouchers/<int:voucher_id>/assign/')

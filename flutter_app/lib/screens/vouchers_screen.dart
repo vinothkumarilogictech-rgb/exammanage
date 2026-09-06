@@ -418,6 +418,10 @@ class _VouchersScreenState extends State<VouchersScreen>
       0,
       (sum, h) => sum + (double.tryParse('${h['final_amount'] ?? 0}') ?? 0),
     );
+    final totalPending = _filteredHistory.fold<double>(
+      0,
+      (sum, h) => sum + (double.tryParse('${h['balance_amount'] ?? 0}') ?? 0),
+    );
 
     final filterLabel = _selectedHistoryDate == null
         ? 'All Dates'
@@ -461,7 +465,7 @@ class _VouchersScreenState extends State<VouchersScreen>
             ),
             pw.SizedBox(height: 6),
             pw.Text(
-              'Total Sales: Rs ${total.toStringAsFixed(2)}',
+              'Total Sales: Rs ${total.toStringAsFixed(2)}   |   Total Pending: Rs ${totalPending.toStringAsFixed(2)}',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 14),
@@ -472,6 +476,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                 'Mobile',
                 'Sold At',
                 'Amount (Rs)',
+                'Pending (Rs)',
                 'Payment',
                 'Status',
               ],
@@ -482,6 +487,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                   '${h['mobile'] ?? h['student_mobile'] ?? '-'}',
                   dateTime(h['sold_at']),
                   (double.tryParse('${h['final_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
+                  (double.tryParse('${h['balance_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
                   '${h['payment_mode'] ?? '-'}',
                   '${h['payment_status'] ?? '-'}',
                 ];
@@ -519,7 +525,7 @@ class _VouchersScreenState extends State<VouchersScreen>
     }
 
     final buffer = StringBuffer();
-    buffer.writeln('Voucher Code,Student Name,Mobile,Sold At,Amount,Payment Mode,Payment Status,Payment Reference');
+    buffer.writeln('Voucher Code,Student Name,Mobile,Sold At,Amount,Paid Amount,Pending Amount,Payment Mode,Payment Status,Payment Reference');
 
     for (final h in _filteredHistory) {
       buffer.writeln([
@@ -528,6 +534,8 @@ class _VouchersScreenState extends State<VouchersScreen>
         csv(h['mobile'] ?? h['student_mobile']),
         csv(dateTime(h['sold_at'])),
         (double.tryParse('${h['final_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
+        (double.tryParse('${h['paid_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
+        (double.tryParse('${h['balance_amount'] ?? 0}') ?? 0).toStringAsFixed(2),
         csv(h['payment_mode']),
         csv(h['payment_status']),
         csv(h['payment_reference']),
@@ -795,6 +803,11 @@ class _VouchersScreenState extends State<VouchersScreen>
                     Text(money(h['final_amount']), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5)),
                     const SizedBox(height: 5),
                     _statusChip('${h['payment_status'] ?? 'Pending'}'),
+                    if ((double.tryParse('${h['balance_amount'] ?? 0}') ?? 0) > 0) ...[
+                      const SizedBox(height: 4),
+                      Text('Pending ${money(h['balance_amount'])}',
+                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.orange)),
+                    ],
                   ],
                 ),
               ],
@@ -881,6 +894,11 @@ class _VouchersScreenState extends State<VouchersScreen>
                           style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5)),
                       const SizedBox(height: 5),
                       _statusChip('${v['status'] ?? '-'}'),
+                      if ((double.tryParse('${v['sale_balance_amount'] ?? 0}') ?? 0) > 0) ...[
+                        const SizedBox(height: 4),
+                        Text('Pending ${money(v['sale_balance_amount'])}',
+                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.orange)),
+                      ],
                     ],
                   ),
               ],
@@ -964,11 +982,13 @@ class _VouchersScreenState extends State<VouchersScreen>
   }
 
   Widget _input(TextEditingController c, String label, IconData icon,
-      {TextInputType? keyboard, int maxLines = 1}) {
+      {TextInputType? keyboard, int maxLines = 1, ValueChanged<String>? onChanged, bool enabled = true}) {
     return TextField(
         controller: c,
         keyboardType: keyboard,
         maxLines: maxLines,
+        onChanged: onChanged,
+        enabled: enabled,
         style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
@@ -1267,13 +1287,27 @@ class _VouchersScreenState extends State<VouchersScreen>
           ],
           if (hs.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _detailSection('Sale & Payment', [
-              _detail('Sold At', dateTime(hs.first['sold_at'])),
-              _detail('Amount', money(hs.first['final_amount'])),
-              _detail('Discount', money(hs.first['discount'])),
-              _detail('Payment', '${hs.first['payment_mode'] ?? '-'} • ${hs.first['payment_status'] ?? '-'}'),
-              _detail('Reference', '${hs.first['payment_reference'] ?? '-'}'),
-            ]),
+            _detailSection(
+              'Sale & Payment',
+              [
+                _detail('Sold At', dateTime(hs.first['sold_at'])),
+                _detail('Amount', money(hs.first['final_amount'])),
+                _detail('Discount', money(hs.first['discount'])),
+                _detail('Paid Amount', money(hs.first['paid_amount'])),
+                _detail('Pending Amount', money(hs.first['balance_amount'])),
+                _detail('Payment', '${hs.first['payment_mode'] ?? '-'} • ${hs.first['payment_status'] ?? '-'}'),
+                _detail('Reference', '${hs.first['payment_reference'] ?? '-'}'),
+              ],
+              trailing: TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showUpdatePaymentSheet(v, hs.first);
+                },
+                icon: const Icon(Icons.edit_outlined, size: 17),
+                label: const Text('Edit'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(horizontal: 6)),
+              ),
+            ),
           ],
           const SizedBox(height: 16),
           const Text('Voucher History', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
@@ -1300,7 +1334,148 @@ class _VouchersScreenState extends State<VouchersScreen>
     );
   }
 
-  Widget _detailSection(String title, List<Widget> children) {
+  // ================================================================
+  // UPDATE PAYMENT SHEET (change Pending/Partial -> Paid, or record a
+  // partial payment amount, on an already-sold voucher)
+  // ================================================================
+
+  Future<void> _showUpdatePaymentSheet(Map<String, dynamic> v, Map<String, dynamic> sale) async {
+    final finalAmount = double.tryParse('${sale['final_amount'] ?? 0}') ?? 0;
+    final paidAmount = TextEditingController(text: '${sale['paid_amount'] ?? 0}');
+    final reference = TextEditingController(text: '${sale['payment_reference'] ?? ''}');
+    final notes = TextEditingController(text: '${sale['notes'] ?? ''}');
+    String paymentMode = '${sale['payment_mode'] ?? 'Cash'}';
+    if (!['Cash', 'UPI', 'Card', 'Bank Transfer'].contains(paymentMode)) paymentMode = 'Cash';
+    String paymentStatus = '${sale['payment_status'] ?? 'Pending'}';
+    if (!['Paid', 'Pending', 'Partial'].contains(paymentStatus)) paymentStatus = 'Pending';
+    bool saving = false;
+
+    void syncPaidAmount() {
+      if (paymentStatus == 'Paid') {
+        paidAmount.text = finalAmount.toStringAsFixed(2);
+      } else if (paymentStatus == 'Pending') {
+        paidAmount.text = '0';
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .9),
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: SingleChildScrollView(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
+              const SizedBox(height: 14),
+              Row(children: [
+                Container(width: 46, height: 46, decoration: BoxDecoration(color: AppColors.primary.withOpacity(.10), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.edit_outlined, color: AppColors.primary)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Update Payment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  Text('${v['voucher_code'] ?? ''} • ${sale['student_name'] ?? ''}', style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600)),
+                ])),
+              ]),
+              const SizedBox(height: 18),
+              Row(children: [
+                Expanded(child: _dropdownField<String>(label: 'Payment Mode', value: paymentMode, items: const ['Cash', 'UPI', 'Card', 'Bank Transfer'], onChanged: (val) => setSheetState(() => paymentMode = val!))),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: _dropdownField<String>(
+                        label: 'Payment Status',
+                        value: paymentStatus,
+                        items: const ['Paid', 'Pending', 'Partial'],
+                        onChanged: (val) => setSheetState(() {
+                              paymentStatus = val!;
+                              syncPaidAmount();
+                            }))),
+              ]),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                    child: _input(paidAmount, 'Paid Amount', Icons.payments_outlined,
+                        keyboard: TextInputType.numberWithOptions(decimal: true),
+                        enabled: paymentStatus == 'Partial',
+                        onChanged: (_) => setSheetState(() {}))),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(color: const Color(0xFFF6F5FA), borderRadius: BorderRadius.circular(14)),
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Pending Amount', style: TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+                        Text(
+                          money((finalAmount - (double.tryParse(paidAmount.text.trim()) ?? 0)).clamp(0, double.infinity)),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: (finalAmount - (double.tryParse(paidAmount.text.trim()) ?? 0)) > 0 ? AppColors.orange : AppColors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              _input(reference, 'Payment Reference (optional)', Icons.tag_outlined),
+              const SizedBox(height: 10),
+              _input(notes, 'Notes (optional)', Icons.short_text_outlined, maxLines: 2),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          final paid = double.tryParse(paidAmount.text.trim()) ?? 0;
+                          if (paid < 0 || paid > finalAmount) {
+                            _toast('Paid amount must be between 0 and the final amount.', error: true);
+                            return;
+                          }
+                          if (paymentStatus == 'Partial' && (paid <= 0 || paid >= finalAmount)) {
+                            _toast('Enter an amount paid that is less than the final amount for Partial.', error: true);
+                            return;
+                          }
+                          setSheetState(() => saving = true);
+                          try {
+                            await api.updateVoucherPayment(v['id'], {
+                              'payment_status': paymentStatus,
+                              'paid_amount': paymentStatus == 'Paid' ? finalAmount : (paymentStatus == 'Pending' ? 0 : paid),
+                              'payment_mode': paymentMode,
+                              'payment_reference': reference.text.trim(),
+                              'notes': notes.text.trim(),
+                            });
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            _toast('Payment updated.');
+                            await load();
+                          } catch (e) {
+                            setSheetState(() => saving = false);
+                            _toast('Update failed: $e', error: true);
+                          }
+                        },
+                  icon: saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle_outline),
+                  label: Text(saving ? 'Saving...' : 'Save'),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailSection(String title, List<Widget> children, {Widget? trailing}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1309,7 +1484,10 @@ class _VouchersScreenState extends State<VouchersScreen>
       ),
       padding: const EdgeInsets.all(14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+        Row(children: [
+          Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w900))),
+          if (trailing != null) trailing,
+        ]),
         const SizedBox(height: 7),
         ...children,
       ]),
@@ -1345,10 +1523,30 @@ class _VouchersScreenState extends State<VouchersScreen>
     final idNumber = TextEditingController();
     final price = TextEditingController(text: '${selected['selling_price'] ?? 0}');
     final discount = TextEditingController(text: '0');
+    final paidAmount = TextEditingController();
     final reference = TextEditingController();
     final notes = TextEditingController();
     String paymentMode = 'Cash';
     String paymentStatus = 'Paid';
+
+    double finalAmountOf() {
+      final sell = double.tryParse(price.text.trim()) ?? 0;
+      final disc = double.tryParse(discount.text.trim()) ?? 0;
+      return (sell - disc).clamp(0, double.infinity);
+    }
+
+    // Keep the Paid Amount field in sync with the selected payment status:
+    // Paid -> full final amount, Pending -> 0, Partial -> whatever the
+    // operator types in (defaults to empty so they must enter it).
+    void syncPaidAmount() {
+      if (paymentStatus == 'Paid') {
+        paidAmount.text = finalAmountOf().toStringAsFixed(2);
+      } else if (paymentStatus == 'Pending') {
+        paidAmount.text = '0';
+      }
+    }
+
+    syncPaidAmount();
 
     await showModalBottomSheet(
       context: context,
@@ -1422,6 +1620,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                       setSheetState(() {
                         selected = v;
                         price.text = '${v['selling_price'] ?? 0}';
+                        syncPaidAmount();
                       });
                     },
                   ),
@@ -1443,15 +1642,66 @@ class _VouchersScreenState extends State<VouchersScreen>
                   _sectionTitle('3. Sale & Payment'),
                   const SizedBox(height: 9),
                   Row(children: [
-                    Expanded(child: _input(price, 'Selling Price', Icons.currency_rupee, keyboard: TextInputType.numberWithOptions(decimal: true))),
+                    Expanded(
+                        child: _input(price, 'Selling Price', Icons.currency_rupee,
+                            keyboard: TextInputType.numberWithOptions(decimal: true),
+                            onChanged: (_) => setSheetState(syncPaidAmount))),
                     const SizedBox(width: 10),
-                    Expanded(child: _input(discount, 'Discount', Icons.discount_outlined, keyboard: TextInputType.numberWithOptions(decimal: true))),
+                    Expanded(
+                        child: _input(discount, 'Discount', Icons.discount_outlined,
+                            keyboard: TextInputType.numberWithOptions(decimal: true),
+                            onChanged: (_) => setSheetState(syncPaidAmount))),
                   ]),
                   const SizedBox(height: 10),
                   Row(children: [
                     Expanded(child: _dropdownField<String>(label: 'Payment Mode', value: paymentMode, items: const ['Cash', 'UPI', 'Card', 'Bank Transfer'], onChanged: (v) => setSheetState(() => paymentMode = v!))),
                     const SizedBox(width: 10),
-                    Expanded(child: _dropdownField<String>(label: 'Payment Status', value: paymentStatus, items: const ['Paid', 'Pending', 'Partial'], onChanged: (v) => setSheetState(() => paymentStatus = v!))),
+                    Expanded(
+                        child: _dropdownField<String>(
+                            label: 'Payment Status',
+                            value: paymentStatus,
+                            items: const ['Paid', 'Pending', 'Partial'],
+                            onChanged: (v) => setSheetState(() {
+                                  paymentStatus = v!;
+                                  syncPaidAmount();
+                                }))),
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(
+                        child: _input(
+                            paidAmount, 'Paid Amount', Icons.payments_outlined,
+                            keyboard: TextInputType.numberWithOptions(decimal: true),
+                            enabled: paymentStatus == 'Partial',
+                            onChanged: (_) => setSheetState(() {}))),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(color: const Color(0xFFF6F5FA), borderRadius: BorderRadius.circular(14)),
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Pending Amount', style: TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+                            Text(
+                              money(
+                                (finalAmountOf() - (double.tryParse(paidAmount.text.trim()) ?? 0)).clamp(0, double.infinity),
+                              ),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: (finalAmountOf() - (double.tryParse(paidAmount.text.trim()) ?? 0)) > 0
+                                    ? AppColors.orange
+                                    : AppColors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ]),
                   const SizedBox(height: 10),
                   _input(reference, 'Payment Reference (optional)', Icons.tag_outlined),
@@ -1481,6 +1731,16 @@ class _VouchersScreenState extends State<VouchersScreen>
                                 _toast('Enter a valid selling price and discount.', error: true);
                                 return;
                               }
+                              final finalAmt = sell - disc;
+                              final paid = double.tryParse(paidAmount.text.trim()) ?? 0;
+                              if (paid < 0 || paid > finalAmt) {
+                                _toast('Paid amount must be between 0 and the final amount.', error: true);
+                                return;
+                              }
+                              if (paymentStatus == 'Partial' && (paid <= 0 || paid >= finalAmt)) {
+                                _toast('Enter how much the candidate actually paid (less than the final amount) for a Partial sale.', error: true);
+                                return;
+                              }
                               setSheetState(() => saving = true);
                               try {
                                 await api.sellVoucher({
@@ -1492,6 +1752,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                                   'id_number': idNumber.text.trim(),
                                   'selling_price': sell,
                                   'discount': disc,
+                                  'paid_amount': paymentStatus == 'Paid' ? finalAmt : (paymentStatus == 'Pending' ? 0 : paid),
                                   'payment_status': paymentStatus,
                                   'payment_mode': paymentMode,
                                   'payment_reference': reference.text.trim(),
