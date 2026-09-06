@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "310238358413",
+    "project_id": "exammanagement-bfb0d",
+    "storage_bucket": "exammanagement-bfb0d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:310238358413:android:92289bd0f0cde295316bc4",
+        "android_client_info": {
+          "package_name": "com.example.office_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBp8EgriWn6xAEIomAFrl_b_j1mHJ-D170"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

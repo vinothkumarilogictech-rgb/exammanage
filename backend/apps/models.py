@@ -656,3 +656,73 @@ class ExpenseSubmissionToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     token = db.Column(db.String(64), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # ============================================================
+# FIREBASE PUSH NOTIFICATIONS
+# ============================================================
+
+class DeviceToken(db.Model):
+    __tablename__ = 'device_token'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Admin / Employee
+    user_type = db.Column(db.String(20), nullable=False, default='admin')
+
+    # User.id or Employee.id
+    user_id = db.Column(db.Integer, nullable=False)
+
+    # Firebase Cloud Messaging token
+    token = db.Column(db.String(500), unique=True, nullable=False)
+
+    platform = db.Column(db.String(20), nullable=True)  # android / ios
+
+    is_active = db.Column(db.Boolean, default=True)
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+
+class PaymentNotificationLog(db.Model):
+    __tablename__ = 'payment_notification_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # VoucherSaleHistory.id
+    voucher_sale_id = db.Column(
+        db.Integer,
+        db.ForeignKey('voucher_sale_history.id'),
+        nullable=False
+    )
+
+    # Date on which notification was sent
+    notification_date = db.Column(
+        db.Date,
+        nullable=False
+    )
+
+    payment_status = db.Column(
+        db.String(20),
+        nullable=False
+    )
+
+    sent_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            'voucher_sale_id',
+            'notification_date',
+            name='uq_payment_notification_daily'
+        ),
+    )

@@ -6,8 +6,12 @@ from sqlalchemy import func, or_
 from . import api_bp
 from .auth import authenticate, issue_tokens, verify_token, api_token_required
 from .serializers import *
-from apps.models import (db, Branch, ExamType, BranchExam, ExamSession, Candidate, ExamAttempt, ExamTeam,
-                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate, Employee, EmployeeCredential)
+from apps.models import (
+    db, Branch, ExamType, BranchExam, ExamSession, Candidate,
+    ExamAttempt, ExamTeam, Expense, ExpenseCategory, ExpenseBudget,
+    Voucher, SessionCandidate, Employee, EmployeeCredential,
+    DeviceToken
+)
 
 
 def ok(data=None, message=None, status=200):
@@ -1710,77 +1714,129 @@ def voucher_sell_api():
     return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(history)}, 'Voucher sold successfully.', 201)
 
 
-@api_bp.post('/vouchers/<int:voucher_id>/payment/')
-@api_token_required
-def voucher_payment_update_api(voucher_id):
-    v = Voucher.query.get_or_404(voucher_id)
-    latest = (VoucherSaleHistory.query.filter_by(voucher_id=v.id)
-              .order_by(VoucherSaleHistory.sold_at.desc(), VoucherSaleHistory.id.desc()).first())
-    if not latest:
-        return fail('This voucher has no sale record to update.', 409)
+    @api_bp.post('/vouchers/<int:voucher_id>/payment/')
+    @api_token_required
+    def voucher_payment_update_api(voucher_id):
+        v = Voucher.query.get_or_404(voucher_id)
+        latest = (VoucherSaleHistory.query.filter_by(voucher_id=v.id)
+                .order_by(VoucherSaleHistory.sold_at.desc(), VoucherSaleHistory.id.desc()).first())
+        if not latest:
+            return fail('This voucher has no sale record to update.', 409)
 
-    d = body()
-    payment_status = str(d.get('payment_status') or latest.payment_status)
-    if payment_status not in ('Paid', 'Pending', 'Partial'):
-        return fail('Payment status must be Paid, Pending, or Partial.', 422)
+        d = body()
+        payment_status = str(d.get('payment_status') or latest.payment_status)
+        if payment_status not in ('Paid', 'Pending', 'Partial'):
+            return fail('Payment status must be Paid, Pending, or Partial.', 422)
 
-    try:
-        if d.get('paid_amount') is not None:
-            paid_amount = float(d.get('paid_amount'))
-        elif payment_status == 'Paid':
+        try:
+            if d.get('paid_amount') is not None:
+                paid_amount = float(d.get('paid_amount'))
+            elif payment_status == 'Paid':
+                paid_amount = latest.final_amount
+            elif payment_status == 'Pending':
+                paid_amount = 0.0
+            else:
+                paid_amount = latest.paid_amount or 0.0
+        except (ValueError, TypeError):
+            return fail('Invalid paid amount.', 422)
+
+        if paid_amount < 0 or paid_amount > latest.final_amount:
+            return fail('Paid amount must be between 0 and the final amount.', 422)
+        if payment_status == 'Paid':
             paid_amount = latest.final_amount
-        elif payment_status == 'Pending':
+        if payment_status == 'Pending':
             paid_amount = 0.0
-        else:
-            paid_amount = latest.paid_amount or 0.0
-    except (ValueError, TypeError):
-        return fail('Invalid paid amount.', 422)
+        if payment_status == 'Partial' and (paid_amount <= 0 or paid_amount >= latest.final_amount):
+            return fail('Enter an amount paid that is less than the final amount for a Partial status.', 422)
 
-    if paid_amount < 0 or paid_amount > latest.final_amount:
-        return fail('Paid amount must be between 0 and the final amount.', 422)
-    if payment_status == 'Paid':
-        paid_amount = latest.final_amount
-    if payment_status == 'Pending':
-        paid_amount = 0.0
-    if payment_status == 'Partial' and (paid_amount <= 0 or paid_amount >= latest.final_amount):
-        return fail('Enter an amount paid that is less than the final amount for a Partial status.', 422)
+        latest.payment_status = payment_status
+        latest.paid_amount = paid_amount
+        if d.get('payment_mode') is not None:
+            latest.payment_mode = str(d.get('payment_mode')).strip() or None
+        if d.get('payment_reference') is not None:
+            latest.payment_reference = str(d.get('payment_reference')).strip() or None
+        if d.get('notes') is not None:
+            latest.notes = str(d.get('notes')).strip() or None
 
-    latest.payment_status = payment_status
-    latest.paid_amount = paid_amount
-    if d.get('payment_mode') is not None:
-        latest.payment_mode = str(d.get('payment_mode')).strip() or None
-    if d.get('payment_reference') is not None:
-        latest.payment_reference = str(d.get('payment_reference')).strip() or None
-    if d.get('notes') is not None:
-        latest.notes = str(d.get('notes')).strip() or None
-
-    v.payment_status = latest.payment_status
-    v.payment_mode = latest.payment_mode
-    v.payment_reference = latest.payment_reference
-    v.notes = latest.notes
-    db.session.commit()
-    return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(latest)}, 'Payment updated.')
+        v.payment_status = latest.payment_status
+        v.payment_mode = latest.payment_mode
+        v.payment_reference = latest.payment_reference
+        v.notes = latest.notes
+        db.session.commit()
+        return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(latest)}, 'Payment updated.')
 
 
-@api_bp.post('/vouchers/<int:voucher_id>/assign/')
-@api_token_required
-def voucher_assign_api(voucher_id):
-    # Backward-compatible endpoint for older clients. New UI uses /sell/ and
-    # never reads/writes Exam Management Candidate records.
-    d = body()
-    if d.get('student_name'):
-        d['voucher_id'] = voucher_id
-        return voucher_sell_api()
-    return fail('Voucher sales now require voucher student details. Use the Sell Voucher form.', 422)
+    @api_bp.post('/vouchers/<int:voucher_id>/assign/')
+    @api_token_required
+    def voucher_assign_api(voucher_id):
+        # Backward-compatible endpoint for older clients. New UI uses /sell/ and
+        # never reads/writes Exam Management Candidate records.
+        d = body()
+        if d.get('student_name'):
+            d['voucher_id'] = voucher_id
+            return voucher_sell_api()
+        return fail('Voucher sales now require voucher student details. Use the Sell Voucher form.', 422)
 
 
-@api_bp.post('/vouchers/<int:voucher_id>/use/')
-@api_token_required
-def voucher_use_api(voucher_id):
-    v = Voucher.query.get_or_404(voucher_id)
-    if v.status not in ('Sold', 'Assigned'):
-        return fail('Only sold vouchers can be marked as used.', 409)
-    v.status = 'Used'
-    v.used_at = datetime.utcnow()
-    db.session.commit()
-    return ok(_voucher_json(v), 'Voucher marked as used.')
+    @api_bp.post('/vouchers/<int:voucher_id>/use/')
+    @api_token_required
+    def voucher_use_api(voucher_id):
+        v = Voucher.query.get_or_404(voucher_id)
+        if v.status not in ('Sold', 'Assigned'):
+            return fail('Only sold vouchers can be marked as used.', 409)
+        v.status = 'Used'
+        v.used_at = datetime.utcnow()
+        db.session.commit()
+        return ok(_voucher_json(v), 'Voucher marked as used.')
+
+    @api_bp.post('/notifications/device-token/')
+    @api_token_required
+    def register_device_token():
+        data = body()
+
+        token = (data.get('token') or '').strip()
+        platform = (data.get('platform') or 'android').strip().lower()
+
+        if not token:
+            return fail('FCM device token is required.', 400)
+
+        identity = g.api_identity
+
+        user_type = identity.get('role', 'Admin')
+
+        try:
+            user_id = int(identity.get('sub'))
+        except (TypeError, ValueError):
+            return fail('Invalid user identity.', 401)
+
+        device = DeviceToken.query.filter_by(token=token).first()
+
+        if device:
+            device.user_type = user_type
+            device.user_id = user_id
+            device.platform = platform
+            device.is_active = True
+            device.updated_at = datetime.utcnow()
+
+            db.session.commit()
+
+            return ok(
+                message='FCM device token updated successfully.'
+            )
+
+        device = DeviceToken(
+            user_type=user_type,
+            user_id=user_id,
+            token=token,
+            platform=platform,
+            is_active=True
+        )
+
+        db.session.add(device)
+        db.session.commit()
+
+        return ok(
+            message='FCM device token registered successfully.',
+            status=201
+        )
+        
