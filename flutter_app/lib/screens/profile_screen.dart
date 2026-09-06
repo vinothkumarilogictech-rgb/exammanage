@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/dio_client.dart';
@@ -7,7 +8,6 @@ import '../services/session_service.dart';
 const _brand = Color(0xFF9A22C7);
 const _brandDark = Color(0xFF6C1FB0);
 const _brandSoft = Color(0xFFEDE9FE);
-
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -47,34 +47,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final employeeId = auth.employeeId!;
 
         // Get employee details
-        final employeeResponse =
-            await api.employee(employeeId);
+        final employeeResponse = await api.employee(employeeId);
 
         // Get own salary history
-        final salaryResponse =
-            await api.employeeSalaryHistory(employeeId);
+        final salaryResponse = await api.employeeSalaryHistory(employeeId);
 
         // Employee response
         if (employeeResponse.data is Map) {
-          final responseData =
-              Map<String, dynamic>.from(
-            employeeResponse.data,
-          );
+          final responseData = Map<String, dynamic>.from(employeeResponse.data);
 
           final data = responseData['data'];
 
           if (data is Map) {
-            employee =
-                Map<String, dynamic>.from(data);
+            employee = Map<String, dynamic>.from(data);
           }
         }
 
         // Salary response
         if (salaryResponse.data is Map) {
-          final responseData =
-              Map<String, dynamic>.from(
-            salaryResponse.data,
-          );
+          final responseData = Map<String, dynamic>.from(salaryResponse.data);
 
           final data = responseData['data'];
 
@@ -84,12 +75,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     } catch (e) {
-      debugPrint(
-        'Profile loading error: $e',
-      );
+      debugPrint('Profile loading error: $e');
 
-      loadError =
-          'Unable to load profile information.';
+      loadError = 'Unable to load profile information.';
     }
 
     if (mounted) {
@@ -104,16 +92,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ============================================================
 
   Future<void> _adminCredentials() async {
-    final old =
-        await SessionService.getAdminCredentials();
+    final old = await SessionService.getAdminCredentials();
 
-    final usernameController =
-        TextEditingController(
+    final usernameController = TextEditingController(
       text: old['username'] ?? 'admin',
     );
 
-    final passwordController =
-        TextEditingController(
+    final passwordController = TextEditingController(
       text: old['password'] ?? '1234',
     );
 
@@ -123,9 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'Admin Credentials',
-          ),
+          title: const Text('Admin Credentials'),
 
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -134,8 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 controller: usernameController,
                 decoration: const InputDecoration(
                   labelText: 'User ID',
-                  prefixIcon:
-                      Icon(Icons.person_outline),
+                  prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
 
@@ -146,8 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Password',
-                  prefixIcon:
-                      Icon(Icons.lock_outline),
+                  prefixIcon: Icon(Icons.lock_outline),
                 ),
               ),
             ],
@@ -163,29 +144,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             FilledButton(
               onPressed: () async {
-                final newUsername =
-                    usernameController.text.trim();
+                final newUsername = usernameController.text.trim();
 
-                final newPassword =
-                    passwordController.text;
+                final newPassword = passwordController.text;
 
-                if (newUsername.isEmpty ||
-                    newPassword.isEmpty) {
-                  ScaffoldMessenger.of(
-                    dialogContext,
-                  ).showSnackBar(
+                if (newUsername.isEmpty || newPassword.isEmpty) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        'User ID and Password are required.',
-                      ),
+                      content: Text('User ID and Password are required.'),
                     ),
                   );
 
                   return;
                 }
 
-                await SessionService
-                    .saveAdminCredentials(
+                await SessionService.saveAdminCredentials(
                   username: newUsername,
                   password: newPassword,
                 );
@@ -194,13 +167,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 Navigator.pop(dialogContext);
 
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Admin credentials updated.',
-                    ),
-                  ),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Admin credentials updated.')),
                 );
               },
               child: const Text('Save'),
@@ -215,6 +183,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ============================================================
+  // LOGOUT CONFIRMATION
+  // ============================================================
+
+  Future<void> _confirmLogout(AuthProvider auth) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text(
+            'Are you sure you want to logout from this account?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await auth.logout();
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
+  // ============================================================
   // EMPLOYEE PROFILE CARD
   // ============================================================
 
@@ -222,118 +225,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (employee == null) {
       return Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text(
-            'Employee details are not available.',
-          ),
+          child: Text('Employee details are not available.'),
         ),
       );
     }
 
-    final name =
-        '${employee!['full_name'] ?? ''}';
+    final name = '${employee!['full_name'] ?? ''}';
 
-    final designation =
-        '${employee!['designation'] ?? ''}';
+    final designation = '${employee!['designation'] ?? ''}';
 
-    final email =
-        '${employee!['email'] ?? ''}';
+    final email = '${employee!['email'] ?? ''}';
 
-    final phone =
-        '${employee!['contact_number'] ?? ''}';
+    final phone = '${employee!['contact_number'] ?? ''}';
 
-    final branch =
-        '${employee!['branch_name'] ?? employee!['branch'] ?? ''}';
+    final branch = '${employee!['branch_name'] ?? employee!['branch'] ?? ''}';
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Employee Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
 
             const SizedBox(height: 16),
 
-            _detailRow(
-              Icons.person_outline,
-              'Name',
-              name,
-            ),
+            _detailRow(Icons.person_outline, 'Name', name),
 
-            _detailRow(
-              Icons.work_outline,
-              'Designation',
-              designation,
-            ),
+            _detailRow(Icons.work_outline, 'Designation', designation),
 
             if (email.isNotEmpty)
-              _detailRow(
-                Icons.email_outlined,
-                'Email',
-                email,
-              ),
+              _detailRow(Icons.email_outlined, 'Email', email),
 
             if (phone.isNotEmpty)
-              _detailRow(
-                Icons.phone_outlined,
-                'Contact',
-                phone,
-              ),
+              _detailRow(Icons.phone_outlined, 'Contact', phone),
 
             if (branch.isNotEmpty)
-              _detailRow(
-                Icons.business_outlined,
-                'Branch',
-                branch,
-              ),
+              _detailRow(Icons.business_outlined, 'Branch', branch),
           ],
         ),
       ),
     );
   }
 
-  Widget _detailRow(
-    IconData icon,
-    String title,
-    String value,
-  ) {
+  Widget _detailRow(IconData icon, String title, String value) {
     return Padding(
-      padding:
-          const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 21,
-          ),
+          Icon(icon, size: 21),
 
           const SizedBox(width: 12),
 
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
 
                 const SizedBox(height: 2),
@@ -359,17 +318,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _salaryHistory() {
     return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
 
         const Text(
           'My Salary History',
-          style: TextStyle(
-            fontSize: 19,
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
         ),
 
         const SizedBox(height: 8),
@@ -378,51 +333,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Card(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: Text(
-                'No salary payments yet.',
-              ),
+              child: Text('No salary payments yet.'),
             ),
           )
         else
-          ...salary.map(
-            (item) {
-              final data =
-                  item is Map
-                      ? Map<String, dynamic>.from(item)
-                      : <String, dynamic>{};
+          ...salary.map((item) {
+            final data = item is Map
+                ? Map<String, dynamic>.from(item)
+                : <String, dynamic>{};
 
-              final amount =
-                  data['amount'] ?? 0;
+            final amount = data['amount'] ?? 0;
 
-              final date =
-                  data['date_incurred'] ??
-                      data['date'] ??
-                      '';
+            final date = data['date_incurred'] ?? data['date'] ?? '';
 
-              final mode =
-                  data['payment_mode'] ?? '';
+            final mode = data['payment_mode'] ?? '';
 
-              return Card(
-                margin:
-                    const EdgeInsets.only(
-                  bottom: 8,
-                ),
-                child: ListTile(
-                  leading: Container(width: 46, height: 46, decoration: BoxDecoration(color: _brandSoft, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.payments_outlined, color: _brandDark)),
-                  title: Text(
-                    '₹ $amount',
-                    style: const TextStyle(
-                      fontWeight:
-                          FontWeight.w700,
-                    ),
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: _brandSoft,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  subtitle: Text(
-                    '$date • $mode',
-                  ),
+                  child: const Icon(Icons.payments_outlined, color: _brandDark),
                 ),
-              );
-            },
-          ),
+                title: Text(
+                  '₹ $amount',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text('$date • $mode'),
+              ),
+            );
+          }),
       ],
     );
   }
@@ -450,7 +395,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
             boxShadow: [
               BoxShadow(
                 color: Color(0x559A22C7),
@@ -462,9 +406,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       body: loading
-          ? const Center(
-              child: CircularProgressIndicator(color: _brand),
-            )
+          ? const Center(child: CircularProgressIndicator(color: _brand))
           : RefreshIndicator(
               color: _brand,
               onRefresh: _loadProfile,
@@ -583,7 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surfaceAlt,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: const Color(0xFFEDE9FE)),
                       boxShadow: const [
@@ -606,7 +548,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: _brandSoft,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.logout_rounded, color: _brandDark),
+                        child: const Icon(
+                          Icons.logout_rounded,
+                          color: _brandDark,
+                        ),
                       ),
                       title: const Text(
                         'Logout',
@@ -614,7 +559,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       subtitle: const Text('Sign out from this account'),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () async => auth.logout(),
+                      onTap: () => _confirmLogout(auth),
                     ),
                   ),
                 ],
@@ -649,11 +594,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFEDE9FE)),
         boxShadow: const [
-          BoxShadow(color: Color(0x169A22C7), blurRadius: 14, offset: Offset(0, 6)),
+          BoxShadow(
+            color: Color(0x169A22C7),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
         ],
       ),
       child: child,
@@ -688,5 +637,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
 }

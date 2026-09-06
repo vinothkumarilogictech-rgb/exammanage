@@ -131,7 +131,7 @@ class _ScheduledCandidatesScreenState extends State<ScheduledCandidatesScreen> {
             children: [
               // Search & Filter Header
               Container(
-                color: Colors.white,
+                color: AppColors.surface,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                 child: Column(
                   children: [
@@ -148,14 +148,14 @@ class _ScheduledCandidatesScreenState extends State<ScheduledCandidatesScreen> {
                               )
                             : null,
                         filled: true,
-                        fillColor: const Color(0xFFF9FAFB),
+                        fillColor: AppColors.searchFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: BorderSide(color: AppColors.searchBorder),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: BorderSide(color: AppColors.searchBorder),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
@@ -220,7 +220,7 @@ class _ScheduledCandidatesScreenState extends State<ScheduledCandidatesScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -350,7 +350,7 @@ class _CandidateCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [

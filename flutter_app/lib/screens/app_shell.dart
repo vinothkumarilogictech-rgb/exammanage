@@ -11,13 +11,42 @@ import 'vouchers_screen.dart';
 import 'employees_screen.dart';
 import 'profile_screen.dart';
 
-class AppShell extends StatefulWidget { const AppShell({super.key}); @override State<AppShell> createState() => _AppShellState(); }
+class AppShell extends StatefulWidget {
+  const AppShell({super.key});
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
 class _AppShellState extends State<AppShell> {
-  int index=0; final _dashboardKey=GlobalKey<DashboardScreenState>(); final _expenseKey=GlobalKey<ExpensesScreenState>(); late List<Widget> pages;
-  @override void initState(){super.initState(); final employee=context.read<AuthProvider>().role.toLowerCase()=='employee'; pages=[DashboardScreen(key:_dashboardKey),const BranchesScreen(),const ExamsScreen(),if(!employee) ExpensesScreen(key:_expenseKey),if(!employee) const VouchersScreen(),if(!employee) EmployeesScreen()];}
-  void profile(){Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfileScreen()));}
-  @override Widget build(BuildContext context){
-    final auth=context.watch<AuthProvider>();
+  int index = 0;
+  final _dashboardKey = GlobalKey<DashboardScreenState>();
+  final _expenseKey = GlobalKey<ExpensesScreenState>();
+  late List<Widget> pages;
+  late bool employee;
+  @override
+  void initState() {
+    super.initState();
+    employee = context.read<AuthProvider>().role.toLowerCase() == 'employee';
+    pages = [
+      DashboardScreen(key: _dashboardKey),
+      if (!employee) const BranchesScreen(),
+      const ExamsScreen(),
+      if (!employee) ExpensesScreen(key: _expenseKey),
+      if (!employee) const VouchersScreen(),
+      if (!employee) EmployeesScreen(),
+    ];
+  }
+
+  void profile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     return Scaffold(
       body: IndexedStack(index: index, children: pages),
       bottomNavigationBar: GradientBottomNavBar(
@@ -28,26 +57,65 @@ class _AppShellState extends State<AppShell> {
         },
         height: 72,
         destinations: [
-          const GradientNavDestination(icon: Icons.dashboard_outlined, selectedIcon: Icons.dashboard, label: 'Dashboard'),
-          const GradientNavDestination(icon: Icons.account_tree_outlined, selectedIcon: Icons.account_tree, label: 'Branches'),
-          const GradientNavDestination(icon: Icons.school_outlined, selectedIcon: Icons.school, label: 'Exams'),
-          if (auth.role != 'Employee') const GradientNavDestination(icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long, label: 'Expense'),
-          if (auth.role != 'Employee') const GradientNavDestination(icon: Icons.confirmation_num_outlined, selectedIcon: Icons.confirmation_num, label: 'Vouchers'),
-          if (auth.role != 'Employee') const GradientNavDestination(icon: Icons.badge_outlined, selectedIcon: Icons.badge, label: 'Employees'),
+          const GradientNavDestination(
+            icon: Icons.dashboard_outlined,
+            selectedIcon: Icons.dashboard,
+            label: 'Dashboard',
+          ),
+          if (auth.role != 'Employee')
+            const GradientNavDestination(
+              icon: Icons.account_tree_outlined,
+              selectedIcon: Icons.account_tree,
+              label: 'Branches',
+            ),
+          const GradientNavDestination(
+            icon: Icons.school_outlined,
+            selectedIcon: Icons.school,
+            label: 'Exams',
+          ),
+          if (auth.role != 'Employee')
+            const GradientNavDestination(
+              icon: Icons.receipt_long_outlined,
+              selectedIcon: Icons.receipt_long,
+              label: 'Expense',
+            ),
+          if (auth.role != 'Employee')
+            const GradientNavDestination(
+              icon: Icons.confirmation_num_outlined,
+              selectedIcon: Icons.confirmation_num,
+              label: 'Vouchers',
+            ),
+          if (auth.role != 'Employee')
+            const GradientNavDestination(
+              icon: Icons.badge_outlined,
+              selectedIcon: Icons.badge,
+              label: 'Employees',
+            ),
         ],
       ),
-      floatingActionButton: index == 1
+      floatingActionButton: !employee && index == 1
           ? Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: brandLinearGradient(),
-                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(.4), blurRadius: 14, offset: const Offset(0, 6))],
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(.4),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: FloatingActionButton(
                 backgroundColor: Colors.transparent,
                 elevation: 0,
                 foregroundColor: Colors.white,
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BranchesScreen(openAddOnStart: true))),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const BranchesScreen(openAddOnStart: true),
+                  ),
+                ),
                 child: const Icon(Icons.add),
               ),
             )

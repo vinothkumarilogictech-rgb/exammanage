@@ -28,11 +28,11 @@ class OfficeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Exam Management',
-        theme: appTheme(),
-        home: const StartupSplash(),
-      );
+    debugShowCheckedModeBanner: false,
+    title: 'Exam Management',
+    theme: appTheme(),
+    home: const StartupSplash(),
+  );
 }
 
 class StartupSplash extends StatefulWidget {
@@ -57,9 +57,10 @@ class _StartupSplashState extends State<StartupSplash>
     )..forward();
 
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.78, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scale = Tween<double>(
+      begin: 0.78,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     Timer(const Duration(milliseconds: 2200), () {
       if (mounted) {
@@ -199,7 +200,9 @@ class RootScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    return auth.authenticated ? const AppShell() : const LoginScreen();
+    return auth.authenticated
+        ? const AppShell()
+        : LoginScreen(initialAdminMode: auth.lastRole != 'Employee');
   }
 }
 
@@ -219,23 +222,13 @@ class _BrandMark extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white.withOpacity(.24),
-          width: 1.5,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(.24), width: 1.5),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x805A17B5),
-            blurRadius: 34,
-            spreadRadius: 6,
-          ),
+          BoxShadow(color: Color(0x805A17B5), blurRadius: 34, spreadRadius: 6),
         ],
       ),
       padding: EdgeInsets.all(size * .2),
-      child: Image.asset(
-        'assets/ilogictech_icon.png',
-        fit: BoxFit.contain,
-      ),
+      child: Image.asset('assets/ilogictech_icon.png', fit: BoxFit.contain),
     );
   }
 }
@@ -279,9 +272,7 @@ class _SplashPainter extends CustomPainter {
             const Color(0xFF9A22C7).withOpacity(.24),
             Colors.transparent,
           ],
-        ).createShader(
-          Rect.fromCircle(center: glow.$1, radius: glow.$2),
-        );
+        ).createShader(Rect.fromCircle(center: glow.$1, radius: glow.$2));
       canvas.drawCircle(glow.$1, glow.$2, paint);
     }
 
@@ -305,11 +296,7 @@ class _SplashPainter extends CustomPainter {
     final dotPaint = Paint()..color = Colors.white.withOpacity(.13);
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 6; col++) {
-        canvas.drawCircle(
-          Offset(24 + col * 34, 30 + row * 34),
-          1.5,
-          dotPaint,
-        );
+        canvas.drawCircle(Offset(24 + col * 34, 30 + row * 34), 1.5, dotPaint);
       }
     }
   }

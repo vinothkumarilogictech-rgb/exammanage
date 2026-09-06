@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  /// Which tab to open on. Defaults to the Admin tab, but callers (e.g.
+  /// after a logout) can pass `false` to reopen on the User tab instead.
+  final bool initialAdminMode;
+
+  const LoginScreen({super.key, this.initialAdminMode = true});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -12,11 +17,15 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
-  final user = TextEditingController(text: 'admin');
-  final pass = TextEditingController(text: '1234');
+  late final user = TextEditingController(
+    text: widget.initialAdminMode ? 'admin' : '',
+  );
+  late final pass = TextEditingController(
+    text: widget.initialAdminMode ? '1234' : '',
+  );
 
   bool obscure = true;
-  bool adminMode = true;
+  late bool adminMode = widget.initialAdminMode;
   bool userFocused = false;
   bool passFocused = false;
   late final AnimationController _animation;
@@ -40,11 +49,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _login(AuthProvider auth) async {
     FocusScope.of(context).unfocus();
-    await auth.login(
-      user.text.trim(),
-      pass.text,
-      adminMode: adminMode,
-    );
+    await auth.login(user.text.trim(), pass.text, adminMode: adminMode);
   }
 
   @override
@@ -59,7 +64,11 @@ class _LoginScreenState extends State<LoginScreen>
           final h = constraints.maxHeight;
           final compact = h < 760;
           final veryCompact = h < 660;
-          final headerHeight = veryCompact ? 190.0 : compact ? 225.0 : 265.0;
+          final headerHeight = veryCompact
+              ? 190.0
+              : compact
+              ? 225.0
+              : 265.0;
 
           return Stack(
             children: [
@@ -77,17 +86,22 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     child: Column(
                       children: [
-                        SizedBox(height: headerHeight - (veryCompact ? 78 : 92)),
+                        SizedBox(
+                          height: headerHeight - (veryCompact ? 78 : 92),
+                        ),
 
                         // ---- Floating logo card ----
                         SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0, .25),
-                            end: Offset.zero,
-                          ).animate(CurvedAnimation(
-                            parent: _animation,
-                            curve: Curves.easeOutCubic,
-                          )),
+                          position:
+                              Tween<Offset>(
+                                begin: const Offset(0, .25),
+                                end: Offset.zero,
+                              ).animate(
+                                CurvedAnimation(
+                                  parent: _animation,
+                                  curve: Curves.easeOutCubic,
+                                ),
+                              ),
                           child: _LogoBadge(size: veryCompact ? 78 : 92),
                         ),
 
@@ -130,7 +144,11 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 440),
-                            child: _buildForm(auth, compact: compact, veryCompact: veryCompact),
+                            child: _buildForm(
+                              auth,
+                              compact: compact,
+                              veryCompact: veryCompact,
+                            ),
                           ),
                         ),
 
@@ -157,9 +175,14 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _dash() => Container(width: 24, height: 1.4, color: const Color(0xFFD9C7F0));
+  Widget _dash() =>
+      Container(width: 24, height: 1.4, color: const Color(0xFFD9C7F0));
 
-  Widget _buildForm(AuthProvider auth, {required bool compact, required bool veryCompact}) {
+  Widget _buildForm(
+    AuthProvider auth, {
+    required bool compact,
+    required bool veryCompact,
+  }) {
     return Container(
       padding: EdgeInsets.fromLTRB(
         veryCompact ? 20 : 26,
@@ -168,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen>
         veryCompact ? 20 : 26,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: const Color(0xFFE9DDF7), width: 1.2),
         boxShadow: const [
@@ -259,7 +282,9 @@ class _LoginScreenState extends State<LoginScreen>
               tooltip: obscure ? 'Show password' : 'Hide password',
               onPressed: () => setState(() => obscure = !obscure),
               icon: Icon(
-                obscure ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                obscure
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
                 color: const Color(0xFF7B14B5),
                 size: 21,
               ),
@@ -297,12 +322,20 @@ class _LoginScreenState extends State<LoginScreen>
           SizedBox(height: veryCompact ? 16 : 20),
           Row(
             children: [
-              Expanded(child: Container(height: 1, color: const Color(0xFFEBE2F7))),
+              Expanded(
+                child: Container(height: 1, color: const Color(0xFFEBE2F7)),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Icon(Icons.verified_user_rounded, color: const Color(0xFF7B14B5), size: 18),
+                child: Icon(
+                  Icons.verified_user_rounded,
+                  color: const Color(0xFF7B14B5),
+                  size: 18,
+                ),
               ),
-              Expanded(child: Container(height: 1, color: const Color(0xFFEBE2F7))),
+              Expanded(
+                child: Container(height: 1, color: const Color(0xFFEBE2F7)),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -331,11 +364,17 @@ class _LoginScreenState extends State<LoginScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(11),
         gradient: selected
-            ? const LinearGradient(colors: [Color(0xFFB23BD6), Color(0xFF5A17B5)])
+            ? const LinearGradient(
+                colors: [Color(0xFFB23BD6), Color(0xFF5A17B5)],
+              )
             : null,
         boxShadow: selected
             ? const [
-                BoxShadow(color: Color(0x409A22C7), blurRadius: 10, offset: Offset(0, 4)),
+                BoxShadow(
+                  color: Color(0x409A22C7),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
               ]
             : null,
       ),
@@ -347,7 +386,11 @@ class _LoginScreenState extends State<LoginScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 17, color: selected ? Colors.white : const Color(0xFF6B6280)),
+              Icon(
+                icon,
+                size: 17,
+                color: selected ? Colors.white : const Color(0xFF6B6280),
+              ),
               const SizedBox(width: 7),
               Text(
                 label,
@@ -365,13 +408,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _label(String text) => Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF4A3F66),
-          fontSize: 13.5,
-          fontWeight: FontWeight.w800,
-        ),
-      );
+    text,
+    style: const TextStyle(
+      color: Color(0xFF4A3F66),
+      fontSize: 13.5,
+      fontWeight: FontWeight.w800,
+    ),
+  );
 
   Widget _input({
     required TextEditingController controller,
@@ -394,7 +437,13 @@ class _LoginScreenState extends State<LoginScreen>
           width: focused ? 1.6 : 1.1,
         ),
         boxShadow: focused
-            ? const [BoxShadow(color: Color(0x229A22C7), blurRadius: 12, spreadRadius: 1)]
+            ? const [
+                BoxShadow(
+                  color: Color(0x229A22C7),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
             : null,
       ),
       child: Focus(
@@ -413,10 +462,16 @@ class _LoginScreenState extends State<LoginScreen>
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: const Color(0xFF7B14B5), size: 21),
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF9C93B5), fontSize: 13.5),
+            hintStyle: const TextStyle(
+              color: Color(0xFF9C93B5),
+              fontSize: 13.5,
+            ),
             suffixIcon: suffix,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 15,
+              horizontal: 4,
+            ),
           ),
         ),
       ),
@@ -428,9 +483,15 @@ class _LoginScreenState extends State<LoginScreen>
       height: compact ? 54 : 58,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(15),
-        gradient: const LinearGradient(colors: [Color(0xFFB23BD6), Color(0xFF5A17B5)]),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFB23BD6), Color(0xFF5A17B5)],
+        ),
         boxShadow: const [
-          BoxShadow(color: Color(0x4D9A22C7), blurRadius: 18, offset: Offset(0, 8)),
+          BoxShadow(
+            color: Color(0x4D9A22C7),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
       child: Material(
@@ -443,7 +504,10 @@ class _LoginScreenState extends State<LoginScreen>
                 ? const SizedBox(
                     width: 22,
                     height: 22,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4),
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.4,
+                    ),
                   )
                 : const Row(
                     mainAxisSize: MainAxisSize.min,
@@ -452,7 +516,11 @@ class _LoginScreenState extends State<LoginScreen>
                       SizedBox(width: 10),
                       Text(
                         'Login',
-                        style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ],
                   ),
@@ -463,26 +531,34 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _error(String text) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF2F4),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0xFFFFCDD5)),
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFF2F4),
+      borderRadius: BorderRadius.circular(11),
+      border: Border.all(color: const Color(0xFFFFCDD5)),
+    ),
+    child: Row(
+      children: [
+        const Icon(
+          Icons.error_outline_rounded,
+          color: Color(0xFFE11D48),
+          size: 18,
         ),
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline_rounded, color: Color(0xFFE11D48), size: 18),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(color: Color(0xFFBE123C), fontSize: 11.5, fontWeight: FontWeight.w600),
-              ),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Color(0xFFBE123C),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
             ),
-          ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 /// The real iLOGIC TECH "i" logo (assets/ilogictech_icon.png) on a white
@@ -498,18 +574,19 @@ class _LogoBadge extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         shape: BoxShape.circle,
         boxShadow: const [
-          BoxShadow(color: Color(0x33000000), blurRadius: 22, offset: Offset(0, 10)),
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 22,
+            offset: Offset(0, 10),
+          ),
           BoxShadow(color: Color(0x4D9A22C7), blurRadius: 30, spreadRadius: 1),
         ],
       ),
       padding: EdgeInsets.all(size * .2),
-      child: Image.asset(
-        'assets/ilogictech_icon.png',
-        fit: BoxFit.contain,
-      ),
+      child: Image.asset('assets/ilogictech_icon.png', fit: BoxFit.contain),
     );
   }
 }
@@ -556,10 +633,10 @@ class _CurvedHeader extends StatelessWidget {
   }
 
   Widget _blob(double size, Color color) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+  );
 }
 
 class _HeaderClipper extends CustomClipper<Path> {

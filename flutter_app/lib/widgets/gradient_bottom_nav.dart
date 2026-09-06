@@ -30,7 +30,7 @@ class GradientBottomNavBar extends StatelessWidget {
     required this.onDestinationSelected,
     required this.destinations,
     this.height = 72,
-    this.radius = 24,
+    this.radius = 0,
   });
 
   @override

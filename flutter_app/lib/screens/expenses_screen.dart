@@ -11,6 +11,7 @@ import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'invoice_tab.dart';
+import 'profile_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final bool openAddOnStart;
@@ -62,12 +63,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     'Other',
   ];
 
-  static const List<String> _periodOptions = [
-    'All',
-    'Days',
-    'Week',
-    'Month',
-  ];
+  static const List<String> _periodOptions = ['All', 'Days', 'Week', 'Month'];
 
   bool _opened = false;
   late final BranchContext _branchContext;
@@ -231,8 +227,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
   String _monthShortName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return months[month - 1];
   }
@@ -242,8 +248,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     final dt = _parseDate(raw);
     if (dt == null) return raw;
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${dt.day.toString().padLeft(2, '0')}-${months[dt.month - 1]}-${dt.year}';
   }
@@ -287,7 +303,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
     // Bounds for Week (Current Week Monday to Sunday)
     final weekStart = todayStart.subtract(Duration(days: now.weekday - 1));
-    final weekEnd = weekStart.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+    final weekEnd = weekStart.add(
+      const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
+    );
 
     // Bounds for Month (Current Month)
     final monthStart = DateTime(now.year, now.month, 1);
@@ -302,9 +320,17 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         if (e.branchId == null) {
           final branchObj = _branches.firstWhere(
             (b) => b.id == _selectedBranchId,
-            orElse: () => Branch(id: -1, name: '', address: '', contact: '', region: '', status: ''),
+            orElse: () => Branch(
+              id: -1,
+              name: '',
+              address: '',
+              contact: '',
+              region: '',
+              status: '',
+            ),
           );
-          if (branchObj.id != -1 && e.branch.toLowerCase() != branchObj.name.toLowerCase()) {
+          if (branchObj.id != -1 &&
+              e.branch.toLowerCase() != branchObj.name.toLowerCase()) {
             return false;
           }
         }
@@ -359,7 +385,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         final matchPaymentMode = e.paymentMode.toLowerCase().contains(query);
         final matchBranch = e.branch.toLowerCase().contains(query);
         final matchAmount = e.amount.toString().contains(query);
-        if (!matchCategory && !matchDescription && !matchPaymentMode && !matchBranch && !matchAmount) {
+        if (!matchCategory &&
+            !matchDescription &&
+            !matchPaymentMode &&
+            !matchBranch &&
+            !matchAmount) {
           return false;
         }
       }
@@ -395,9 +425,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       await reload();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating category: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error creating category: $e')));
       }
     } finally {
       if (mounted) setState(() => _isAddingCategory = false);
@@ -412,16 +442,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Category "${cat.name}" is now $newStatus.'),
-            backgroundColor: newStatus == 'Active' ? AppColors.green : Colors.grey[800],
+            backgroundColor: newStatus == 'Active'
+                ? AppColors.green
+                : Colors.grey[800],
           ),
         );
       }
       await reload();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating category: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating category: $e')));
       }
     }
   }
@@ -431,52 +463,57 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     required IconData icon,
     required Color color,
     required List<Widget> children,
-  }) =>
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFEFEFEF)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  }) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFAFAFA),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFFEFEFEF)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, size: 14, color: color),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF6B7280),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 14, color: color),
             ),
-            const SizedBox(height: 14),
-            ...children,
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF6B7280),
+                letterSpacing: 0.3,
+              ),
+            ),
           ],
         ),
-      );
+        const SizedBox(height: 14),
+        ...children,
+      ],
+    ),
+  );
 
   // --- Add Expense Modal ---
   Future<void> addExpense() async {
     final globalBranchId = _branchContext.selectedBranchId;
     if (globalBranchId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a branch from Dashboard before adding an expense.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please select a branch from Dashboard before adding an expense.',
+          ),
+        ),
+      );
       return;
     }
     final amountCtrl = TextEditingController();
@@ -494,7 +531,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceAlt,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -530,7 +567,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         ),
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: const [
-                          BoxShadow(color: Color(0x336C1FB0), blurRadius: 14, offset: Offset(0, 6)),
+                          BoxShadow(
+                            color: Color(0x336C1FB0),
+                            blurRadius: 14,
+                            offset: Offset(0, 6),
+                          ),
                         ],
                       ),
                       child: const Icon(
@@ -555,7 +596,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           SizedBox(height: 2),
                           Text(
                             'Record a new branch expense',
-                            style: TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -569,7 +614,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           color: const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF6B7280)),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: Color(0xFF6B7280),
+                        ),
                       ),
                     ),
                   ],
@@ -592,7 +641,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     const SizedBox(height: 6),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0xFFE5E7EB)),
                       ),
@@ -603,12 +652,23 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           value: categoryId,
                           hint: const Text('Select Category'),
                           icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                          items: _categories.where((c) => context.read<AuthProvider>().role != 'Employee' || !['salary','salaries'].contains(c.name.trim().toLowerCase())).map((c) {
-                            return DropdownMenuItem<int>(
-                              value: c.id,
-                              child: Text(c.name),
-                            );
-                          }).toList(),
+                          items: _categories
+                              .where(
+                                (c) =>
+                                    context.read<AuthProvider>().role !=
+                                        'Employee' ||
+                                    ![
+                                      'salary',
+                                      'salaries',
+                                    ].contains(c.name.trim().toLowerCase()),
+                              )
+                              .map((c) {
+                                return DropdownMenuItem<int>(
+                                  value: c.id,
+                                  child: Text(c.name),
+                                );
+                              })
+                              .toList(),
                           onChanged: (val) {
                             if (val != null) {
                               setSheetState(() => categoryId = val);
@@ -617,11 +677,52 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         ),
                       ),
                     ),
-                    if (categoryId != null && _categories.any((c) => c.id == categoryId && ['salary', 'salaries'].contains(c.name.trim().toLowerCase()))) ...[
+                    if (categoryId != null &&
+                        _categories.any(
+                          (c) =>
+                              c.id == categoryId &&
+                              [
+                                'salary',
+                                'salaries',
+                              ].contains(c.name.trim().toLowerCase()),
+                        )) ...[
                       const SizedBox(height: 14),
-                      const Text('Employee', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                      const Text(
+                        'Employee',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Color(0xFF4B5563),
+                        ),
+                      ),
                       const SizedBox(height: 6),
-                      Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))), padding: const EdgeInsets.symmetric(horizontal: 12), child: DropdownButtonHideUnderline(child: DropdownButton<int>(isExpanded: true, value: employeeId, hint: const Text('Select Employee'), items: _employees.map((e) => DropdownMenuItem<int>(value: e.id, child: Text('${e.employeeId} - ${e.fullName}'))).toList(), onChanged: (v) => setSheetState(() => employeeId = v)))),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceAlt,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            isExpanded: true,
+                            value: employeeId,
+                            hint: const Text('Select Employee'),
+                            items: _employees
+                                .map(
+                                  (e) => DropdownMenuItem<int>(
+                                    value: e.id,
+                                    child: Text(
+                                      '${e.employeeId} - ${e.fullName}',
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) =>
+                                setSheetState(() => employeeId = v),
+                          ),
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -634,28 +735,56 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   children: [
                     const Text(
                       'Branch',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563)),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF4B5563),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 15,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0xFFE5E7EB)),
                       ),
-                      child: Row(children: [
-                        const Icon(Icons.business_rounded, size: 20, color: Color(0xFF6B7280)),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(
-                          _branches.where((b) => b.id == globalBranchId).isNotEmpty
-                              ? _branches.firstWhere((b) => b.id == globalBranchId).name
-                              : 'Selected Branch',
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                        )),
-                        const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
-                      ]),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.business_rounded,
+                            size: 20,
+                            color: Color(0xFF6B7280),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _branches
+                                      .where((b) => b.id == globalBranchId)
+                                      .isNotEmpty
+                                  ? _branches
+                                        .firstWhere(
+                                          (b) => b.id == globalBranchId,
+                                        )
+                                        .name
+                                  : 'Selected Branch',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.lock_outline_rounded,
+                            size: 18,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 14),
 
@@ -671,7 +800,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     const SizedBox(height: 6),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0xFFE5E7EB)),
                       ),
@@ -682,7 +811,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           value: paymentMode,
                           icon: const Icon(Icons.keyboard_arrow_down_rounded),
                           items: _paymentModes
-                              .map((m) => DropdownMenuItem<String>(value: m, child: Text(m)))
+                              .map(
+                                (m) => DropdownMenuItem<String>(
+                                  value: m,
+                                  child: Text(m),
+                                ),
+                              )
                               .toList(),
                           onChanged: (val) {
                             if (val != null) {
@@ -719,18 +853,28 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       borderRadius: BorderRadius.circular(14),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surfaceAlt,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: const Color(0xFFE5E7EB)),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF6B7280)),
+                            const Icon(
+                              Icons.calendar_month_outlined,
+                              size: 20,
+                              color: Color(0xFF6B7280),
+                            ),
                             const SizedBox(width: 10),
                             Text(
                               '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
@@ -750,19 +894,28 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     const SizedBox(height: 6),
                     TextField(
                       controller: amountCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         hintText: '0.00',
-                        prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 20),
+                        prefixIcon: const Icon(
+                          Icons.currency_rupee_rounded,
+                          size: 20,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                       ),
                     ),
@@ -794,11 +947,15 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                       ),
                     ),
@@ -818,24 +975,49 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                       elevation: 0,
                     ),
-                    icon: const Icon(Icons.add_circle_outline_rounded, size: 19),
+                    icon: const Icon(
+                      Icons.add_circle_outline_rounded,
+                      size: 19,
+                    ),
                     onPressed: () async {
                       final val = double.tryParse(amountCtrl.text.trim()) ?? 0;
                       if (val <= 0) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Please enter a valid amount')),
+                          const SnackBar(
+                            content: Text('Please enter a valid amount'),
+                          ),
                         );
                         return;
                       }
 
                       final catObj = _categories.firstWhere(
                         (c) => c.id == categoryId,
-                        orElse: () => ExpenseCategoryItem(id: 0, name: 'Other', status: 'Active', createdAt: ''),
+                        orElse: () => ExpenseCategoryItem(
+                          id: 0,
+                          name: 'Other',
+                          status: 'Active',
+                          createdAt: '',
+                        ),
                       );
 
-                      final isSalary = categoryId != null && _categories.any((c) => c.id == categoryId && ['salary', 'salaries'].contains(c.name.trim().toLowerCase()));
+                      final isSalary =
+                          categoryId != null &&
+                          _categories.any(
+                            (c) =>
+                                c.id == categoryId &&
+                                [
+                                  'salary',
+                                  'salaries',
+                                ].contains(c.name.trim().toLowerCase()),
+                          );
                       if (isSalary && employeeId == null) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please select an employee for salary expense.')));
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Please select an employee for salary expense.',
+                            ),
+                          ),
+                        );
                         return;
                       }
 
@@ -866,9 +1048,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         }
                       } catch (e) {
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                          ScaffoldMessenger.of(
+                            ctx,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
                         }
                       }
                     },
@@ -896,7 +1078,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     int? branchId = e.branchId;
     int? categoryId = e.categoryId;
     if (categoryId == null && _categories.isNotEmpty) {
-      final found = _categories.where((c) => c.name.toLowerCase() == e.category.toLowerCase()).toList();
+      final found = _categories
+          .where((c) => c.name.toLowerCase() == e.category.toLowerCase())
+          .toList();
       if (found.isNotEmpty) categoryId = found.first.id;
     }
     int? employeeId = e.employeeId;
@@ -911,7 +1095,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceAlt,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -965,13 +1149,25 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 20),
 
                 // Amount
-                const Text('Amount *', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Amount *',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.currency_rupee_rounded,
+                      size: 20,
+                    ),
                     filled: true,
                     fillColor: const Color(0xFFF9FAFB),
                     border: OutlineInputBorder(
@@ -983,7 +1179,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 14),
 
                 // Category
-                const Text('Category', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Category',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Container(
                   decoration: BoxDecoration(
@@ -996,30 +1199,69 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     child: DropdownButton<int?>(
                       isExpanded: true,
                       value: categoryId,
-                      items: _categories.where((c) => context.read<AuthProvider>().role != 'Employee' || !['salary','salaries'].contains(c.name.trim().toLowerCase())).map((c) {
-                        return DropdownMenuItem<int?>(
-                          value: c.id,
-                          child: Text(c.name),
-                        );
-                      }).toList(),
+                      items: _categories
+                          .where(
+                            (c) =>
+                                context.read<AuthProvider>().role !=
+                                    'Employee' ||
+                                ![
+                                  'salary',
+                                  'salaries',
+                                ].contains(c.name.trim().toLowerCase()),
+                          )
+                          .map((c) {
+                            return DropdownMenuItem<int?>(
+                              value: c.id,
+                              child: Text(c.name),
+                            );
+                          })
+                          .toList(),
                       onChanged: (val) => setSheetState(() => categoryId = val),
                     ),
                   ),
                 ),
                 const SizedBox(height: 14),
 
-                if (categoryId != null && _categories.any((c) => c.id == categoryId && ['salary', 'salaries'].contains(c.name.trim().toLowerCase()))) ...[
-                  const Text('Employee', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                if (categoryId != null &&
+                    _categories.any(
+                      (c) =>
+                          c.id == categoryId &&
+                          [
+                            'salary',
+                            'salaries',
+                          ].contains(c.name.trim().toLowerCase()),
+                    )) ...[
+                  const Text(
+                    'Employee',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: Color(0xFF4B5563),
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Container(
-                    decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int>(
                         isExpanded: true,
                         value: employeeId,
                         hint: const Text('Select Employee'),
-                        items: _employees.map((emp) => DropdownMenuItem<int>(value: emp.id, child: Text('${emp.employeeId} - ${emp.fullName}'))).toList(),
+                        items: _employees
+                            .map(
+                              (emp) => DropdownMenuItem<int>(
+                                value: emp.id,
+                                child: Text(
+                                  '${emp.employeeId} - ${emp.fullName}',
+                                ),
+                              ),
+                            )
+                            .toList(),
                         onChanged: (v) => setSheetState(() => employeeId = v),
                       ),
                     ),
@@ -1028,7 +1270,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 ],
 
                 // Branch
-                const Text('Branch', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Branch',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Container(
                   decoration: BoxDecoration(
@@ -1042,8 +1291,16 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       isExpanded: true,
                       value: branchId,
                       items: [
-                        const DropdownMenuItem<int?>(value: null, child: Text('- None / General -')),
-                        ..._branches.map((b) => DropdownMenuItem<int?>(value: b.id, child: Text(b.name))),
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('- None / General -'),
+                        ),
+                        ..._branches.map(
+                          (b) => DropdownMenuItem<int?>(
+                            value: b.id,
+                            child: Text(b.name),
+                          ),
+                        ),
                       ],
                       onChanged: (val) => setSheetState(() => branchId = val),
                     ),
@@ -1058,13 +1315,22 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Payment Mode', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                          const Text(
+                            'Payment Mode',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: Color(0xFF4B5563),
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Container(
                             decoration: BoxDecoration(
                               color: const Color(0xFFF9FAFB),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB),
+                              ),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: DropdownButtonHideUnderline(
@@ -1072,10 +1338,16 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                                 isExpanded: true,
                                 value: paymentMode,
                                 items: _paymentModes
-                                    .map((m) => DropdownMenuItem<String>(value: m, child: Text(m)))
+                                    .map(
+                                      (m) => DropdownMenuItem<String>(
+                                        value: m,
+                                        child: Text(m),
+                                      ),
+                                    )
                                     .toList(),
                                 onChanged: (val) {
-                                  if (val != null) setSheetState(() => paymentMode = val);
+                                  if (val != null)
+                                    setSheetState(() => paymentMode = val);
                                 },
                               ),
                             ),
@@ -1088,13 +1360,22 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Status', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                          const Text(
+                            'Status',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: Color(0xFF4B5563),
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Container(
                             decoration: BoxDecoration(
                               color: const Color(0xFFF9FAFB),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB),
+                              ),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: DropdownButtonHideUnderline(
@@ -1102,11 +1383,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                                 isExpanded: true,
                                 value: status,
                                 items: const [
-                                  DropdownMenuItem(value: 'Active', child: Text('Active')),
-                                  DropdownMenuItem(value: 'Cancelled', child: Text('Cancelled')),
+                                  DropdownMenuItem(
+                                    value: 'Active',
+                                    child: Text('Active'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'Cancelled',
+                                    child: Text('Cancelled'),
+                                  ),
                                 ],
                                 onChanged: (val) {
-                                  if (val != null) setSheetState(() => status = val);
+                                  if (val != null)
+                                    setSheetState(() => status = val);
                                 },
                               ),
                             ),
@@ -1119,7 +1407,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 14),
 
                 // Date Incurred
-                const Text('Date Incurred', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Date Incurred',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 InkWell(
                   onTap: () async {
@@ -1140,14 +1435,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFFE5E7EB)),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF6B7280)),
+                        const Icon(
+                          Icons.calendar_month_outlined,
+                          size: 20,
+                          color: Color(0xFF6B7280),
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
@@ -1156,7 +1461,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 14),
 
                 // Description
-                const Text('Description', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF4B5563))),
+                const Text(
+                  'Description',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: noteCtrl,
@@ -1187,18 +1499,34 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       final val = double.tryParse(amountCtrl.text.trim()) ?? 0;
                       if (val <= 0) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Please enter a valid amount')),
+                          const SnackBar(
+                            content: Text('Please enter a valid amount'),
+                          ),
                         );
                         return;
                       }
 
                       final catObj = _categories.firstWhere(
                         (c) => c.id == categoryId,
-                        orElse: () => ExpenseCategoryItem(id: 0, name: e.category, status: 'Active', createdAt: ''),
+                        orElse: () => ExpenseCategoryItem(
+                          id: 0,
+                          name: e.category,
+                          status: 'Active',
+                          createdAt: '',
+                        ),
                       );
-                      final isSalary = ['salary', 'salaries'].contains(catObj.name.trim().toLowerCase());
+                      final isSalary = [
+                        'salary',
+                        'salaries',
+                      ].contains(catObj.name.trim().toLowerCase());
                       if (isSalary && employeeId == null) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please select an employee for salary expense.')));
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Please select an employee for salary expense.',
+                            ),
+                          ),
+                        );
                         return;
                       }
 
@@ -1235,7 +1563,13 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         }
                       }
                     },
-                    child: const Text('Update Expense', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                    child: const Text(
+                      'Update Expense',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1254,7 +1588,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
@@ -1294,20 +1628,30 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     const SizedBox(width: 12),
                     const Text(
                       'Expense Details',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: e.status == 'Cancelled' ? const Color(0xFFFEE2E2) : const Color(0xFFEDE9FE),
+                    color: e.status == 'Cancelled'
+                        ? const Color(0xFFFEE2E2)
+                        : const Color(0xFFEDE9FE),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     e.status,
                     style: TextStyle(
-                      color: e.status == 'Cancelled' ? const Color(0xFFDC2626) : const Color(0xFF5B21B6),
+                      color: e.status == 'Cancelled'
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFF5B21B6),
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
                     ),
@@ -1326,7 +1670,12 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               ),
               child: Column(
                 children: [
-                  _detailRow('Amount', '₹${e.amount.toStringAsFixed(2)}', isBold: true, fontSize: 18),
+                  _detailRow(
+                    'Amount',
+                    '₹${e.amount.toStringAsFixed(2)}',
+                    isBold: true,
+                    fontSize: 18,
+                  ),
                   const Divider(height: 20, color: Color(0xFFE5E7EB)),
                   _detailRow('Category', e.category),
                   const SizedBox(height: 8),
@@ -1338,7 +1687,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     _detailRow('Employee', e.employeeName),
                   ],
                   const SizedBox(height: 8),
-                  _detailRow('Payment Mode', e.paymentMode.isNotEmpty ? e.paymentMode : '-'),
+                  _detailRow(
+                    'Payment Mode',
+                    e.paymentMode.isNotEmpty ? e.paymentMode : '-',
+                  ),
                   if (e.description.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     _detailRow('Description', e.description),
@@ -1353,7 +1705,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       side: const BorderSide(color: Color(0xFFCBD5E1)),
                     ),
                     onPressed: () => Navigator.pop(ctx),
@@ -1367,7 +1721,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF9A22C7),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     onPressed: () {
                       Navigator.pop(ctx);
@@ -1385,12 +1741,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  Widget _detailRow(String label, String value, {bool isBold = false, double fontSize = 14}) {
+  Widget _detailRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    double fontSize = 14,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF6B7280),
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
         const SizedBox(width: 12),
         Flexible(
           child: Text(
@@ -1414,7 +1782,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
@@ -1451,9 +1819,16 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   color: const Color(0xFFEDE9FE),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF6C1FB0), size: 20),
+                child: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Color(0xFF6C1FB0),
+                  size: 20,
+                ),
               ),
-              title: const Text('Export PDF', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              title: const Text(
+                'Export PDF',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              ),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _exportPdf();
@@ -1469,9 +1844,16 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   color: const Color(0xFFEDE9FE),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.table_chart_rounded, color: Color(0xFF6C1FB0), size: 20),
+                child: const Icon(
+                  Icons.table_chart_rounded,
+                  color: Color(0xFF6C1FB0),
+                  size: 20,
+                ),
               ),
-              title: const Text('Export Excel', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              title: const Text(
+                'Export Excel',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              ),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _exportExcel();
@@ -1496,7 +1878,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     if (_selectedBranchId != null) {
       final b = _branches.firstWhere(
         (x) => x.id == _selectedBranchId,
-        orElse: () => Branch(id: -1, name: '', address: '', contact: '', region: '', status: ''),
+        orElse: () => Branch(
+          id: -1,
+          name: '',
+          address: '',
+          contact: '',
+          region: '',
+          status: '',
+        ),
       );
       if (b.name.isNotEmpty) {
         branchLabel = b.name;
@@ -1514,8 +1903,17 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Expense Management Report', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-                  pw.Text(_formatDateDisplay(DateTime.now().toIso8601String()), style: const pw.TextStyle(fontSize: 12)),
+                  pw.Text(
+                    'Expense Management Report',
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    _formatDateDisplay(DateTime.now().toIso8601String()),
+                    style: const pw.TextStyle(fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -1523,21 +1921,47 @@ class ExpensesScreenState extends State<ExpensesScreen> {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Branch: $branchLabel', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
-                pw.Text('Filter Period: $_selectedPeriod', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text(
+                  'Branch: $branchLabel',
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  'Filter Period: $_selectedPeriod',
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
               ],
             ),
             pw.SizedBox(height: 6),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Total Expenses: Rs ${filteredTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13, color: PdfColors.purple900)),
-                pw.Text('Total Records: ${_filteredExpenses.length}', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text(
+                  'Total Expenses: Rs ${filteredTotal.toStringAsFixed(2)}',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 13,
+                    color: PdfColors.purple900,
+                  ),
+                ),
+                pw.Text(
+                  'Total Records: ${_filteredExpenses.length}',
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
               ],
             ),
             pw.SizedBox(height: 14),
             pw.TableHelper.fromTextArray(
-              headers: ['Date', 'Branch', 'Category', 'Amount (Rs)', 'Payment Mode', 'Status'],
+              headers: [
+                'Date',
+                'Branch',
+                'Category',
+                'Amount (Rs)',
+                'Payment Mode',
+                'Status',
+              ],
               data: _filteredExpenses.map((e) {
                 return [
                   _formatDateDisplay(e.date),
@@ -1548,11 +1972,18 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   e.status,
                 ];
               }).toList(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF6C1FB0)),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFF6C1FB0),
+              ),
               cellAlignment: pw.Alignment.centerLeft,
               rowDecoration: const pw.BoxDecoration(
-                border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
               ),
             ),
           ];
@@ -1560,17 +1991,22 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       ),
     );
 
-    final filenameSuffix = _selectedBranchId != null ? '_${branchLabel.replaceAll(' ', '_')}' : '';
+    final filenameSuffix = _selectedBranchId != null
+        ? '_${branchLabel.replaceAll(' ', '_')}'
+        : '';
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
-      name: 'expense_report${filenameSuffix}_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      name:
+          'expense_report${filenameSuffix}_${DateTime.now().millisecondsSinceEpoch}.pdf',
     );
   }
 
   // --- Excel / CSV Export ---
   Future<void> _exportExcel() async {
     final buffer = StringBuffer();
-    buffer.writeln('Date,Branch,Category,Amount,Payment Mode,Status,Description');
+    buffer.writeln(
+      'Date,Branch,Category,Amount,Payment Mode,Status,Description',
+    );
 
     for (final e in _filteredExpenses) {
       final date = _formatDateDisplay(e.date);
@@ -1608,15 +2044,26 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            boxShadow: [BoxShadow(color: Color(0x559A22C7), blurRadius: 24, offset: Offset(0, 8))],
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x559A22C7),
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
         ),
-        title: const Text(
-          'Expense',
-          style: AppBarStyle.titleStyle,
-        ),
+        title: const Text('Expense', style: AppBarStyle.titleStyle),
         actions: [
+          IconButton(
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            },
+            icon: const Icon(Icons.person_rounded),
+          ),
           IconButton(
             onPressed: reload,
             tooltip: 'Refresh',
@@ -1627,29 +2074,35 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       body: _isLoading
           ? const LoadingView()
           : _errorMessage != null
-              ? ErrorView(message: _errorMessage!, onRetry: reload)
-              : RefreshIndicator(
-                  color: const Color(0xFF9A22C7),
-                  onRefresh: reload,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Tabs selector
-                        _buildTabSelector(),
-                        const SizedBox(height: 16),
-
-                        // Switch Tab View
-                        if (_selectedTab == 0) _buildExpensesTab()
-                        else if (_selectedTab == 1) _buildCategoriesTab()
-                        else const VoucherPurchaseInvoicesTab(),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
+          ? ErrorView(message: _errorMessage!, onRetry: reload)
+          : RefreshIndicator(
+              color: const Color(0xFF9A22C7),
+              onRefresh: reload,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Tabs selector
+                    _buildTabSelector(),
+                    const SizedBox(height: 16),
+
+                    // Switch Tab View
+                    if (_selectedTab == 0)
+                      _buildExpensesTab()
+                    else if (_selectedTab == 1)
+                      _buildCategoriesTab()
+                    else
+                      const VoucherPurchaseInvoicesTab(),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
@@ -1658,21 +2111,45 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Row(
         children: [
-          Expanded(child: _tabButton(label: 'Expenses', icon: Icons.receipt_long_rounded, index: 0)),
-          if (context.read<AuthProvider>().role != 'Employee') Expanded(child: _tabButton(label: 'Categories', icon: Icons.category_rounded, index: 1)),
-          if (context.read<AuthProvider>().role != 'Employee') Expanded(child: _tabButton(label: 'Invoices', icon: Icons.request_quote_rounded, index: 2)),
+          Expanded(
+            child: _tabButton(
+              label: 'Expenses',
+              icon: Icons.receipt_long_rounded,
+              index: 0,
+            ),
+          ),
+          if (context.read<AuthProvider>().role != 'Employee')
+            Expanded(
+              child: _tabButton(
+                label: 'Categories',
+                icon: Icons.category_rounded,
+                index: 1,
+              ),
+            ),
+          if (context.read<AuthProvider>().role != 'Employee')
+            Expanded(
+              child: _tabButton(
+                label: 'Invoices',
+                icon: Icons.request_quote_rounded,
+                index: 2,
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _tabButton({required String label, required IconData icon, required int index}) {
+  Widget _tabButton({
+    required String label,
+    required IconData icon,
+    required int index,
+  }) {
     final isSelected = _selectedTab == index;
     return InkWell(
       onTap: () {
@@ -1688,7 +2165,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : const Color(0xFF6B7280)),
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : const Color(0xFF6B7280),
+            ),
             const SizedBox(width: 6),
             Text(
               label,
@@ -1740,20 +2221,35 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     return SizedBox(
       height: 125,
       width: double.infinity,
-      child: _metricCard('Total Expenses', _totalExpenses, Icons.account_balance_wallet_rounded,
-          const Color(0xFFEDE9FE), AppColors.primary),
+      child: _metricCard(
+        'Total Expenses',
+        _totalExpenses,
+        Icons.account_balance_wallet_rounded,
+        const Color(0xFFEDE9FE),
+        AppColors.primary,
+      ),
     );
   }
 
-  Widget _metricCard(String title, double amount, IconData icon, Color tint, Color iconColor) {
+  Widget _metricCard(
+    String title,
+    double amount,
+    IconData icon,
+    Color tint,
+    Color iconColor,
+  ) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: tint),
         boxShadow: const [
-          BoxShadow(color: Color(0x10000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -1762,7 +2258,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
           Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(11)),
+            decoration: BoxDecoration(
+              color: tint,
+              borderRadius: BorderRadius.circular(11),
+            ),
             child: Icon(icon, color: iconColor, size: 19),
           ),
           const Spacer(),
@@ -1770,7 +2269,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF4B5563)),
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF4B5563),
+            ),
           ),
           const SizedBox(height: 2),
           FittedBox(
@@ -1778,7 +2281,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
             alignment: Alignment.centerLeft,
             child: Text(
               amount.toStringAsFixed(2),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF111827)),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
+              ),
             ),
           ),
         ],
@@ -1863,7 +2370,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
   Widget _buildSearchAndPeriodBar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: const [
@@ -1902,11 +2409,11 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   onChanged: _branchContext.selectedBranchId != null
                       ? null
                       : (val) {
-                    setState(() {
-                      _selectedBranchId = val;
-                      _applyLocalFilters();
-                    });
-                  },
+                          setState(() {
+                            _selectedBranchId = val;
+                            _applyLocalFilters();
+                          });
+                        },
                 ),
               ),
               const SizedBox(width: 7),
@@ -1951,10 +2458,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       height: 40,
                       width: _selectedExpenseDate == null ? 44 : 92,
                       decoration: BoxDecoration(
-                        color: _selectedExpenseDate != null ? const Color(0xFFEDE9FE) : const Color(0xFFF1F5F9),
+                        color: _selectedExpenseDate != null
+                            ? const Color(0xFFEDE9FE)
+                            : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: _selectedExpenseDate != null ? const Color(0xFFC4B5FD) : const Color(0xFFE2E8F0),
+                          color: _selectedExpenseDate != null
+                              ? const Color(0xFFC4B5FD)
+                              : const Color(0xFFE2E8F0),
                         ),
                       ),
                       child: Row(
@@ -1963,7 +2474,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           Icon(
                             Icons.calendar_month_rounded,
                             size: 18,
-                            color: _selectedExpenseDate != null ? const Color(0xFF6C1FB0) : const Color(0xFF64748B),
+                            color: _selectedExpenseDate != null
+                                ? const Color(0xFF6C1FB0)
+                                : const Color(0xFF64748B),
                           ),
                           if (_selectedExpenseDate != null) ...[
                             const SizedBox(width: 5),
@@ -2007,10 +2520,14 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF6C1FB0) : const Color(0xFFF8FAFC),
+                        color: isSelected
+                            ? const Color(0xFF6C1FB0)
+                            : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF6C1FB0) : const Color(0xFFE2E8F0),
+                          color: isSelected
+                              ? const Color(0xFF6C1FB0)
+                              : const Color(0xFFE2E8F0),
                         ),
                       ),
                       child: FittedBox(
@@ -2020,7 +2537,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.white : const Color(0xFF475569),
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF475569),
                           ),
                         ),
                       ),
@@ -2044,7 +2563,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(vertical: 9),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0xFFC4B5FD)),
               ),
@@ -2119,7 +2638,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
@@ -2128,13 +2647,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
             Container(
               width: 56,
               height: 56,
-              decoration: const BoxDecoration(color: Color(0xFFF3F4F6), shape: BoxShape.circle),
-              child: Icon(Icons.receipt_long_outlined, size: 26, color: Colors.grey[400]),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3F4F6),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 26,
+                color: Colors.grey[400],
+              ),
             ),
             const SizedBox(height: 14),
             const Text(
               'No expenses found',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF4B5563)),
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                color: Color(0xFF4B5563),
+              ),
             ),
             const SizedBox(height: 4),
             const Text(
@@ -2151,13 +2681,28 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Expenses',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+            const Text(
+              'Expenses',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(20)),
-              child: Text('${_filteredExpenses.length}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 12)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDE9FE),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_filteredExpenses.length}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
@@ -2172,10 +2717,16 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -2193,11 +2744,15 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: isCancelled ? const Color(0xFFFEE2E2) : const Color(0xFFEDE9FE),
+                        color: isCancelled
+                            ? const Color(0xFFFEE2E2)
+                            : const Color(0xFFEDE9FE),
                         borderRadius: BorderRadius.circular(13),
                       ),
                       child: Icon(
-                        isCancelled ? Icons.cancel_rounded : Icons.receipt_rounded,
+                        isCancelled
+                            ? Icons.cancel_rounded
+                            : Icons.receipt_rounded,
                         color: isCancelled ? AppColors.red : AppColors.primary,
                       ),
                     ),
@@ -2207,7 +2762,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEDE9FE),
                               borderRadius: BorderRadius.circular(20),
@@ -2215,29 +2773,48 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                             child: Text(
                               e.category,
                               style: const TextStyle(
-                                  color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 11),
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 5),
-                          Text(_formatDateDisplay(e.date),
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+                          Text(
+                            _formatDateDisplay(e.date),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13.5,
+                            ),
+                          ),
                           const SizedBox(height: 3),
                           Text(
                             e.branch.isNotEmpty ? e.branch : 'No branch',
-                            style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                           if (e.employeeName.isNotEmpty) ...[
                             const SizedBox(height: 3),
                             Row(
                               children: [
-                                Icon(Icons.person_outline_rounded, size: 13, color: Colors.grey.shade500),
+                                Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 13,
+                                  color: Colors.grey.shade500,
+                                ),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     e.employeeName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -2249,19 +2826,31 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('₹${e.amount.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                        Text(
+                          '₹${e.amount.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                          ),
+                        ),
                         const SizedBox(height: 5),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: isCancelled ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+                            color: isCancelled
+                                ? const Color(0xFFFEE2E2)
+                                : const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             e.status.isNotEmpty ? e.status : 'Active',
                             style: TextStyle(
-                              color: isCancelled ? AppColors.red : AppColors.green,
+                              color: isCancelled
+                                  ? AppColors.red
+                                  : AppColors.green,
                               fontWeight: FontWeight.w800,
                               fontSize: 10.5,
                             ),
@@ -2276,31 +2865,59 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.payments_outlined, size: 14, color: Colors.grey.shade500),
+                    Icon(
+                      Icons.payments_outlined,
+                      size: 14,
+                      color: Colors.grey.shade500,
+                    ),
                     const SizedBox(width: 5),
-                    Text(e.paymentMode.isNotEmpty ? e.paymentMode : '-',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+                    Text(
+                      e.paymentMode.isNotEmpty ? e.paymentMode : '-',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const Spacer(),
                     TextButton.icon(
                       onPressed: () => _viewExpense(e),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       icon: const Icon(Icons.visibility_outlined, size: 15),
-                      label: const Text('View', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      label: const Text(
+                        'View',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 4),
                     TextButton.icon(
                       onPressed: () => _editExpense(e),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       icon: const Icon(Icons.edit_outlined, size: 15),
-                      label: const Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      label: const Text(
+                        'Edit',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -2346,11 +2963,15 @@ class ExpensesScreenState extends State<ExpensesScreen> {
   Widget _buildAddCategoryPanel() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: const [
-          BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 3)),
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
         ],
       ),
       padding: const EdgeInsets.all(16),
@@ -2362,13 +2983,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.add_circle_rounded, color: AppColors.primary, size: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.add_circle_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               const Text(
                 'Add Category',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF111827)),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF111827),
+                ),
               ),
             ],
           ),
@@ -2398,7 +3030,9 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
               onPressed: _isAddingCategory ? null : _addCategory,
@@ -2406,7 +3040,10 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Icon(Icons.add, size: 18),
               label: const Text(
@@ -2428,13 +3065,28 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Categories',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+            const Text(
+              'Categories',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(20)),
-              child: Text('${_categories.length}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 12)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDE9FE),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_categories.length}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
@@ -2444,7 +3096,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surfaceAlt,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
@@ -2453,12 +3105,25 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: const BoxDecoration(color: Color(0xFFF3F4F6), shape: BoxShape.circle),
-                  child: Icon(Icons.category_outlined, size: 26, color: Colors.grey[400]),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.category_outlined,
+                    size: 26,
+                    color: Colors.grey[400],
+                  ),
                 ),
                 const SizedBox(height: 14),
-                const Text('No categories yet.',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF4B5563))),
+                const Text(
+                  'No categories yet.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
               ],
             ),
           )
@@ -2469,10 +3134,16 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 8, offset: const Offset(0, 2))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -2480,29 +3151,47 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isInactive ? const Color(0xFFFEE2E2) : const Color(0xFFEDE9FE),
+                      color: isInactive
+                          ? const Color(0xFFFEE2E2)
+                          : const Color(0xFFEDE9FE),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.label_rounded,
-                        color: isInactive ? AppColors.red : AppColors.primary, size: 20),
+                    child: Icon(
+                      Icons.label_rounded,
+                      color: isInactive ? AppColors.red : AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                        Text(
+                          cat.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
                         const SizedBox(height: 5),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: isInactive ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+                            color: isInactive
+                                ? const Color(0xFFFEE2E2)
+                                : const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
                             cat.status,
                             style: TextStyle(
-                              color: isInactive ? AppColors.red : AppColors.green,
+                              color: isInactive
+                                  ? AppColors.red
+                                  : AppColors.green,
                               fontWeight: FontWeight.w800,
                               fontSize: 10.5,
                             ),
@@ -2515,12 +3204,21 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     onPressed: () => _toggleCategoryStatus(cat),
                     style: TextButton.styleFrom(
                       backgroundColor: const Color(0xFFEEF2FF),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     child: Text(
                       cat.status == 'Active' ? 'Deactivate' : 'Activate',
-                      style: const TextStyle(color: Color(0xFF6C1FB0), fontWeight: FontWeight.w700, fontSize: 11.5),
+                      style: const TextStyle(
+                        color: Color(0xFF6C1FB0),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
+                      ),
                     ),
                   ),
                 ],

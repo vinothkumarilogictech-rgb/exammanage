@@ -5,24 +5,27 @@ import 'package:flutter/material.dart';
 /// Derived from the brand mark: deep blue → violet → magenta.
 /// ============================================================
 class AppColors {
-  // Core brand identity (blue -> purple -> magenta, matches the logo)
+  
   static const brandBlue = Color(0xFF2A17C9);
-  static const primary = Color(0xFF6C1FB0); // primary purple — buttons, active states, icons
-  static const primaryLight = Color(0xFF9A22C7); // bright purple-magenta — secondary bars, FAB
-  static const magenta = Color(0xFFE0189E); // accent magenta/pink — gradient end, highlights
-  static const primaryDark = Color(0xFF3D0F8C); // deep indigo — darkest gradient stop
+  static const primary = Color(0xFF6C1FB0); 
+  static const primaryLight = Color(0xFF9A22C7); 
+  static const magenta = Color(0xFFE0189E); 
+  static const primaryDark = Color(0xFF3D0F8C); 
 
-  // Full 3-stop brand gradient used across nav bars / headers / buttons
   static const List<Color> brandGradient = [brandBlue, primary, magenta];
   static const List<Color> brandGradientSoft = [primaryLight, magenta];
 
-  // Light, mild tints for backgrounds, cards, inputs (never loud)
-  static const surface = Color(0xFFF7F5FD); // app-wide light lavender background
-  static const surfaceAlt = Color(0xFFFFFFFF);
-  static const tint = Color(0xFFEDE9FE); // light purple tint — borders, chips, indicators
-  static const tintStrong = Color(0xFFF0E3FA); // slightly richer tint — icon backgrounds
+  static const surface = Color(0xFFF5F0FC); 
+  static const surfaceAlt = Color(0xFFFCF7FF);
+  static const tint = Color(0xFFEDE9FE); 
+  static const tintStrong = Color(0xFFF2E6FB); 
 
-  // Semantic / status colors (kept distinct from brand so meaning stays clear)
+  /// Soft brand-tinted fill for search boxes, selectors, and filter bars
+  /// that sit directly on the app's light background — colorful instead
+  /// of plain white/gray, but still light enough to read as a form field.
+  static Color searchFill = tint.withOpacity(.55);
+  static Color searchBorder = primary.withOpacity(.14);
+
   static const green = Color(0xFF15803D);
   static const blue = Color(0xFF2563EB);
   static const orange = Color(0xFFD97706); // warning / pending
@@ -32,7 +35,7 @@ class AppColors {
   static const textMuted = Color(0xFF6B6280);
 }
 
-/// Reusable linear gradient for app bars, buttons, and highlight surfaces.
+
 LinearGradient brandLinearGradient({
   AlignmentGeometry begin = Alignment.topLeft,
   AlignmentGeometry end = Alignment.bottomRight,
@@ -41,9 +44,9 @@ LinearGradient brandLinearGradient({
 
 class AppBarStyle {
   static const double height = 72;
-  static const shape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-  );
+  // Flat/square app bar — no rounded bottom corners, used consistently
+  // across every screen's top bar.
+  static const shape = RoundedRectangleBorder();
   static const titleStyle = TextStyle(
     fontWeight: FontWeight.w800,
     fontSize: 21,
@@ -53,7 +56,7 @@ class AppBarStyle {
 
   /// Standard decoration for a gradient app-bar flexibleSpace, used
   /// consistently across every screen's colorful top bar.
-  static BoxDecoration gradientDecoration({double radius = 24}) => BoxDecoration(
+  static BoxDecoration gradientDecoration({double radius = 0}) => BoxDecoration(
         gradient: brandLinearGradient(),
         boxShadow: [
           BoxShadow(
@@ -62,7 +65,9 @@ class AppBarStyle {
             offset: const Offset(0, 8),
           ),
         ],
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
+        borderRadius: radius > 0
+            ? BorderRadius.vertical(bottom: Radius.circular(radius))
+            : null,
       );
 }
 
@@ -96,7 +101,7 @@ ThemeData appTheme() {
 
     cardTheme: CardThemeData(
       elevation: 0,
-      color: Colors.white,
+      color: AppColors.surfaceAlt,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -169,7 +174,7 @@ ThemeData appTheme() {
 
     // Colorful bottom navigation
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surfaceAlt,
       indicatorColor: AppColors.tint,
       surfaceTintColor: Colors.transparent,
       elevation: 8,

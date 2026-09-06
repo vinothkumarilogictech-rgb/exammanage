@@ -614,7 +614,7 @@ class _GlassSection extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.82),
+            color: AppColors.surfaceAlt.withOpacity(0.82),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: Colors.white.withOpacity(0.95)),
             boxShadow: [
@@ -751,7 +751,7 @@ class _StatBox extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.75),
+                  color: AppColors.surfaceAlt.withOpacity(0.75),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Icon(icon, size: 17, color: color),
@@ -825,14 +825,14 @@ class _GlassSearchField extends StatelessWidget {
                     onPressed: onClear,
                   ),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.65),
+            fillColor: AppColors.searchFill,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.10)),
+              borderSide: BorderSide(color: AppColors.searchBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.10)),
+              borderSide: BorderSide(color: AppColors.searchBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
@@ -973,7 +973,7 @@ class _GlassEmptyState extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(34),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.72),
+            color: AppColors.surfaceAlt.withOpacity(0.72),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white),
             boxShadow: [
@@ -1085,7 +1085,7 @@ class _HistoryCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.78),
+            color: AppColors.surfaceAlt.withOpacity(0.78),
             borderRadius: BorderRadius.circular(19),
             border: Border.all(color: Colors.white.withOpacity(0.95)),
             boxShadow: [

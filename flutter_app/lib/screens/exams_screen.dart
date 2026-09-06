@@ -7,6 +7,7 @@ import '../app_theme.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
+import 'profile_screen.dart';
 import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
 
@@ -28,10 +29,16 @@ class _ExamsScreenState extends State<ExamsScreen>
   late final BranchContext _branchContext;
 
   TabController get tabController {
-    return _tabController ??= TabController(length: 3, vsync: this, initialIndex: widget.initialIndex < 0 ? 0 : (widget.initialIndex > 2 ? 2 : widget.initialIndex))
-      ..addListener(() {
-        if (mounted) setState(() {});
-      });
+    return _tabController ??=
+        TabController(
+          length: 3,
+          vsync: this,
+          initialIndex: widget.initialIndex < 0
+              ? 0
+              : (widget.initialIndex > 2 ? 2 : widget.initialIndex),
+        )..addListener(() {
+          if (mounted) setState(() {});
+        });
   }
 
   @override
@@ -39,10 +46,16 @@ class _ExamsScreenState extends State<ExamsScreen>
     super.initState();
     _branchContext = context.read<BranchContext>();
     _branchContext.addListener(_onBranchChanged);
-    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialIndex < 0 ? 0 : (widget.initialIndex > 2 ? 2 : widget.initialIndex))
-      ..addListener(() {
-        if (mounted) setState(() {});
-      });
+    _tabController =
+        TabController(
+          length: 3,
+          vsync: this,
+          initialIndex: widget.initialIndex < 0
+              ? 0
+              : (widget.initialIndex > 2 ? 2 : widget.initialIndex),
+        )..addListener(() {
+          if (mounted) setState(() {});
+        });
     reload();
   }
 
@@ -99,7 +112,10 @@ class _ExamsScreenState extends State<ExamsScreen>
   }
 
   Future<List<ExamTeam>> loadTeams() async {
-    final r = await api.teams(status: 'Active', branchId: _branchContext.selectedBranchId);
+    final r = await api.teams(
+      status: 'Active',
+      branchId: _branchContext.selectedBranchId,
+    );
     return (r.data['data'] as List? ?? const [])
         .map((x) => ExamTeam.fromMap(Map<String, dynamic>.from(x)))
         .toList();
@@ -118,9 +134,9 @@ class _ExamsScreenState extends State<ExamsScreen>
       reload();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to update status: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to update status: $e')));
     }
   }
 
@@ -160,9 +176,9 @@ class _ExamsScreenState extends State<ExamsScreen>
       reload();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to delete candidate: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to delete candidate: $e')));
     }
   }
 
@@ -176,7 +192,9 @@ class _ExamsScreenState extends State<ExamsScreen>
 
   Future<void> _openCandidateDetails(Candidate candidate) async {
     final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => CandidateDetailsScreen(candidate: candidate)),
+      MaterialPageRoute(
+        builder: (_) => CandidateDetailsScreen(candidate: candidate),
+      ),
     );
     if (changed == true && mounted) reload();
   }
@@ -191,50 +209,139 @@ class _ExamsScreenState extends State<ExamsScreen>
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: Container(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(8)))),
-            const SizedBox(height: 18),
-            Row(children: [
-              Container(width: 42, height: 42, decoration: BoxDecoration(color: Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.sticky_note_2_rounded, color: Color(0xFFEA580C))),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Candidate Remarks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                Text(candidate.name, style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280))),
-              ])),
-            ]),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller, autofocus: true, maxLines: 5, maxLength: 500,
-              decoration: InputDecoration(
-                hintText: 'Type any note or remark about this candidate...', alignLabelWithHint: true,
-                filled: true, fillColor: const Color(0xFFF7F5FD),
-                prefixIcon: const Icon(Icons.notes_rounded, color: Color(0xFFEA580C)),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF9A22C7), width: 1.5)),
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Color(0xFFD1D5DB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(width: double.infinity, height: 50, child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C1FB0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-              icon: const Icon(Icons.save_rounded), label: const Text('Save Remarks', style: TextStyle(fontWeight: FontWeight.w800)),
-              onPressed: () async {
-                try {
-                  await api.updateCandidate(candidate.id, {'remarks': controller.text.trim()});
-                  if (ctx.mounted) Navigator.pop(ctx, true);
-                } catch (e) {
-                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Unable to save remarks: $e')));
-                }
-              },
-            )),
-          ]),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFEDE9FE),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: const Icon(
+                      Icons.sticky_note_2_rounded,
+                      color: Color(0xFFEA580C),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Candidate Remarks',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          candidate.name,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLines: 5,
+                maxLength: 500,
+                decoration: InputDecoration(
+                  hintText: 'Type any note or remark about this candidate...',
+                  alignLabelWithHint: true,
+                  filled: true,
+                  fillColor: const Color(0xFFF7F5FD),
+                  prefixIcon: const Icon(
+                    Icons.notes_rounded,
+                    color: Color(0xFFEA580C),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF9A22C7),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C1FB0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  icon: const Icon(Icons.save_rounded),
+                  label: const Text(
+                    'Save Remarks',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  onPressed: () async {
+                    try {
+                      await api.updateCandidate(candidate.id, {
+                        'remarks': controller.text.trim(),
+                      });
+                      if (ctx.mounted) Navigator.pop(ctx, true);
+                    } catch (e) {
+                      if (ctx.mounted)
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(content: Text('Unable to save remarks: $e')),
+                        );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
     controller.dispose();
     if (saved == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Remarks saved.'), backgroundColor: AppColors.green));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Remarks saved.'),
+          backgroundColor: AppColors.green,
+        ),
+      );
       reload();
     }
   }
@@ -245,7 +352,9 @@ class _ExamsScreenState extends State<ExamsScreen>
 
   Widget _fixedBranchField(int branchId, List<Map<String, dynamic>> branches) {
     final match = branches.where((b) => b['id'] == branchId).toList();
-    final name = match.isNotEmpty ? '${match.first['branch_name'] ?? ''}' : 'Selected Branch';
+    final name = match.isNotEmpty
+        ? '${match.first['branch_name'] ?? ''}'
+        : 'Selected Branch';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
@@ -254,125 +363,140 @@ class _ExamsScreenState extends State<ExamsScreen>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
-      child: Row(children: [
-        const Icon(Icons.business_rounded, size: 20, color: Color(0xFF6B7280)),
-        const SizedBox(width: 10),
-        Expanded(child: Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
-        const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
-      ]),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.business_rounded,
+            size: 20,
+            color: Color(0xFF6B7280),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const Icon(
+            Icons.lock_outline_rounded,
+            size: 18,
+            color: Color(0xFF9CA3AF),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _label(String text) => Text(
-        text,
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 13,
-          color: Color(0xFF4B5563),
-        ),
-      );
+    text,
+    style: const TextStyle(
+      fontWeight: FontWeight.w700,
+      fontSize: 13,
+      color: Color(0xFF4B5563),
+    ),
+  );
 
   Widget _field(
     TextEditingController ctrl,
     String hint, {
     IconData? icon,
     TextInputType? keyboardType,
-  }) =>
-      TextField(
-        controller: ctrl,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          hintText: hint,
-          prefixIcon: icon != null ? Icon(icon, size: 20) : null,
-          filled: true,
-          fillColor: const Color(0xFFF9FAFB),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        ),
-      );
+  }) => TextField(
+    controller: ctrl,
+    keyboardType: keyboardType,
+    decoration: InputDecoration(
+      hintText: hint,
+      prefixIcon: icon != null ? Icon(icon, size: 20) : null,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    ),
+  );
 
   Widget _dropdown<T>({
     required T? value,
     required String hint,
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
-  }) =>
-      Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+  }) => Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFF9FAFB),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: const Color(0xFFE5E7EB)),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<T>(
+        isExpanded: true,
+        value: value,
+        hint: Text(
+          hint,
+          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<T>(
-            isExpanded: true,
-            value: value,
-            hint: Text(
-              hint,
-              style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-            ),
-            dropdownColor: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF6B7280)),
-            items: items,
-            onChanged: onChanged,
-          ),
+        dropdownColor: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: Color(0xFF6B7280),
         ),
-      );
+        items: items,
+        onChanged: onChanged,
+      ),
+    ),
+  );
 
   Widget _formSectionCard({
     required String title,
     required IconData icon,
     required Color color,
     required List<Widget> children,
-  }) =>
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFEFEFEF)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  }) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFAFAFA),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFFEFEFEF)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, size: 14, color: color),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF6B7280),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 14, color: color),
             ),
-            const SizedBox(height: 14),
-            ...children,
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF6B7280),
+                letterSpacing: 0.3,
+              ),
+            ),
           ],
         ),
-      );
+        const SizedBox(height: 14),
+        ...children,
+      ],
+    ),
+  );
 
   Widget _statusChip({
     required String label,
@@ -380,39 +504,42 @@ class _ExamsScreenState extends State<ExamsScreen>
     required Color color,
     required bool selected,
     required VoidCallback onTap,
-  }) =>
-      Expanded(
-        child: InkWell(
-          onTap: onTap,
+  }) => Expanded(
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? color.withOpacity(0.12) : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: selected ? color.withOpacity(0.12) : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: selected ? color : const Color(0xFFE5E7EB),
-                width: selected ? 1.4 : 1,
-              ),
-            ),
-            child: Column(
-              children: [
-                Icon(icon, size: 18, color: selected ? color : const Color(0xFF9CA3AF)),
-                const SizedBox(height: 5),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? color : const Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
+          border: Border.all(
+            color: selected ? color : const Color(0xFFE5E7EB),
+            width: selected ? 1.4 : 1,
           ),
         ),
-      );
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? color : const Color(0xFF9CA3AF),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: selected ? color : const Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 
   // ================================================================
   // ADD CANDIDATE DIALOG
@@ -421,9 +548,13 @@ class _ExamsScreenState extends State<ExamsScreen>
   Future<void> _showAddCandidateDialog() async {
     final globalBranchId = _branchContext.selectedBranchId;
     if (globalBranchId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Please select a branch from Dashboard before adding a candidate.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please select a branch from Dashboard before adding a candidate.',
+          ),
+        ),
+      );
       return;
     }
 
@@ -470,20 +601,29 @@ class _ExamsScreenState extends State<ExamsScreen>
         if (b['id'] != null) b['id']: b,
     }.values.toList();
     if (globalBranchId != null) {
-      branchesList = branchesList.where((b) => b['id'] == globalBranchId).toList();
+      branchesList = branchesList
+          .where((b) => b['id'] == globalBranchId)
+          .toList();
     }
     examTypesList = {
       for (final e in examTypesList)
         if (e['id'] != null) e['id']: e,
     }.values.toList();
-    teamsList = {
-      for (final t in teamsList) t.id: t,
-    }.values.toList();
+    teamsList = {for (final t in teamsList) t.id: t}.values.toList();
 
-    int? selectedBranchId = globalBranchId ?? (branchesList.isNotEmpty ? branchesList.first['id'] as int? : null);
-    int? selectedExamTypeId = examTypesList.isNotEmpty ? examTypesList.first['id'] as int? : null;
+    int? selectedBranchId =
+        globalBranchId ??
+        (branchesList.isNotEmpty ? branchesList.first['id'] as int? : null);
+    int? selectedExamTypeId = examTypesList.isNotEmpty
+        ? examTypesList.first['id'] as int?
+        : null;
     List<ExamTeam> teamsForSelectedExam() => teamsList
-        .where((t) => t.examTypeId == null || selectedExamTypeId == null || t.examTypeId == selectedExamTypeId)
+        .where(
+          (t) =>
+              t.examTypeId == null ||
+              selectedExamTypeId == null ||
+              t.examTypeId == selectedExamTypeId,
+        )
         .toList();
     // Team assignment is optional. Candidates can be added without a team.
     int? selectedTeamId;
@@ -508,11 +648,15 @@ class _ExamsScreenState extends State<ExamsScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceAlt,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           padding: EdgeInsets.fromLTRB(
-              24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            24,
+            16,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -540,23 +684,41 @@ class _ExamsScreenState extends State<ExamsScreen>
                         ),
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: const [
-                          BoxShadow(color: Color(0x33059669), blurRadius: 14, offset: Offset(0, 6)),
+                          BoxShadow(
+                            color: Color(0x33059669),
+                            blurRadius: 14,
+                            offset: Offset(0, 6),
+                          ),
                         ],
                       ),
-                      child: const Icon(Icons.person_add_rounded,
-                          color: Colors.white, size: 23),
+                      child: const Icon(
+                        Icons.person_add_rounded,
+                        color: Colors.white,
+                        size: 23,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Add',
-                              style: TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+                          Text(
+                            'Add',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF111827),
+                            ),
+                          ),
                           SizedBox(height: 2),
-                          Text('Register a new exam candidate',
-                              style: TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+                          Text(
+                            'Register a new exam candidate',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -569,7 +731,11 @@ class _ExamsScreenState extends State<ExamsScreen>
                           color: const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF6B7280)),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: Color(0xFF6B7280),
+                        ),
                       ),
                     ),
                   ],
@@ -583,23 +749,37 @@ class _ExamsScreenState extends State<ExamsScreen>
                   children: [
                     _label('Full Name *'),
                     const SizedBox(height: 6),
-                    _field(nameCtrl, 'Enter candidate name',
-                        icon: Icons.person_outline_rounded),
+                    _field(
+                      nameCtrl,
+                      'Enter candidate name',
+                      icon: Icons.person_outline_rounded,
+                    ),
                     const SizedBox(height: 14),
                     _label('Email'),
                     const SizedBox(height: 6),
-                    _field(emailCtrl, 'Candidate email',
-                        icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+                    _field(
+                      emailCtrl,
+                      'Candidate email',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
                     const SizedBox(height: 14),
                     _label('Phone'),
                     const SizedBox(height: 6),
-                    _field(phoneCtrl, 'Candidate phone',
-                        icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
+                    _field(
+                      phoneCtrl,
+                      'Candidate phone',
+                      icon: Icons.phone_outlined,
+                      keyboardType: TextInputType.phone,
+                    ),
                     const SizedBox(height: 14),
                     _label('Remarks'),
                     const SizedBox(height: 6),
-                    _field(remarksCtrl, 'Add a note about this candidate...',
-                        icon: Icons.notes_rounded),
+                    _field(
+                      remarksCtrl,
+                      'Add a note about this candidate...',
+                      icon: Icons.notes_rounded,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -619,16 +799,22 @@ class _ExamsScreenState extends State<ExamsScreen>
                       value: selectedExamTypeId,
                       hint: 'Select exam type',
                       items: examTypesList
-                          .map((e) => DropdownMenuItem<int>(
-                                value: e['id'],
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.school_rounded, size: 18, color: Color(0xFF6B7280)),
-                                    const SizedBox(width: 8),
-                                    Text('${e['name'] ?? ''}'),
-                                  ],
-                                ),
-                              ))
+                          .map(
+                            (e) => DropdownMenuItem<int>(
+                              value: e['id'],
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.school_rounded,
+                                    size: 18,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('${e['name'] ?? ''}'),
+                                ],
+                              ),
+                            ),
+                          )
                           .toList(),
                       onChanged: (val) {
                         setSheetState(() {
@@ -649,22 +835,45 @@ class _ExamsScreenState extends State<ExamsScreen>
                       items: [
                         const DropdownMenuItem<int>(
                           value: -1,
-                          child: Row(children: [
-                            Icon(Icons.person_outline_rounded, size: 18, color: Color(0xFF6B7280)),
-                            SizedBox(width: 8),
-                            Expanded(child: Text('Not Assigned')),
-                          ]),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.person_outline_rounded,
+                                size: 18,
+                                color: Color(0xFF6B7280),
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(child: Text('Not Assigned')),
+                            ],
+                          ),
                         ),
-                        ...teamsForSelectedExam().map((t) => DropdownMenuItem<int>(
-                              value: t.id,
-                              child: Row(children: [
-                                const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF6B7280)),
+                        ...teamsForSelectedExam().map(
+                          (t) => DropdownMenuItem<int>(
+                            value: t.id,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.groups_rounded,
+                                  size: 18,
+                                  color: Color(0xFF6B7280),
+                                ),
                                 const SizedBox(width: 8),
-                                Expanded(child: Text(t.name, overflow: TextOverflow.ellipsis)),
-                              ]),
-                            )),
+                                Expanded(
+                                  child: Text(
+                                    t.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
-                      onChanged: (val) => setSheetState(() => selectedTeamId = val == null || val == -1 ? null : val),
+                      onChanged: (val) => setSheetState(
+                        () => selectedTeamId = val == null || val == -1
+                            ? null
+                            : val,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     _label('Exam Date'),
@@ -674,17 +883,24 @@ class _ExamsScreenState extends State<ExamsScreen>
                       readOnly: true,
                       decoration: InputDecoration(
                         hintText: 'Select date',
-                        prefixIcon: const Icon(Icons.calendar_today_rounded, size: 19),
+                        prefixIcon: const Icon(
+                          Icons.calendar_today_rounded,
+                          size: 19,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide:
-                                const BorderSide(color: Color(0xFFE5E7EB))),
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
+                        ),
                         enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide:
-                                const BorderSide(color: Color(0xFFE5E7EB))),
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
+                        ),
                       ),
                       onTap: () async {
                         final picked = await showDatePicker(
@@ -716,7 +932,9 @@ class _ExamsScreenState extends State<ExamsScreen>
                           icon: Icons.check_circle_rounded,
                           color: const Color(0xFF059669),
                           selected: selectedStatus == 'Registered',
-                          onTap: () => setSheetState(() => selectedStatus = 'Registered'),
+                          onTap: () => setSheetState(
+                            () => selectedStatus = 'Registered',
+                          ),
                         ),
                         const SizedBox(width: 10),
                         _statusChip(
@@ -724,7 +942,9 @@ class _ExamsScreenState extends State<ExamsScreen>
                           icon: Icons.person_off_rounded,
                           color: const Color(0xFFEA580C),
                           selected: selectedStatus == 'Not Completed',
-                          onTap: () => setSheetState(() => selectedStatus = 'Not Completed'),
+                          onTap: () => setSheetState(
+                            () => selectedStatus = 'Not Completed',
+                          ),
                         ),
                         const SizedBox(width: 10),
                         _statusChip(
@@ -732,7 +952,9 @@ class _ExamsScreenState extends State<ExamsScreen>
                           icon: Icons.event_repeat_rounded,
                           color: const Color(0xFF7C3AED),
                           selected: selectedStatus == 'Rescheduled',
-                          onTap: () => setSheetState(() => selectedStatus = 'Rescheduled'),
+                          onTap: () => setSheetState(
+                            () => selectedStatus = 'Rescheduled',
+                          ),
                         ),
                       ],
                     ),
@@ -746,14 +968,18 @@ class _ExamsScreenState extends State<ExamsScreen>
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF059669),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                     ),
                     icon: const Icon(Icons.person_add_alt_1_rounded, size: 19),
                     onPressed: () async {
                       if (nameCtrl.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                            content: Text('Candidate name is required')));
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('Candidate name is required'),
+                          ),
+                        );
                         return;
                       }
                       try {
@@ -771,21 +997,28 @@ class _ExamsScreenState extends State<ExamsScreen>
                         if (ctx.mounted) {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Candidate added!'),
-                                  backgroundColor: AppColors.green));
+                            const SnackBar(
+                              content: Text('Candidate added!'),
+                              backgroundColor: AppColors.green,
+                            ),
+                          );
                           reload();
                         }
                       } catch (e) {
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text('Error: $e')));
+                          ScaffoldMessenger.of(
+                            ctx,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
                         }
                       }
                     },
-                    label: const Text('Add',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w800)),
+                    label: const Text(
+                      'Add',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -803,7 +1036,13 @@ class _ExamsScreenState extends State<ExamsScreen>
   Future<void> _showAddSessionDialog() async {
     final globalBranchId = _branchContext.selectedBranchId;
     if (globalBranchId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a branch from Dashboard before adding an exam session.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please select a branch from Dashboard before adding an exam session.',
+          ),
+        ),
+      );
       return;
     }
     if (_branchesList.isEmpty || _examTypesList.isEmpty) {
@@ -834,10 +1073,16 @@ class _ExamsScreenState extends State<ExamsScreen>
     }
 
     if (globalBranchId != null) {
-      branchesList = branchesList.where((b) => b['id'] == globalBranchId).toList();
+      branchesList = branchesList
+          .where((b) => b['id'] == globalBranchId)
+          .toList();
     }
-    int? selectedBranchId = globalBranchId ?? (branchesList.isNotEmpty ? branchesList.first['id'] : null);
-    int? selectedExamTypeId = examTypesList.isNotEmpty ? examTypesList.first['id'] : null;
+    int? selectedBranchId =
+        globalBranchId ??
+        (branchesList.isNotEmpty ? branchesList.first['id'] : null);
+    int? selectedExamTypeId = examTypesList.isNotEmpty
+        ? examTypesList.first['id']
+        : null;
     final dateCtrl = TextEditingController(
       text: DateTime.now().toIso8601String().split('T').first,
     );
@@ -855,280 +1100,7 @@ class _ExamsScreenState extends State<ExamsScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-              24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(Icons.note_add_rounded,
-                          color: Colors.white, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text('Add Exam Session',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w900)),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Branch is controlled globally from Dashboard.
-                _label('Branch'),
-                const SizedBox(height: 6),
-                _fixedBranchField(globalBranchId, branchesList),
-                const SizedBox(height: 14),
-
-                // Exam Type
-                _label('Exam Type'),
-                const SizedBox(height: 6),
-                _dropdown<int>(
-                  value: selectedExamTypeId,
-                  hint: 'Select exam type',
-                  items: examTypesList
-                      .map((e) => DropdownMenuItem<int>(
-                            value: e['id'],
-                            child: Row(
-                              children: [
-                                const Icon(Icons.school_rounded, size: 18, color: Color(0xFF6B7280)),
-                                const SizedBox(width: 8),
-                                Text('${e['name'] ?? ''}', overflow: TextOverflow.ellipsis),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (val) =>
-                      setSheetState(() => selectedExamTypeId = val),
-                ),
-
-                const SizedBox(height: 14),
-                _label('Exam Date'),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: dateCtrl,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: 'Select date',
-                    suffixIcon: const Icon(Icons.calendar_today_rounded),
-                    filled: true,
-                    fillColor: const Color(0xFFF9FAFB),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide:
-                            const BorderSide(color: Color(0xFFE5E7EB))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide:
-                            const BorderSide(color: Color(0xFFE5E7EB))),
-                  ),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate:
-                          DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (picked != null) {
-                      dateCtrl.text =
-                          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                    }
-                  },
-                ),
-
-                const SizedBox(height: 14),
-                Row(children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _label('Start Time'),
-                        const SizedBox(height: 6),
-                        _field(startCtrl, 'HH:MM'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _label('End Time'),
-                        const SizedBox(height: 6),
-                        _field(endCtrl, 'HH:MM'),
-                      ],
-                    ),
-                  ),
-                ]),
-
-                const SizedBox(height: 14),
-                Row(children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _label('Fee'),
-                        const SizedBox(height: 6),
-                        _field(feeCtrl, '0.00',
-                            keyboardType: TextInputType.number),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _label('Seats'),
-                        const SizedBox(height: 6),
-                        _field(capacityCtrl, '0',
-                            keyboardType: TextInputType.number),
-                      ],
-                    ),
-                  ),
-                ]),
-
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: () async {
-                      if (dateCtrl.text.isEmpty ||
-                          selectedBranchId == null ||
-                          selectedExamTypeId == null) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                            content: Text('Fill all required fields')));
-                        return;
-                      }
-                      try {
-                        // Auto-create or find existing branch-exam mapping
-                        int? mappingId;
-                        try {
-                          final mapResp = await api.createBranchMapping({
-                            'branch_id': selectedBranchId,
-                            'exam_type_id': selectedExamTypeId,
-                          });
-                          mappingId = mapResp.data['data']?['id'];
-                        } catch (_) {
-                          // Mapping may already exist — find it
-                          final existing = await api.branchMappings(
-                              branchId: selectedBranchId);
-                          final list =
-                              existing.data['data'] as List? ?? [];
-                          for (final m in list) {
-                            if (m['exam_type_id'] == selectedExamTypeId) {
-                              mappingId = m['id'];
-                              break;
-                            }
-                          }
-                        }
-                        if (mappingId == null) {
-                          if (ctx.mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Could not resolve branch-exam mapping')));
-                          }
-                          return;
-                        }
-                        await api.createSession({
-                          'branch_exam_id': mappingId,
-                          'exam_date': dateCtrl.text,
-                          'start_time': startCtrl.text,
-                          'end_time': endCtrl.text,
-                          'fee': double.tryParse(feeCtrl.text) ?? 0,
-                          'seat_capacity':
-                              int.tryParse(capacityCtrl.text) ?? 0,
-                        });
-                        if (ctx.mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Session created!'),
-                                  backgroundColor: AppColors.green));
-                          reload();
-                        }
-                      } catch (e) {
-                        if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text('Error: $e')));
-                        }
-                      }
-                    },
-                    child: const Text('Create Session',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w800)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ================================================================
-  // BUILD
-  // ================================================================
-
-  Future<void> _showAddExamTypeDialog() async {
-    // The Add Exam form uses the existing English-language exam catalog.
-    // If the user selects "Others", they can enter a custom exam name manually.
-    if (_examTypesList.isEmpty) {
-      await _loadLookups();
-    }
-
-    final englishExamNames = <String>{
-      for (final exam in _examTypesList)
-        if ('${exam['language'] ?? ''}'.trim().toLowerCase() == 'english' &&
-            '${exam['name'] ?? ''}'.trim().isNotEmpty)
-          '${exam['name']}'.trim(),
-    }.toList();
-    englishExamNames.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-    String? selectedExam = englishExamNames.isNotEmpty ? englishExamNames.first : null;
-    final customExamCtrl = TextEditingController();
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceAlt,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1164,12 +1136,336 @@ class _ExamsScreenState extends State<ExamsScreen>
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(Icons.school_rounded, color: Colors.white, size: 22),
+                      child: const Icon(
+                        Icons.note_add_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Add Exam Session',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Branch is controlled globally from Dashboard.
+                _label('Branch'),
+                const SizedBox(height: 6),
+                _fixedBranchField(globalBranchId, branchesList),
+                const SizedBox(height: 14),
+
+                // Exam Type
+                _label('Exam Type'),
+                const SizedBox(height: 6),
+                _dropdown<int>(
+                  value: selectedExamTypeId,
+                  hint: 'Select exam type',
+                  items: examTypesList
+                      .map(
+                        (e) => DropdownMenuItem<int>(
+                          value: e['id'],
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.school_rounded,
+                                size: 18,
+                                color: Color(0xFF6B7280),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${e['name'] ?? ''}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) =>
+                      setSheetState(() => selectedExamTypeId = val),
+                ),
+
+                const SizedBox(height: 14),
+                _label('Exam Date'),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: dateCtrl,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: 'Select date',
+                    suffixIcon: const Icon(Icons.calendar_today_rounded),
+                    filled: true,
+                    fillColor: const Color(0xFFF9FAFB),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                  ),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      dateCtrl.text =
+                          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _label('Start Time'),
+                          const SizedBox(height: 6),
+                          _field(startCtrl, 'HH:MM'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _label('End Time'),
+                          const SizedBox(height: 6),
+                          _field(endCtrl, 'HH:MM'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _label('Fee'),
+                          const SizedBox(height: 6),
+                          _field(
+                            feeCtrl,
+                            '0.00',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _label('Seats'),
+                          const SizedBox(height: 6),
+                          _field(
+                            capacityCtrl,
+                            '0',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () async {
+                      if (dateCtrl.text.isEmpty ||
+                          selectedBranchId == null ||
+                          selectedExamTypeId == null) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('Fill all required fields'),
+                          ),
+                        );
+                        return;
+                      }
+                      try {
+                        // Auto-create or find existing branch-exam mapping
+                        int? mappingId;
+                        try {
+                          final mapResp = await api.createBranchMapping({
+                            'branch_id': selectedBranchId,
+                            'exam_type_id': selectedExamTypeId,
+                          });
+                          mappingId = mapResp.data['data']?['id'];
+                        } catch (_) {
+                          // Mapping may already exist — find it
+                          final existing = await api.branchMappings(
+                            branchId: selectedBranchId,
+                          );
+                          final list = existing.data['data'] as List? ?? [];
+                          for (final m in list) {
+                            if (m['exam_type_id'] == selectedExamTypeId) {
+                              mappingId = m['id'];
+                              break;
+                            }
+                          }
+                        }
+                        if (mappingId == null) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not resolve branch-exam mapping',
+                                ),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        await api.createSession({
+                          'branch_exam_id': mappingId,
+                          'exam_date': dateCtrl.text,
+                          'start_time': startCtrl.text,
+                          'end_time': endCtrl.text,
+                          'fee': double.tryParse(feeCtrl.text) ?? 0,
+                          'seat_capacity': int.tryParse(capacityCtrl.text) ?? 0,
+                        });
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Session created!'),
+                              backgroundColor: AppColors.green,
+                            ),
+                          );
+                          reload();
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(
+                            ctx,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                        }
+                      }
+                    },
+                    child: const Text(
+                      'Create Session',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ================================================================
+  // BUILD
+  // ================================================================
+
+  Future<void> _showAddExamTypeDialog() async {
+    // The Add Exam form uses the existing English-language exam catalog.
+    // If the user selects "Others", they can enter a custom exam name manually.
+    if (_examTypesList.isEmpty) {
+      await _loadLookups();
+    }
+
+    final englishExamNames = <String>{
+      for (final exam in _examTypesList)
+        if ('${exam['language'] ?? ''}'.trim().toLowerCase() == 'english' &&
+            '${exam['name'] ?? ''}'.trim().isNotEmpty)
+          '${exam['name']}'.trim(),
+    }.toList();
+    englishExamNames.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    String? selectedExam = englishExamNames.isNotEmpty
+        ? englishExamNames.first
+        : null;
+    final customExamCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            16,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.school_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Text(
                       'Add',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ],
                 ),
@@ -1180,21 +1476,36 @@ class _ExamsScreenState extends State<ExamsScreen>
                   value: selectedExam,
                   hint: 'Select English exam',
                   items: [
-                    ...englishExamNames.map((name) => DropdownMenuItem<String>(
-                          value: name,
-                          child: Row(
-                            children: [
-                              const Icon(Icons.school_rounded, size: 18, color: Color(0xFF6B7280)),
-                              const SizedBox(width: 8),
-                              Expanded(child: Text(name, overflow: TextOverflow.ellipsis)),
-                            ],
-                          ),
-                        )),
+                    ...englishExamNames.map(
+                      (name) => DropdownMenuItem<String>(
+                        value: name,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.school_rounded,
+                              size: 18,
+                              color: Color(0xFF6B7280),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     const DropdownMenuItem<String>(
                       value: '__others__',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_rounded, size: 18, color: Color(0xFF6B7280)),
+                          Icon(
+                            Icons.edit_rounded,
+                            size: 18,
+                            color: Color(0xFF6B7280),
+                          ),
                           SizedBox(width: 8),
                           Text('Others'),
                         ],
@@ -1212,7 +1523,11 @@ class _ExamsScreenState extends State<ExamsScreen>
                   const SizedBox(height: 14),
                   _label('Enter Exam Name *'),
                   const SizedBox(height: 6),
-                  _field(customExamCtrl, 'e.g. PTE, GRE, Duolingo', icon: Icons.edit_rounded),
+                  _field(
+                    customExamCtrl,
+                    'e.g. PTE, GRE, Duolingo',
+                    icon: Icons.edit_rounded,
+                  ),
                 ],
                 const SizedBox(height: 24),
                 SizedBox(
@@ -1221,7 +1536,9 @@ class _ExamsScreenState extends State<ExamsScreen>
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                     onPressed: () async {
                       final examName = selectedExam == '__others__'
@@ -1229,14 +1546,20 @@ class _ExamsScreenState extends State<ExamsScreen>
                           : (selectedExam ?? '').trim();
                       if (examName.isEmpty || selectedExam == null) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Please select an exam or choose Others and enter a name')),
+                          const SnackBar(
+                            content: Text(
+                              'Please select an exam or choose Others and enter a name',
+                            ),
+                          ),
                         );
                         return;
                       }
                       try {
                         await api.createExamType({
                           'name': examName,
-                          'language': selectedExam == '__others__' ? 'Other' : 'English',
+                          'language': selectedExam == '__others__'
+                              ? 'Other'
+                              : 'English',
                           // Description is intentionally not collected in the UI.
                           'description': '',
                           'status': 'Active',
@@ -1253,13 +1576,19 @@ class _ExamsScreenState extends State<ExamsScreen>
                         }
                       } catch (e) {
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                          ScaffoldMessenger.of(
+                            ctx,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
                         }
                       }
                     },
-                    child: const Text('Add', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                    child: const Text(
+                      'Add',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1274,44 +1603,182 @@ class _ExamsScreenState extends State<ExamsScreen>
   Future<void> _showAddTeamDialog() async {
     final globalBranchId = _branchContext.selectedBranchId;
     if (globalBranchId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a branch from Dashboard before adding a team.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please select a branch from Dashboard before adding a team.',
+          ),
+        ),
+      );
       return;
     }
     if (_examTypesList.isEmpty) await _loadLookups();
     final nameCtrl = TextEditingController();
     final locationCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    int? selectedExamTypeId = _examTypesList.isNotEmpty ? _examTypesList.first['id'] : null;
+    int? selectedExamTypeId = _examTypesList.isNotEmpty
+        ? _examTypesList.first['id']
+        : null;
 
     await showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setSheetState) => Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 18),
-          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF9A22C7), Color(0xFF9A3412)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Add', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
-          const SizedBox(height: 22),
-          _label('Team Name *'), const SizedBox(height: 6), _field(nameCtrl, 'e.g. CELPIP Partner Team', icon: Icons.groups_rounded),
-          const SizedBox(height: 14), _label('Location'), const SizedBox(height: 6), _field(locationCtrl, 'Team location / service area', icon: Icons.location_on_outlined),
-          const SizedBox(height: 14), _label('Phone Number'), const SizedBox(height: 6), _field(phoneCtrl, 'Team contact number', icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
-          const SizedBox(height: 14), _label('Exam Provided For'), const SizedBox(height: 6),
-          _dropdown<int>(value: selectedExamTypeId, hint: 'Select exam', items: _examTypesList.map((e) => DropdownMenuItem<int>(value: e['id'], child: Text('${e['name'] ?? ''}'))).toList(), onChanged: (v) => setSheetState(() => selectedExamTypeId = v)),
-          const SizedBox(height: 24),
-          SizedBox(width: double.infinity, height: 52, child: FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-            onPressed: () async {
-              if (nameCtrl.text.trim().isEmpty) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Team name is required'))); return; }
-              try {
-                await api.createTeam({'name': nameCtrl.text.trim(), 'location': locationCtrl.text.trim(), 'phone': phoneCtrl.text.trim(), 'branch_id': globalBranchId, 'exam_type_id': selectedExamTypeId, 'status': 'Active'});
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team added successfully!'), backgroundColor: AppColors.green)); reload(); }
-              } catch (e) { if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'))); }
-            }, icon: const Icon(Icons.add_rounded), label: const Text('Add', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          )),
-        ])),
-      )),
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            16,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFD1D5DB),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.groups_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Add',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                _label('Team Name *'),
+                const SizedBox(height: 6),
+                _field(
+                  nameCtrl,
+                  'e.g. CELPIP Partner Team',
+                  icon: Icons.groups_rounded,
+                ),
+                const SizedBox(height: 14),
+                _label('Location'),
+                const SizedBox(height: 6),
+                _field(
+                  locationCtrl,
+                  'Team location / service area',
+                  icon: Icons.location_on_outlined,
+                ),
+                const SizedBox(height: 14),
+                _label('Phone Number'),
+                const SizedBox(height: 6),
+                _field(
+                  phoneCtrl,
+                  'Team contact number',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 14),
+                _label('Exam Provided For'),
+                const SizedBox(height: 6),
+                _dropdown<int>(
+                  value: selectedExamTypeId,
+                  hint: 'Select exam',
+                  items: _examTypesList
+                      .map(
+                        (e) => DropdownMenuItem<int>(
+                          value: e['id'],
+                          child: Text('${e['name'] ?? ''}'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setSheetState(() => selectedExamTypeId = v),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () async {
+                      if (nameCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('Team name is required'),
+                          ),
+                        );
+                        return;
+                      }
+                      try {
+                        await api.createTeam({
+                          'name': nameCtrl.text.trim(),
+                          'location': locationCtrl.text.trim(),
+                          'phone': phoneCtrl.text.trim(),
+                          'branch_id': globalBranchId,
+                          'exam_type_id': selectedExamTypeId,
+                          'status': 'Active',
+                        });
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Team added successfully!'),
+                              backgroundColor: AppColors.green,
+                            ),
+                          );
+                          reload();
+                        }
+                      } catch (e) {
+                        if (ctx.mounted)
+                          ScaffoldMessenger.of(
+                            ctx,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    },
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text(
+                      'Add',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1323,96 +1790,518 @@ class _ExamsScreenState extends State<ExamsScreen>
     int? selectedExamTypeId = team.examTypeId;
 
     await showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setSheetState) => Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 18),
-          Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF9A22C7), Color(0xFF9A3412)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.edit_rounded, color: Colors.white)), const SizedBox(width: 12), const Text('Edit Team', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))]),
-          const SizedBox(height: 22),
-          _label('Team Name *'), const SizedBox(height: 6), _field(nameCtrl, 'e.g. CELPIP Partner Team', icon: Icons.groups_rounded),
-          const SizedBox(height: 14), _label('Location'), const SizedBox(height: 6), _field(locationCtrl, 'Team location / service area', icon: Icons.location_on_outlined),
-          const SizedBox(height: 14), _label('Phone Number'), const SizedBox(height: 6), _field(phoneCtrl, 'Team contact number', icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
-          const SizedBox(height: 14), _label('Exam Provided For'), const SizedBox(height: 6),
-          _dropdown<int>(value: selectedExamTypeId, hint: 'Select exam', items: _examTypesList.map((e) => DropdownMenuItem<int>(value: e['id'], child: Text('${e['name'] ?? ''}'))).toList(), onChanged: (v) => setSheetState(() => selectedExamTypeId = v)),
-          const SizedBox(height: 24),
-          SizedBox(width: double.infinity, height: 52, child: FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-            onPressed: () async {
-              if (nameCtrl.text.trim().isEmpty) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Team name is required'))); return; }
-              try {
-                await api.updateTeam(team.id, {'name': nameCtrl.text.trim(), 'location': locationCtrl.text.trim(), 'phone': phoneCtrl.text.trim(), 'exam_type_id': selectedExamTypeId});
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team updated successfully!'), backgroundColor: AppColors.green)); reload(); }
-              } catch (e) { if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'))); }
-            }, icon: const Icon(Icons.save_rounded), label: const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          )),
-        ])),
-      )),
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            16,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFD1D5DB),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.edit_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Edit Team',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                _label('Team Name *'),
+                const SizedBox(height: 6),
+                _field(
+                  nameCtrl,
+                  'e.g. CELPIP Partner Team',
+                  icon: Icons.groups_rounded,
+                ),
+                const SizedBox(height: 14),
+                _label('Location'),
+                const SizedBox(height: 6),
+                _field(
+                  locationCtrl,
+                  'Team location / service area',
+                  icon: Icons.location_on_outlined,
+                ),
+                const SizedBox(height: 14),
+                _label('Phone Number'),
+                const SizedBox(height: 6),
+                _field(
+                  phoneCtrl,
+                  'Team contact number',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 14),
+                _label('Exam Provided For'),
+                const SizedBox(height: 6),
+                _dropdown<int>(
+                  value: selectedExamTypeId,
+                  hint: 'Select exam',
+                  items: _examTypesList
+                      .map(
+                        (e) => DropdownMenuItem<int>(
+                          value: e['id'],
+                          child: Text('${e['name'] ?? ''}'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setSheetState(() => selectedExamTypeId = v),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () async {
+                      if (nameCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('Team name is required'),
+                          ),
+                        );
+                        return;
+                      }
+                      try {
+                        await api.updateTeam(team.id, {
+                          'name': nameCtrl.text.trim(),
+                          'location': locationCtrl.text.trim(),
+                          'phone': phoneCtrl.text.trim(),
+                          'exam_type_id': selectedExamTypeId,
+                        });
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Team updated successfully!'),
+                              backgroundColor: AppColors.green,
+                            ),
+                          );
+                          reload();
+                        }
+                      } catch (e) {
+                        if (ctx.mounted)
+                          ScaffoldMessenger.of(
+                            ctx,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    },
+                    icon: const Icon(Icons.save_rounded),
+                    label: const Text(
+                      'Save',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Future<Map<String, dynamic>?> _loadTeamReport(ExamTeam team) async {
-    try { final r = await api.teamReport(team.id); return Map<String, dynamic>.from(r.data['data'] ?? {}); }
-    catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to load report: $e'))); return null; }
+    try {
+      final r = await api.teamReport(team.id);
+      return Map<String, dynamic>.from(r.data['data'] ?? {});
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Unable to load report: $e')));
+      return null;
+    }
   }
 
-  String _csvEscape(dynamic value) => '"${'${value ?? ''}'.replaceAll('"', '""')}"';
+  String _csvEscape(dynamic value) =>
+      '"${'${value ?? ''}'.replaceAll('"', '""')}"';
 
   Future<void> _exportTeamExcel(ExamTeam team, {bool all = false}) async {
     List<Map<String, dynamic>> rows = [];
     if (all) {
-      for (final t in await teams) rows.add({'Team Name': t.name, 'Location': t.location, 'Phone': t.phone, 'Exam': t.examTypeName, 'Candidates': t.candidateCount, 'Status': t.status});
+      for (final t in await teams)
+        rows.add({
+          'Team Name': t.name,
+          'Location': t.location,
+          'Phone': t.phone,
+          'Exam': t.examTypeName,
+          'Candidates': t.candidateCount,
+          'Status': t.status,
+        });
     } else {
-      final report = await _loadTeamReport(team); if (report == null) return;
-      for (final item in (report['candidates'] as List? ?? const [])) { final c = Map<String,dynamic>.from(item); rows.add({'Team Name': team.name, 'Location': team.location, 'Phone': team.phone, 'Exam': c['exam_type_name'] ?? team.examTypeName, 'Candidate': c['name'], 'Branch': c['branch_name'], 'Exam Date': c['exam_date'], 'Status': c['status']}); }
+      final report = await _loadTeamReport(team);
+      if (report == null) return;
+      for (final item in (report['candidates'] as List? ?? const [])) {
+        final c = Map<String, dynamic>.from(item);
+        rows.add({
+          'Team Name': team.name,
+          'Location': team.location,
+          'Phone': team.phone,
+          'Exam': c['exam_type_name'] ?? team.examTypeName,
+          'Candidate': c['name'],
+          'Branch': c['branch_name'],
+          'Exam Date': c['exam_date'],
+          'Status': c['status'],
+        });
+      }
     }
-    final headers = all ? ['Team Name','Location','Phone','Exam','Candidates','Status'] : ['Team Name','Location','Phone','Exam','Candidate','Branch','Exam Date','Status'];
+    final headers = all
+        ? ['Team Name', 'Location', 'Phone', 'Exam', 'Candidates', 'Status']
+        : [
+            'Team Name',
+            'Location',
+            'Phone',
+            'Exam',
+            'Candidate',
+            'Branch',
+            'Exam Date',
+            'Status',
+          ];
     final buffer = StringBuffer()..writeln(headers.map(_csvEscape).join(','));
-    for (final row in rows) buffer.writeln(headers.map((h) => _csvEscape(row[h])).join(','));
-    final safe = (all ? 'all_teams' : team.name).replaceAll(RegExp(r'\W+'), '_');
-    await Printing.sharePdf(bytes: Uint8List.fromList(buffer.toString().codeUnits), filename: '${safe}_team_report.csv');
+    for (final row in rows)
+      buffer.writeln(headers.map((h) => _csvEscape(row[h])).join(','));
+    final safe = (all ? 'all_teams' : team.name).replaceAll(
+      RegExp(r'\W+'),
+      '_',
+    );
+    await Printing.sharePdf(
+      bytes: Uint8List.fromList(buffer.toString().codeUnits),
+      filename: '${safe}_team_report.csv',
+    );
   }
 
   Future<void> _exportTeamPdf(ExamTeam team, {bool all = false}) async {
     final document = pw.Document();
-    final report = all ? null : await _loadTeamReport(team); if (!all && report == null) return;
+    final report = all ? null : await _loadTeamReport(team);
+    if (!all && report == null) return;
     final teamRows = all ? await teams : <ExamTeam>[];
-    final candidates = all ? const [] : (report!['candidates'] as List? ?? const []);
-    document.addPage(pw.MultiPage(pageFormat: pdf.PdfPageFormat.a4, margin: const pw.EdgeInsets.all(28), build: (context) => [
-      pw.Text(all ? 'Exam Team Report' : '${team.name} — Team Report', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-      pw.SizedBox(height: 5), pw.Text('Generated: ${DateTime.now().toString().split('.').first}', style: const pw.TextStyle(fontSize: 10, color: pdf.PdfColors.grey700)), pw.SizedBox(height: 16),
-      if (!all) ...[
-        pw.Container(padding: const pw.EdgeInsets.all(12), decoration: pw.BoxDecoration(color: const pdf.PdfColor.fromInt(0xFFF3E8FF), borderRadius: pw.BorderRadius.circular(8)), child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [pw.Text('Team Details', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)), pw.SizedBox(height: 5), pw.Text('Team: ${team.name}'), pw.Text('Location: ${team.location.isEmpty ? '-' : team.location}'), pw.Text('Phone: ${team.phone.isEmpty ? '-' : team.phone}'), pw.Text('Exam: ${team.examTypeName.isEmpty ? '-' : team.examTypeName}'), pw.Text('Candidates: ${candidates.length}') ])),
-        pw.SizedBox(height: 16), pw.Text('Assigned Candidates', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 8),
-        pw.TableHelper.fromTextArray(headers: ['Candidate','Branch','Exam','Date','Status'], data: candidates.map((item) { final c=Map<String,dynamic>.from(item); return ['${c['name']??'-'}','${c['branch_name']??'-'}','${c['exam_type_name']??'-'}','${c['exam_date']??'-'}','${c['status']??'-'}']; }).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFFE85D04)), cellStyle: const pw.TextStyle(fontSize: 8)),
-      ] else ...[
-        pw.Text('All Teams', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 8),
-        pw.TableHelper.fromTextArray(headers: ['Team','Location','Phone','Exam','Candidates','Status'], data: teamRows.map((t)=>[t.name,t.location.isEmpty?'-':t.location,t.phone.isEmpty?'-':t.phone,t.examTypeName.isEmpty?'-':t.examTypeName,'${t.candidateCount}',t.status]).toList(), headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white), headerDecoration: const pw.BoxDecoration(color: pdf.PdfColor.fromInt(0xFFE85D04)), cellStyle: const pw.TextStyle(fontSize: 9)),
-      ],
-    ]));
-    final safe = (all ? 'all_teams' : team.name).replaceAll(RegExp(r'\W+'), '_');
-    await Printing.layoutPdf(onLayout: (format) async => document.save(), name: '${safe}_team_report_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    final candidates = all
+        ? const []
+        : (report!['candidates'] as List? ?? const []);
+    document.addPage(
+      pw.MultiPage(
+        pageFormat: pdf.PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(28),
+        build: (context) => [
+          pw.Text(
+            all ? 'Exam Team Report' : '${team.name} — Team Report',
+            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 5),
+          pw.Text(
+            'Generated: ${DateTime.now().toString().split('.').first}',
+            style: const pw.TextStyle(
+              fontSize: 10,
+              color: pdf.PdfColors.grey700,
+            ),
+          ),
+          pw.SizedBox(height: 16),
+          if (!all) ...[
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: const pdf.PdfColor.fromInt(0xFFF3E8FF),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'Team Details',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  pw.SizedBox(height: 5),
+                  pw.Text('Team: ${team.name}'),
+                  pw.Text(
+                    'Location: ${team.location.isEmpty ? '-' : team.location}',
+                  ),
+                  pw.Text('Phone: ${team.phone.isEmpty ? '-' : team.phone}'),
+                  pw.Text(
+                    'Exam: ${team.examTypeName.isEmpty ? '-' : team.examTypeName}',
+                  ),
+                  pw.Text('Candidates: ${candidates.length}'),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            pw.Text(
+              'Assigned Candidates',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              headers: ['Candidate', 'Branch', 'Exam', 'Date', 'Status'],
+              data: candidates.map((item) {
+                final c = Map<String, dynamic>.from(item);
+                return [
+                  '${c['name'] ?? '-'}',
+                  '${c['branch_name'] ?? '-'}',
+                  '${c['exam_type_name'] ?? '-'}',
+                  '${c['exam_date'] ?? '-'}',
+                  '${c['status'] ?? '-'}',
+                ];
+              }).toList(),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: pdf.PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: pdf.PdfColor.fromInt(0xFFE85D04),
+              ),
+              cellStyle: const pw.TextStyle(fontSize: 8),
+            ),
+          ] else ...[
+            pw.Text(
+              'All Teams',
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              headers: [
+                'Team',
+                'Location',
+                'Phone',
+                'Exam',
+                'Candidates',
+                'Status',
+              ],
+              data: teamRows
+                  .map(
+                    (t) => [
+                      t.name,
+                      t.location.isEmpty ? '-' : t.location,
+                      t.phone.isEmpty ? '-' : t.phone,
+                      t.examTypeName.isEmpty ? '-' : t.examTypeName,
+                      '${t.candidateCount}',
+                      t.status,
+                    ],
+                  )
+                  .toList(),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: pdf.PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: pdf.PdfColor.fromInt(0xFFE85D04),
+              ),
+              cellStyle: const pw.TextStyle(fontSize: 9),
+            ),
+          ],
+        ],
+      ),
+    );
+    final safe = (all ? 'all_teams' : team.name).replaceAll(
+      RegExp(r'\W+'),
+      '_',
+    );
+    await Printing.layoutPdf(
+      onLayout: (format) async => document.save(),
+      name: '${safe}_team_report_${DateTime.now().millisecondsSinceEpoch}.pdf',
+    );
   }
 
   Future<void> _showOverallReportActions() async {
-    final rows = await teams; if (!mounted || rows.isEmpty) return;
-    await showModalBottomSheet(context: context, backgroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))), builder: (ctx) => SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(20,12,20,24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width:40,height:4,decoration:BoxDecoration(color:Colors.grey[300],borderRadius:BorderRadius.circular(2))), const SizedBox(height:18), const Text('All Team Report',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900)), const SizedBox(height:4), Text('${rows.length} teams',style:const TextStyle(color:Color(0xFF6B7280))), const SizedBox(height:12),
-      ListTile(leading:const Icon(Icons.picture_as_pdf_rounded,color:Color(0xFFDC2626)),title:const Text('Download PDF'),onTap:() async {Navigator.pop(ctx); await _exportTeamPdf(rows.first,all:true);}),
-      ListTile(leading:const Icon(Icons.table_chart_rounded,color:Color(0xFF059669)),title:const Text('Export Excel'),onTap:() async {Navigator.pop(ctx); await _exportTeamExcel(rows.first,all:true);}),
-    ]))));
+    final rows = await teams;
+    if (!mounted || rows.isEmpty) return;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'All Team Report',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${rows.length} teams',
+                style: const TextStyle(color: Color(0xFF6B7280)),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Color(0xFFDC2626),
+                ),
+                title: const Text('Download PDF'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _exportTeamPdf(rows.first, all: true);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.table_chart_rounded,
+                  color: Color(0xFF059669),
+                ),
+                title: const Text('Export Excel'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _exportTeamExcel(rows.first, all: true);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _showTeamReportActions(ExamTeam team) async {
-    await showModalBottomSheet(context: context, backgroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))), builder: (ctx) => SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(20,12,20,24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width:40,height:4,decoration:BoxDecoration(color:Colors.grey[300],borderRadius:BorderRadius.circular(2))), const SizedBox(height:18),
-      Row(children:[Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFEDE9FE),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.summarize_rounded,color:AppColors.primary)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Team Report',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900)),Text(team.name,style:const TextStyle(color:Color(0xFF6B7280))) ]))]), const SizedBox(height:18),
-      ListTile(leading:const Icon(Icons.picture_as_pdf_rounded,color:Color(0xFFDC2626)),title:const Text('Download PDF'),subtitle:const Text('This team and its assigned candidates'),onTap:() async {Navigator.pop(ctx); await _exportTeamPdf(team);}),
-      ListTile(leading:const Icon(Icons.table_chart_rounded,color:Color(0xFF059669)),title:const Text('Export Excel'),subtitle:const Text('This team and its assigned candidates'),onTap:() async {Navigator.pop(ctx); await _exportTeamExcel(team);}),
-    ]))));
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDE9FE),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.summarize_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Team Report',
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          team.name,
+                          style: const TextStyle(color: Color(0xFF6B7280)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                leading: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Color(0xFFDC2626),
+                ),
+                title: const Text('Download PDF'),
+                subtitle: const Text('This team and its assigned candidates'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _exportTeamPdf(team);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.table_chart_rounded,
+                  color: Color(0xFF059669),
+                ),
+                title: const Text('Export Excel'),
+                subtitle: const Text('This team and its assigned candidates'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _exportTeamExcel(team);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -1434,16 +2323,30 @@ class _ExamsScreenState extends State<ExamsScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            boxShadow: [BoxShadow(color: Color(0x55FF7A18), blurRadius: 24, offset: Offset(0, 8))],
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x55FF7A18),
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
         ),
-        title: const Text('Exam',
-            style: AppBarStyle.titleStyle),
+        title: const Text('Exam', style: AppBarStyle.titleStyle),
         actions: [
           IconButton(
-              onPressed: reload,
-              icon: const Icon(Icons.refresh_rounded)),
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            },
+            icon: const Icon(Icons.person_rounded),
+          ),
+          IconButton(
+            onPressed: reload,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(46),
@@ -1457,15 +2360,21 @@ class _ExamsScreenState extends State<ExamsScreen>
             child: TabBar(
               controller: controller,
               indicator: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(11),
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               labelColor: AppColors.primary,
               unselectedLabelColor: Colors.white,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 12.5,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+              ),
               tabs: const [
                 Tab(text: 'Exam'),
                 Tab(text: 'Candidates'),
@@ -1488,8 +2397,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                 return const LoadingView();
               }
               if (s.hasError) {
-                return ErrorView(
-                    message: '${s.error}', onRetry: reload);
+                return ErrorView(message: '${s.error}', onRetry: reload);
               }
               final types = s.requireData;
               if (types.isEmpty) {
@@ -1497,20 +2405,27 @@ class _ExamsScreenState extends State<ExamsScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.school_outlined,
-                          size: 56, color: Colors.grey[300]),
+                      Icon(
+                        Icons.school_outlined,
+                        size: 56,
+                        color: Colors.grey[300],
+                      ),
                       const SizedBox(height: 12),
-                      Text('No exams registered',
-                          style: TextStyle(
-                              color: Colors.grey[500],
-                              fontWeight: FontWeight.w700)),
+                      Text(
+                        'No exams registered',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       FilledButton.icon(
                         onPressed: _showAddExamTypeDialog,
                         icon: const Icon(Icons.add),
                         label: const Text('Add'),
                         style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primary),
+                          backgroundColor: AppColors.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -1519,10 +2434,7 @@ class _ExamsScreenState extends State<ExamsScreen>
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: types.length,
-                itemBuilder: (c, i) =>
-                    _ExamTypeCard(
-                      examType: types[i],
-                    ),
+                itemBuilder: (c, i) => _ExamTypeCard(examType: types[i]),
               );
             },
           ),
@@ -1537,8 +2449,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                 return const LoadingView();
               }
               if (s.hasError) {
-                return ErrorView(
-                    message: '${s.error}', onRetry: reload);
+                return ErrorView(message: '${s.error}', onRetry: reload);
               }
               final rows = s.requireData;
               if (rows.isEmpty) {
@@ -1546,20 +2457,27 @@ class _ExamsScreenState extends State<ExamsScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.people_outline_rounded,
-                          size: 56, color: Colors.grey[300]),
+                      Icon(
+                        Icons.people_outline_rounded,
+                        size: 56,
+                        color: Colors.grey[300],
+                      ),
                       const SizedBox(height: 12),
-                      Text('No candidates',
-                          style: TextStyle(
-                              color: Colors.grey[500],
-                              fontWeight: FontWeight.w700)),
+                      Text(
+                        'No candidates',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       FilledButton.icon(
                         onPressed: _showAddCandidateDialog,
                         icon: const Icon(Icons.add),
                         label: const Text('Add'),
                         style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF059669)),
+                          backgroundColor: const Color(0xFF059669),
+                        ),
                       ),
                     ],
                   ),
@@ -1568,15 +2486,14 @@ class _ExamsScreenState extends State<ExamsScreen>
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: rows.length,
-                itemBuilder: (c, i) =>
-                    _CandidateCard(
-                      candidate: rows[i],
-                      onStatusChanged: _updateCandidateStatus,
-                      onOpenDetails: _openCandidateDetails,
-                      onEditRemarks: _showCandidateRemarks,
-                      onEditCandidate: _showEditCandidateDialog,
-                      onDeleteCandidate: _deleteCandidate,
-                    ),
+                itemBuilder: (c, i) => _CandidateCard(
+                  candidate: rows[i],
+                  onStatusChanged: _updateCandidateStatus,
+                  onOpenDetails: _openCandidateDetails,
+                  onEditRemarks: _showCandidateRemarks,
+                  onEditCandidate: _showEditCandidateDialog,
+                  onDeleteCandidate: _deleteCandidate,
+                ),
               );
             },
           ),
@@ -1587,49 +2504,111 @@ class _ExamsScreenState extends State<ExamsScreen>
           FutureBuilder<List<ExamTeam>>(
             future: teams,
             builder: (c, s) {
-              if (s.connectionState != ConnectionState.done) return const LoadingView();
-              if (s.hasError) return ErrorView(message: '${s.error}', onRetry: reload);
+              if (s.connectionState != ConnectionState.done)
+                return const LoadingView();
+              if (s.hasError)
+                return ErrorView(message: '${s.error}', onRetry: reload);
               final rows = s.requireData;
-              return Column(children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                  child: Row(children: [
-                    const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Exam Teams', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1F2937))),
-                      SizedBox(height: 3),
-                      Text('Teams supporting your exams', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
-                    ])),
-                    OutlinedButton.icon(
-                      onPressed: rows.isEmpty ? null : _showOverallReportActions,
-                      icon: const Icon(Icons.download_rounded, size: 17), label: const Text('Reports'),
-                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, side: const BorderSide(color: Color(0xFFD8B4FE)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                    ),
-                  ]),
-                ),
-                Expanded(
-                  child: rows.isEmpty
-                      ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.groups_outlined, size: 60, color: Colors.grey[300]),
-                          const SizedBox(height: 12),
-                          Text('No teams added yet', style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 16),
-                          FilledButton.icon(onPressed: _showAddTeamDialog, icon: const Icon(Icons.add), label: const Text('Add'), style: FilledButton.styleFrom(backgroundColor: AppColors.primary)),
-                        ]))
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                          itemCount: rows.length,
-                          itemBuilder: (c, i) => _TeamCard(
-                            team: rows[i],
-                            onReport: () => _showTeamReportActions(rows[i]),
-                            onEdit: () => _showEditTeamDialog(rows[i]),
-                            onDelete: () async {
-                              try { await api.deleteTeam(rows[i].id); reload(); }
-                              catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
-                            },
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Exam Teams',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Teams supporting your exams',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                ),
-              ]);
+                        OutlinedButton.icon(
+                          onPressed: rows.isEmpty
+                              ? null
+                              : _showOverallReportActions,
+                          icon: const Icon(Icons.download_rounded, size: 17),
+                          label: const Text('Reports'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: Color(0xFFD8B4FE)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: rows.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.groups_outlined,
+                                  size: 60,
+                                  color: Colors.grey[300],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No teams added yet',
+                                  style: TextStyle(
+                                    color: Colors.grey[500],
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                FilledButton.icon(
+                                  onPressed: _showAddTeamDialog,
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Add'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                            itemCount: rows.length,
+                            itemBuilder: (c, i) => _TeamCard(
+                              team: rows[i],
+                              onReport: () => _showTeamReportActions(rows[i]),
+                              onEdit: () => _showEditTeamDialog(rows[i]),
+                              onDelete: () async {
+                                try {
+                                  await api.deleteTeam(rows[i].id);
+                                  reload();
+                                } catch (e) {
+                                  if (mounted)
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('$e')),
+                                    );
+                                }
+                              },
+                            ),
+                          ),
+                  ),
+                ],
+              );
             },
           ),
         ],
@@ -1642,8 +2621,8 @@ class _ExamsScreenState extends State<ExamsScreen>
         onPressed: controller.index == 0
             ? _showAddExamTypeDialog
             : controller.index == 1
-                ? _showAddCandidateDialog
-                : _showAddTeamDialog,
+            ? _showAddCandidateDialog
+            : _showAddTeamDialog,
         child: const Icon(Icons.add),
       ),
     );
@@ -1653,16 +2632,23 @@ class _ExamsScreenState extends State<ExamsScreen>
     final globalBranchId = _branchContext.selectedBranchId;
     if (globalBranchId == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Please select a branch from Dashboard before editing a candidate.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please select a branch from Dashboard before editing a candidate.',
+          ),
+        ),
+      );
       return;
     }
 
     await _loadLookups();
     final branches = List<Map<String, dynamic>>.from(_branchesList);
     final examTypes = List<Map<String, dynamic>>.from(_examTypesList);
-    final teamResponse = await api.teams(status: 'Active', branchId: _branchContext.selectedBranchId);
+    final teamResponse = await api.teams(
+      status: 'Active',
+      branchId: _branchContext.selectedBranchId,
+    );
     final teams = (teamResponse.data['data'] as List? ?? const [])
         .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
         .toList();
@@ -1680,9 +2666,14 @@ class _ExamsScreenState extends State<ExamsScreen>
     final dateCtrl = TextEditingController(text: candidate.date);
     bool saving = false;
 
-    List<ExamTeam> teamsForSelectedExam() => teams.where((t) =>
-        t.examTypeId == null || selectedExamTypeId == null ||
-        t.examTypeId == selectedExamTypeId).toList();
+    List<ExamTeam> teamsForSelectedExam() => teams
+        .where(
+          (t) =>
+              t.examTypeId == null ||
+              selectedExamTypeId == null ||
+              t.examTypeId == selectedExamTypeId,
+        )
+        .toList();
 
     try {
       if (!mounted) return;
@@ -1693,118 +2684,401 @@ class _ExamsScreenState extends State<ExamsScreen>
         builder: (ctx) => StatefulBuilder(
           builder: (ctx, setSheetState) => Container(
             decoration: const BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surfaceAlt,
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             ),
-            padding: EdgeInsets.fromLTRB(24, 16, 24,
-                MediaQuery.of(ctx).viewInsets.bottom + 24),
+            padding: EdgeInsets.fromLTRB(
+              24,
+              16,
+              24,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(child: Container(width: 40, height: 4,
-                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  Row(children: [
-                    Container(width: 46, height: 46,
-                      decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(15)),
-                      child: const Icon(Icons.edit_rounded, color: AppColors.primary, size: 23)),
-                    const SizedBox(width: 12),
-                    const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Edit Candidate', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
-                      SizedBox(height: 2),
-                      Text('Update candidate details', style: TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
-                    ])),
-                    InkWell(onTap: () => Navigator.pop(ctx), borderRadius: BorderRadius.circular(20),
-                      child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(20)),
-                        child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF6B7280))))
-                  ]),
+                  Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEDE9FE),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: const Icon(
+                          Icons.edit_rounded,
+                          color: AppColors.primary,
+                          size: 23,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Candidate',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF111827),
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Update candidate details',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pop(ctx),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 22),
-                  _formSectionCard(title: 'CANDIDATE DETAILS', icon: Icons.badge_rounded,
-                    color: const Color(0xFF7C3AED), children: [
-                    _label('Full Name *'), const SizedBox(height: 6),
-                    _field(nameCtrl, 'Enter candidate name', icon: Icons.person_outline_rounded),
-                    const SizedBox(height: 14), _label('Email'), const SizedBox(height: 6),
-                    _field(emailCtrl, 'Candidate email', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
-                    const SizedBox(height: 14), _label('Phone'), const SizedBox(height: 6),
-                    _field(phoneCtrl, 'Candidate phone', icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
-                    const SizedBox(height: 14), _label('Remarks'), const SizedBox(height: 6),
-                    _field(remarksCtrl, 'Add a note about this candidate...', icon: Icons.notes_rounded),
-                  ]),
+                  _formSectionCard(
+                    title: 'CANDIDATE DETAILS',
+                    icon: Icons.badge_rounded,
+                    color: const Color(0xFF7C3AED),
+                    children: [
+                      _label('Full Name *'),
+                      const SizedBox(height: 6),
+                      _field(
+                        nameCtrl,
+                        'Enter candidate name',
+                        icon: Icons.person_outline_rounded,
+                      ),
+                      const SizedBox(height: 14),
+                      _label('Email'),
+                      const SizedBox(height: 6),
+                      _field(
+                        emailCtrl,
+                        'Candidate email',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 14),
+                      _label('Phone'),
+                      const SizedBox(height: 6),
+                      _field(
+                        phoneCtrl,
+                        'Candidate phone',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 14),
+                      _label('Remarks'),
+                      const SizedBox(height: 6),
+                      _field(
+                        remarksCtrl,
+                        'Add a note about this candidate...',
+                        icon: Icons.notes_rounded,
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 14),
-                  _formSectionCard(title: 'EXAM ASSIGNMENT', icon: Icons.school_rounded,
-                    color: AppColors.primary, children: [
-                    _label('Branch'), const SizedBox(height: 6),
-                    _fixedBranchField(selectedBranchId, branches),
-                    const SizedBox(height: 14), _label('Exam Type'), const SizedBox(height: 6),
-                    _dropdown<int>(
-                      value: selectedExamTypeId,
-                      hint: 'Select exam type',
-                      items: examTypes.map((e) => DropdownMenuItem<int>(value: e['id'], child: Row(children: [
-                        const Icon(Icons.school_rounded, size: 18, color: Color(0xFF6B7280)), const SizedBox(width: 8), Text('${e['name'] ?? ''}')
-                      ]))).toList(),
-                      onChanged: (val) => setSheetState(() { selectedExamTypeId = val; selectedTeamId = null; }),
-                    ),
-                    const SizedBox(height: 14), _label('Team'), const SizedBox(height: 6),
-                    _dropdown<int>(
-                      value: selectedTeamId ?? -1,
-                      hint: 'Select team (optional)',
-                      items: [
-                        const DropdownMenuItem<int>(value: -1, child: Row(children: [
-                          Icon(Icons.person_outline_rounded, size: 18, color: Color(0xFF6B7280)), SizedBox(width: 8), Expanded(child: Text('Not Assigned'))
-                        ])),
-                        ...teamsForSelectedExam().map((t) => DropdownMenuItem<int>(value: t.id, child: Row(children: [
-                          const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF6B7280)), const SizedBox(width: 8), Expanded(child: Text(t.name, overflow: TextOverflow.ellipsis))
-                        ]))),
-                      ],
-                      onChanged: (val) => setSheetState(() => selectedTeamId = val == null || val == -1 ? null : val),
-                    ),
-                    const SizedBox(height: 14), _label('Exam Date'), const SizedBox(height: 6),
-                    TextField(controller: dateCtrl, readOnly: true,
-                      decoration: InputDecoration(hintText: 'Select date', prefixIcon: const Icon(Icons.calendar_today_rounded, size: 19), filled: true, fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE5E7EB)))),
-                      onTap: () async {
-                        DateTime initial = DateTime.tryParse(dateCtrl.text) ?? DateTime.now();
-                        final picked = await showDatePicker(context: ctx, initialDate: initial, firstDate: DateTime(1900), lastDate: DateTime(2100));
-                        if (picked != null) dateCtrl.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                      }),
-                  ]),
+                  _formSectionCard(
+                    title: 'EXAM ASSIGNMENT',
+                    icon: Icons.school_rounded,
+                    color: AppColors.primary,
+                    children: [
+                      _label('Branch'),
+                      const SizedBox(height: 6),
+                      _fixedBranchField(selectedBranchId, branches),
+                      const SizedBox(height: 14),
+                      _label('Exam Type'),
+                      const SizedBox(height: 6),
+                      _dropdown<int>(
+                        value: selectedExamTypeId,
+                        hint: 'Select exam type',
+                        items: examTypes
+                            .map(
+                              (e) => DropdownMenuItem<int>(
+                                value: e['id'],
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.school_rounded,
+                                      size: 18,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text('${e['name'] ?? ''}'),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) => setSheetState(() {
+                          selectedExamTypeId = val;
+                          selectedTeamId = null;
+                        }),
+                      ),
+                      const SizedBox(height: 14),
+                      _label('Team'),
+                      const SizedBox(height: 6),
+                      _dropdown<int>(
+                        value: selectedTeamId ?? -1,
+                        hint: 'Select team (optional)',
+                        items: [
+                          const DropdownMenuItem<int>(
+                            value: -1,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 18,
+                                  color: Color(0xFF6B7280),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(child: Text('Not Assigned')),
+                              ],
+                            ),
+                          ),
+                          ...teamsForSelectedExam().map(
+                            (t) => DropdownMenuItem<int>(
+                              value: t.id,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.groups_rounded,
+                                    size: 18,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      t.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: (val) => setSheetState(
+                          () => selectedTeamId = val == null || val == -1
+                              ? null
+                              : val,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _label('Exam Date'),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: dateCtrl,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          hintText: 'Select date',
+                          prefixIcon: const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 19,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE5E7EB),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE5E7EB),
+                            ),
+                          ),
+                        ),
+                        onTap: () async {
+                          DateTime initial =
+                              DateTime.tryParse(dateCtrl.text) ??
+                              DateTime.now();
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: initial,
+                            firstDate: DateTime(1900),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null)
+                            dateCtrl.text =
+                                '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                        },
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 14),
-                  _formSectionCard(title: 'STATUS', icon: Icons.flag_rounded, color: const Color(0xFF7C3AED), children: [
-                    Wrap(spacing: 10, runSpacing: 10, children: [
-                      _statusChip(label: 'Registered', icon: Icons.check_circle_rounded, color: const Color(0xFF059669), selected: selectedStatus == 'Registered', onTap: () => setSheetState(() => selectedStatus = 'Registered')),
-                      _statusChip(label: 'Not Completed', icon: Icons.person_off_rounded, color: const Color(0xFFEA580C), selected: selectedStatus == 'Not Completed', onTap: () => setSheetState(() => selectedStatus = 'Not Completed')),
-                      _statusChip(label: 'Rescheduled', icon: Icons.event_repeat_rounded, color: const Color(0xFF7C3AED), selected: selectedStatus == 'Rescheduled', onTap: () => setSheetState(() => selectedStatus = 'Rescheduled')),
-                      _statusChip(label: 'Completed', icon: Icons.check_circle_rounded, color: const Color(0xFF059669), selected: selectedStatus == 'Completed', onTap: () => setSheetState(() => selectedStatus = 'Completed')),
-                    ])
-                  ]),
+                  _formSectionCard(
+                    title: 'STATUS',
+                    icon: Icons.flag_rounded,
+                    color: const Color(0xFF7C3AED),
+                    children: [
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _statusChip(
+                            label: 'Registered',
+                            icon: Icons.check_circle_rounded,
+                            color: const Color(0xFF059669),
+                            selected: selectedStatus == 'Registered',
+                            onTap: () => setSheetState(
+                              () => selectedStatus = 'Registered',
+                            ),
+                          ),
+                          _statusChip(
+                            label: 'Not Completed',
+                            icon: Icons.person_off_rounded,
+                            color: const Color(0xFFEA580C),
+                            selected: selectedStatus == 'Not Completed',
+                            onTap: () => setSheetState(
+                              () => selectedStatus = 'Not Completed',
+                            ),
+                          ),
+                          _statusChip(
+                            label: 'Rescheduled',
+                            icon: Icons.event_repeat_rounded,
+                            color: const Color(0xFF7C3AED),
+                            selected: selectedStatus == 'Rescheduled',
+                            onTap: () => setSheetState(
+                              () => selectedStatus = 'Rescheduled',
+                            ),
+                          ),
+                          _statusChip(
+                            label: 'Completed',
+                            icon: Icons.check_circle_rounded,
+                            color: const Color(0xFF059669),
+                            selected: selectedStatus == 'Completed',
+                            onTap: () => setSheetState(
+                              () => selectedStatus = 'Completed',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 24),
-                  SizedBox(width: double.infinity, height: 52,
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
                     child: FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C1FB0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
-                      icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_rounded),
-                      label: Text(saving ? 'Saving...' : 'Save Changes', style: const TextStyle(fontWeight: FontWeight.w800)),
-                      onPressed: saving ? null : () async {
-                        if (nameCtrl.text.trim().isEmpty) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Candidate name is required'))); return; }
-                        if (selectedExamTypeId == null) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please select an exam type'))); return; }
-                        if (dateCtrl.text.trim().isEmpty) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please select an exam date'))); return; }
-                        setSheetState(() => saving = true);
-                        try {
-                          await api.updateCandidate(candidate.id, {
-                            'name': nameCtrl.text.trim(), 'email': emailCtrl.text.trim(), 'phone': phoneCtrl.text.trim(),
-                            'branch_id': selectedBranchId, 'exam_type_id': selectedExamTypeId, 'team_id': selectedTeamId,
-                            'status': selectedStatus, 'exam_date': dateCtrl.text.trim(), 'remarks': remarksCtrl.text.trim(),
-                          });
-                          if (!ctx.mounted) return;
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate updated successfully'), backgroundColor: AppColors.green));
-                          reload();
-                        } catch (e) {
-                          if (ctx.mounted) { setSheetState(() => saving = false); ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Unable to update candidate: $e'))); }
-                        }
-                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C1FB0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.save_rounded),
+                      label: Text(
+                        saving ? 'Saving...' : 'Save Changes',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              if (nameCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Candidate name is required'),
+                                  ),
+                                );
+                                return;
+                              }
+                              if (selectedExamTypeId == null) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please select an exam type'),
+                                  ),
+                                );
+                                return;
+                              }
+                              if (dateCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please select an exam date'),
+                                  ),
+                                );
+                                return;
+                              }
+                              setSheetState(() => saving = true);
+                              try {
+                                await api.updateCandidate(candidate.id, {
+                                  'name': nameCtrl.text.trim(),
+                                  'email': emailCtrl.text.trim(),
+                                  'phone': phoneCtrl.text.trim(),
+                                  'branch_id': selectedBranchId,
+                                  'exam_type_id': selectedExamTypeId,
+                                  'team_id': selectedTeamId,
+                                  'status': selectedStatus,
+                                  'exam_date': dateCtrl.text.trim(),
+                                  'remarks': remarksCtrl.text.trim(),
+                                });
+                                if (!ctx.mounted) return;
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Candidate updated successfully',
+                                    ),
+                                    backgroundColor: AppColors.green,
+                                  ),
+                                );
+                                reload();
+                              } catch (e) {
+                                if (ctx.mounted) {
+                                  setSheetState(() => saving = false);
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Unable to update candidate: $e',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
                     ),
                   ),
                 ],
@@ -1814,7 +3088,11 @@ class _ExamsScreenState extends State<ExamsScreen>
         ),
       );
     } finally {
-      nameCtrl.dispose(); emailCtrl.dispose(); phoneCtrl.dispose(); remarksCtrl.dispose(); dateCtrl.dispose();
+      nameCtrl.dispose();
+      emailCtrl.dispose();
+      phoneCtrl.dispose();
+      remarksCtrl.dispose();
+      dateCtrl.dispose();
     }
   }
 }
@@ -1828,17 +3106,155 @@ class _TeamCard extends StatelessWidget {
   final VoidCallback onReport;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  const _TeamCard({required this.team, required this.onReport, required this.onEdit, required this.onDelete});
+  const _TeamCard({
+    required this.team,
+    required this.onReport,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(margin:const EdgeInsets.only(bottom:12),padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(20),border: Border.all(color: const Color(0xFFE5E7EB)),boxShadow:const[BoxShadow(color:Color(0x0D000000),blurRadius:14,offset:Offset(0,5))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[Container(width:48,height:48,decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFEDE9FE),Color(0xFFF5F3FF)]),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.groups_rounded,color:AppColors.primary,size:25)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(team.name,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(team.examTypeName.isEmpty?'Any exam':team.examTypeName,style:const TextStyle(fontSize:12.5,color:Color(0xFF6B7280),fontWeight:FontWeight.w600))])),PopupMenuButton<String>(onSelected:(v){if(v=='report')onReport();else if(v=='edit')onEdit();else if(v=='delete')onDelete();},itemBuilder:(ctx)=>const[PopupMenuItem(value:'report',child:Text('Team Report')),PopupMenuItem(value:'edit',child:Text('Edit')),PopupMenuItem(value:'delete',child:Text('Delete'))])]),
-      const SizedBox(height:14),Wrap(spacing:8,runSpacing:8,children:[_teamMeta(Icons.location_on_outlined,team.location.isEmpty?'Location not set':team.location),_teamMeta(Icons.phone_outlined,team.phone.isEmpty?'Phone not set':team.phone),_teamMeta(Icons.people_alt_outlined,'${team.candidateCount} candidates')]),
-      const SizedBox(height:14),SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:onReport,icon:const Icon(Icons.download_rounded,size:18),label:const Text('Team Report — PDF / Excel'),style:OutlinedButton.styleFrom(foregroundColor:AppColors.primary,side:const BorderSide(color:Color(0xFFD8B4FE)),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)))))
-    ]));
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEDE9FE), Color(0xFFF5F3FF)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: AppColors.primary,
+                  size: 25,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      team.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      team.examTypeName.isEmpty
+                          ? 'Any exam'
+                          : team.examTypeName,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (v) {
+                  if (v == 'report')
+                    onReport();
+                  else if (v == 'edit')
+                    onEdit();
+                  else if (v == 'delete')
+                    onDelete();
+                },
+                itemBuilder: (ctx) => const [
+                  PopupMenuItem(value: 'report', child: Text('Team Report')),
+                  PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  PopupMenuItem(value: 'delete', child: Text('Delete')),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _teamMeta(
+                Icons.location_on_outlined,
+                team.location.isEmpty ? 'Location not set' : team.location,
+              ),
+              _teamMeta(
+                Icons.phone_outlined,
+                team.phone.isEmpty ? 'Phone not set' : team.phone,
+              ),
+              _teamMeta(
+                Icons.people_alt_outlined,
+                '${team.candidateCount} candidates',
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onReport,
+              icon: const Icon(Icons.download_rounded, size: 18),
+              label: const Text('Team Report — PDF / Excel'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: Color(0xFFD8B4FE)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
-  Widget _teamMeta(IconData icon,String text)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),decoration:BoxDecoration(color:const Color(0xFFF8FAFC),borderRadius:BorderRadius.circular(10)),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(icon,size:14,color:const Color(0xFF64748B)),const SizedBox(width:5),ConstrainedBox(constraints:const BoxConstraints(maxWidth:210),child:Text(text,style:const TextStyle(fontSize:11.5,color:Color(0xFF475569)),overflow:TextOverflow.ellipsis))]));
+
+  Widget _teamMeta(IconData icon, String text) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF8FAFC),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: const Color(0xFF64748B)),
+        const SizedBox(width: 5),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 210),
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569)),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 // ================================================================
@@ -1848,9 +3264,7 @@ class _TeamCard extends StatelessWidget {
 class _ExamTypeCard extends StatelessWidget {
   final ExamTypeItem examType;
 
-  const _ExamTypeCard({
-    required this.examType,
-  });
+  const _ExamTypeCard({required this.examType});
 
   @override
   Widget build(BuildContext context) {
@@ -1859,11 +3273,15 @@ class _ExamTypeCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: const [
-          BoxShadow(color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
       child: ClipRRect(
@@ -1884,7 +3302,9 @@ class _ExamTypeCard extends StatelessWidget {
                 radius: 22,
                 backgroundColor: const Color(0xFFEDE9FE),
                 child: Text(
-                  examType.name.isNotEmpty ? examType.name[0].toUpperCase() : 'E',
+                  examType.name.isNotEmpty
+                      ? examType.name[0].toUpperCase()
+                      : 'E',
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w900,
@@ -1899,20 +3319,31 @@ class _ExamTypeCard extends StatelessWidget {
                   children: [
                     Text(
                       examType.name,
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16.5),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16.5,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       '${examType.language} • ${examType.description.isNotEmpty ? examType.description : "Exam"}',
-                      style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                  color: isActive
+                      ? const Color(0xFFDCFCE7)
+                      : const Color(0xFFFEE2E2),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -1930,7 +3361,6 @@ class _ExamTypeCard extends StatelessWidget {
       ),
     );
   }
-
 }
 
 // ================================================================
@@ -1956,26 +3386,40 @@ class _CandidateCard extends StatelessWidget {
 
   Color _statusColor(String s) {
     switch (s.toLowerCase()) {
-      case 'registered': return AppColors.blue;
-      case 'scheduled': return AppColors.primary;
-      case 'completed': return AppColors.green;
-      case 'cancelled': return AppColors.red;
+      case 'registered':
+        return AppColors.blue;
+      case 'scheduled':
+        return AppColors.primary;
+      case 'completed':
+        return AppColors.green;
+      case 'cancelled':
+        return AppColors.red;
       case 'absent':
-      case 'not completed': return AppColors.orange;
-      case 'rescheduled': return const Color(0xFF9A22C7);
-      default: return AppColors.orange;
+      case 'not completed':
+        return AppColors.orange;
+      case 'rescheduled':
+        return const Color(0xFF9A22C7);
+      default:
+        return AppColors.orange;
     }
   }
 
   Color _statusBg(String s) {
     switch (s.toLowerCase()) {
-      case 'registered': return const Color(0xFFDBEAFE);
-      case 'scheduled': return const Color(0xFFEDE9FE);
-      case 'completed': return const Color(0xFFDCFCE7);
-      case 'cancelled': return const Color(0xFFFFE4E6);
-      case 'absent': return const Color(0xFFEDE9FE);
-      case 'rescheduled': return const Color(0xFFEDE9FE);
-      default: return const Color(0xFFFEF3C7);
+      case 'registered':
+        return const Color(0xFFDBEAFE);
+      case 'scheduled':
+        return const Color(0xFFEDE9FE);
+      case 'completed':
+        return const Color(0xFFDCFCE7);
+      case 'cancelled':
+        return const Color(0xFFFFE4E6);
+      case 'absent':
+        return const Color(0xFFEDE9FE);
+      case 'rescheduled':
+        return const Color(0xFFEDE9FE);
+      default:
+        return const Color(0xFFFEF3C7);
     }
   }
 
@@ -1987,7 +3431,7 @@ class _CandidateCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceAlt,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
@@ -2018,22 +3462,42 @@ class _CandidateCard extends StatelessWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
-                  width: 42, height: 42,
-                  decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF2563EB)),
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: Color(0xFF2563EB),
+                  ),
                 ),
-                title: const Text('Registered', style: TextStyle(fontWeight: FontWeight.w800)),
+                title: const Text(
+                  'Registered',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
                 subtitle: const Text('Candidate is registered for the exam'),
                 onTap: () => Navigator.pop(ctx, 'Registered'),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
-                  width: 42, height: 42,
-                  decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.person_off_rounded, color: Color(0xFFEA580C)),
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.person_off_rounded,
+                    color: Color(0xFFEA580C),
+                  ),
                 ),
-                title: const Text('Not Completed', style: TextStyle(fontWeight: FontWeight.w800)),
+                title: const Text(
+                  'Not Completed',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
                 subtitle: const Text('Candidate did not attend the exam'),
                 onTap: () => Navigator.pop(ctx, 'Not Completed'),
               ),
@@ -2046,10 +3510,18 @@ class _CandidateCard extends StatelessWidget {
                     color: const Color(0xFFEDE9FE),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.event_repeat_rounded, color: Color(0xFF9A22C7)),
+                  child: const Icon(
+                    Icons.event_repeat_rounded,
+                    color: Color(0xFF9A22C7),
+                  ),
                 ),
-                title: const Text('Rescheduled', style: TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: const Text('Candidate exam was moved to another date'),
+                title: const Text(
+                  'Rescheduled',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: const Text(
+                  'Candidate exam was moved to another date',
+                ),
                 onTap: () => Navigator.pop(ctx, 'Rescheduled'),
               ),
               ListTile(
@@ -2061,9 +3533,15 @@ class _CandidateCard extends StatelessWidget {
                     color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A)),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    color: Color(0xFF16A34A),
+                  ),
                 ),
-                title: const Text('Completed', style: TextStyle(fontWeight: FontWeight.w800)),
+                title: const Text(
+                  'Completed',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
                 subtitle: const Text('Candidate completed the exam'),
                 onTap: () => Navigator.pop(ctx, 'Completed'),
               ),
@@ -2088,133 +3566,227 @@ class _CandidateCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEDE9FE),
-              borderRadius: BorderRadius.circular(14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0D000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
             ),
-            child: Center(
-              child: Text(
-                candidate.name.isNotEmpty ? candidate.name[0].toUpperCase() : '?',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.primary),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDE9FE),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(
+                child: Text(
+                  candidate.name.isNotEmpty
+                      ? candidate.name[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  candidate.name,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                if (candidate.examType.isNotEmpty)
-                  Text(candidate.examType, style: const TextStyle(color: Color(0xFF4B5563), fontSize: 12)),
-                if (candidate.teamName.isNotEmpty)
-                  Text('Team: ${candidate.teamName}', style: const TextStyle(color: Color(0xFF9A22C7), fontSize: 11.5, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if (candidate.branch.isNotEmpty) candidate.branch,
-                    if (candidate.date.isNotEmpty) candidate.date,
-                  ].join(' • '),
-                  style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 5),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    GestureDetector(
-                      onTap: canUpdate ? () => _showStatusMenu(context) : null,
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text('Status: ', style: TextStyle(color: Colors.grey[600], fontSize: 11, fontWeight: FontWeight.w700)),
-                        Text(status, style: TextStyle(color: _statusColor(status), fontSize: 11, fontWeight: FontWeight.w900)),
-                        if (canUpdate) ...[
-                          const SizedBox(width: 3),
-                          Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: _statusColor(status)),
-                        ],
-                      ]),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    candidate.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14.5,
                     ),
-                    GestureDetector(
-                      onTap: () => onEditRemarks(candidate),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.notes_rounded, size: 14, color: candidate.remarks.isEmpty ? const Color(0xFF9CA3AF) : const Color(0xFFEA580C)),
-                        const SizedBox(width: 4),
-                        Text('Remarks', style: TextStyle(color: candidate.remarks.isEmpty ? const Color(0xFF6B7280) : const Color(0xFFEA580C), fontSize: 11, fontWeight: FontWeight.w800)),
-                        const SizedBox(width: 3),
-                        Icon(Icons.edit_rounded, size: 12, color: candidate.remarks.isEmpty ? const Color(0xFF9CA3AF) : const Color(0xFFEA580C)),
-                      ]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  if (candidate.examType.isNotEmpty)
+                    Text(
+                      candidate.examType,
+                      style: const TextStyle(
+                        color: Color(0xFF4B5563),
+                        fontSize: 12,
+                      ),
+                    ),
+                  if (candidate.teamName.isNotEmpty)
+                    Text(
+                      'Team: ${candidate.teamName}',
+                      style: const TextStyle(
+                        color: Color(0xFF9A22C7),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      if (candidate.branch.isNotEmpty) candidate.branch,
+                      if (candidate.date.isNotEmpty) candidate.date,
+                    ].join(' • '),
+                    style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 5),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: canUpdate
+                            ? () => _showStatusMenu(context)
+                            : null,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Status: ',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              status,
+                              style: TextStyle(
+                                color: _statusColor(status),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            if (canUpdate) ...[
+                              const SizedBox(width: 3),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 15,
+                                color: _statusColor(status),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => onEditRemarks(candidate),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.notes_rounded,
+                              size: 14,
+                              color: candidate.remarks.isEmpty
+                                  ? const Color(0xFF9CA3AF)
+                                  : const Color(0xFFEA580C),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Remarks',
+                              style: TextStyle(
+                                color: candidate.remarks.isEmpty
+                                    ? const Color(0xFF6B7280)
+                                    : const Color(0xFFEA580C),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Icon(
+                              Icons.edit_rounded,
+                              size: 12,
+                              color: candidate.remarks.isEmpty
+                                  ? const Color(0xFF9CA3AF)
+                                  : const Color(0xFFEA580C),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (candidate.remarks.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      candidate.remarks,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 10.5,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
-                ),
-                if (candidate.remarks.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(candidate.remarks, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 10.5, fontStyle: FontStyle.italic)),
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 4),
-          Material(
-            color: const Color(0xFFF3E8FF),
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              onTap: () => onEditCandidate(candidate),
-              borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.all(7),
-                child: Icon(Icons.edit_rounded, size: 15, color: AppColors.primary),
               ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Material(
-            color: const Color(0xFFFFE4E6),
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              onTap: () => onDeleteCandidate(candidate),
+            const SizedBox(width: 4),
+            Material(
+              color: const Color(0xFFF3E8FF),
               borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.all(7),
-                child: Icon(Icons.delete_outline_rounded, size: 15, color: AppColors.red),
+              child: InkWell(
+                onTap: () => onEditCandidate(candidate),
+                borderRadius: BorderRadius.circular(12),
+                child: const Padding(
+                  padding: EdgeInsets.all(7),
+                  child: Icon(
+                    Icons.edit_rounded,
+                    size: 15,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(
-              color: _statusBg(status),
-              borderRadius: BorderRadius.circular(20),
+            const SizedBox(width: 4),
+            Material(
+              color: const Color(0xFFFFE4E6),
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                onTap: () => onDeleteCandidate(candidate),
+                borderRadius: BorderRadius.circular(12),
+                child: const Padding(
+                  padding: EdgeInsets.all(7),
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 15,
+                    color: AppColors.red,
+                  ),
+                ),
+              ),
             ),
-            child: Text(
-              status,
-              style: TextStyle(color: _statusColor(status), fontSize: 10.5, fontWeight: FontWeight.w800),
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: _statusBg(status),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  color: _statusColor(status),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -2248,29 +3820,66 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
 
   Color _statusColor(String s) {
     switch (s.toLowerCase()) {
-      case 'registered': return AppColors.blue;
-      case 'scheduled': return AppColors.primary;
-      case 'completed': return AppColors.green;
-      case 'cancelled': return AppColors.red;
+      case 'registered':
+        return AppColors.blue;
+      case 'scheduled':
+        return AppColors.primary;
+      case 'completed':
+        return AppColors.green;
+      case 'cancelled':
+        return AppColors.red;
       case 'absent':
-      case 'not completed': return AppColors.orange;
-      case 'rescheduled': return const Color(0xFF9A22C7);
-      default: return AppColors.orange;
+      case 'not completed':
+        return AppColors.orange;
+      case 'rescheduled':
+        return const Color(0xFF9A22C7);
+      default:
+        return AppColors.orange;
     }
   }
 
   Widget _infoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(width: 34, height: 34, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 18, color: const Color(0xFF6C1FB0))),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700)),
-          const SizedBox(height: 3),
-          Text(value.isEmpty ? '-' : value, style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937), fontWeight: FontWeight.w700)),
-        ])),
-      ]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0E3FA),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: const Color(0xFF6C1FB0)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF9CA3AF),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value.isEmpty ? '-' : value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF1F2937),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2278,30 +3887,75 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE5E7EB)), boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4))]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(9)), child: Icon(icon, size: 15, color: const Color(0xFF6C1FB0))), const SizedBox(width: 9), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF6B7280), letterSpacing: .3))]),
-        const SizedBox(height: 5),
-        ...children,
-      ]),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0E3FA),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 15, color: const Color(0xFF6C1FB0)),
+              ),
+              const SizedBox(width: 9),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF6B7280),
+                  letterSpacing: .3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          ...children,
+        ],
+      ),
     );
   }
 
   Future<void> _saveRemarks() async {
     setState(() => saving = true);
     try {
-      final r = await api.updateCandidate(candidate.id, {'remarks': remarksCtrl.text.trim()});
+      final r = await api.updateCandidate(candidate.id, {
+        'remarks': remarksCtrl.text.trim(),
+      });
       final data = Map<String, dynamic>.from(r.data['data'] ?? {});
       if (data.isNotEmpty) {
         candidate = Candidate.fromMap(data);
         remarksCtrl.text = candidate.remarks;
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Remarks saved successfully.'), backgroundColor: AppColors.green));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Remarks saved successfully.'),
+          backgroundColor: AppColors.green,
+        ),
+      );
       setState(() {});
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to save remarks: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to save remarks: $e')));
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -2318,57 +3972,235 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
         toolbarHeight: 64,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        title: const Text('Candidate Details', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-        flexibleSpace: Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)]), borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)))),
-      ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 28), children: [
-        Container(
-          padding: const EdgeInsets.all(18),
-          margin: const EdgeInsets.only(bottom: 14),
-          decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFFF1E6), Color(0xFFFFFFFF)]), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFFFD7B5))),
-          child: Row(children: [
-            Container(width: 60, height: 60, decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(18)), child: Center(child: Text(candidate.name.isNotEmpty ? candidate.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: AppColors.primary)))),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(candidate.name, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
-              const SizedBox(height: 4),
-              Text(candidate.examType.isEmpty ? 'Exam candidate' : candidate.examType, style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
-              if (candidate.teamName.isNotEmpty) ...[const SizedBox(height: 3), Text('Team: ${candidate.teamName}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF6C1FB0), fontWeight: FontWeight.w800))],
-            ])),
-            Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: statusColor.withOpacity(.12), borderRadius: BorderRadius.circular(14)), child: Text(status, style: TextStyle(color: statusColor, fontSize: 10.5, fontWeight: FontWeight.w900))),
-          ]),
+        title: const Text(
+          'Candidate Details',
+          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
         ),
-        _section('PERSONAL INFORMATION', Icons.person_rounded, [
-          _infoRow(Icons.email_outlined, 'Email', candidate.email),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          _infoRow(Icons.phone_outlined, 'Phone', candidate.phone),
-        ]),
-        _section('EXAM INFORMATION', Icons.school_rounded, [
-          _infoRow(Icons.menu_book_rounded, 'Exam Type', candidate.examType),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          _infoRow(Icons.account_tree_rounded, 'Branch / Centre', candidate.branch),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          _infoRow(Icons.groups_rounded, 'Team', candidate.teamName),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          _infoRow(Icons.calendar_month_rounded, 'Exam Date', candidate.date),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          _infoRow(Icons.flag_rounded, 'Current Status', status),
-        ]),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE5E7EB)), boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4))]),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [const Icon(Icons.sticky_note_2_rounded, size: 20, color: Color(0xFF6C1FB0)), const SizedBox(width: 8), const Text('Remarks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)), const Spacer(), Text('${remarksCtrl.text.length}/500', style: const TextStyle(fontSize: 10.5, color: Color(0xFF9CA3AF)))]),
-            const SizedBox(height: 10),
-            TextField(
-              controller: remarksCtrl, maxLines: 6, maxLength: 500, onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(hintText: 'Add or edit remarks about this candidate...', alignLabelWithHint: true, filled: true, fillColor: const Color(0xFFF7F5FD), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFE5E7EB))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFE5E7EB))), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFF9A22C7), width: 1.5))),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6C1FB0), Color(0xFF9A22C7), Color(0xFFE0189E)],
             ),
-            const SizedBox(height: 2),
-            SizedBox(width: double.infinity, height: 50, child: FilledButton.icon(onPressed: saving ? null : _saveRemarks, style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C1FB0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_rounded), label: Text(saving ? 'Saving...' : 'Save Remarks', style: const TextStyle(fontWeight: FontWeight.w800)))),
-          ]),
+          ),
         ),
-      ]),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            margin: const EdgeInsets.only(bottom: 14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF1E6), Color(0xFFFFFFFF)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFFD7B5)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Center(
+                    child: Text(
+                      candidate.name.isNotEmpty
+                          ? candidate.name[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        candidate.name,
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        candidate.examType.isEmpty
+                            ? 'Exam candidate'
+                            : candidate.examType,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (candidate.teamName.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          'Team: ${candidate.teamName}',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFF6C1FB0),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _section('PERSONAL INFORMATION', Icons.person_rounded, [
+            _infoRow(Icons.email_outlined, 'Email', candidate.email),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.phone_outlined, 'Phone', candidate.phone),
+          ]),
+          _section('EXAM INFORMATION', Icons.school_rounded, [
+            _infoRow(Icons.menu_book_rounded, 'Exam Type', candidate.examType),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.account_tree_rounded,
+              'Branch / Centre',
+              candidate.branch,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.groups_rounded, 'Team', candidate.teamName),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.calendar_month_rounded, 'Exam Date', candidate.date),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.flag_rounded, 'Current Status', status),
+          ]),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0D000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.sticky_note_2_rounded,
+                      size: 20,
+                      color: Color(0xFF6C1FB0),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Remarks',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${remarksCtrl.text.length}/500',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: remarksCtrl,
+                  maxLines: 6,
+                  maxLength: 500,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Add or edit remarks about this candidate...',
+                    alignLabelWithHint: true,
+                    filled: true,
+                    fillColor: const Color(0xFFF7F5FD),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF9A22C7),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: FilledButton.icon(
+                    onPressed: saving ? null : _saveRemarks,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C1FB0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    icon: saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.save_rounded),
+                    label: Text(
+                      saving ? 'Saving...' : 'Save Remarks',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

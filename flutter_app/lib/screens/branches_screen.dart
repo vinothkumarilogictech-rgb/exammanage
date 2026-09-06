@@ -7,14 +7,12 @@ import '../providers/branch_context.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
+import 'profile_screen.dart';
 
 class BranchesScreen extends StatefulWidget {
   final bool openAddOnStart;
 
-  const BranchesScreen({
-    super.key,
-    this.openAddOnStart = false,
-  });
+  const BranchesScreen({super.key, this.openAddOnStart = false});
 
   @override
   State<BranchesScreen> createState() => BranchesScreenState();
@@ -78,15 +76,15 @@ class BranchesScreenState extends State<BranchesScreen> {
   // GLASS DECORATION
   // ================================================================
 
-  BoxDecoration _glassDecoration({
-    double radius = 20,
-    bool strong = false,
-  }) {
+  BoxDecoration _glassDecoration({double radius = 20, bool strong = false}) {
     return BoxDecoration(
-      color: Colors.white.withOpacity(strong ? .94 : .82),
+      // Dialogs/empty-states ("strong") keep a near-white glass look;
+      // the search bar sitting directly on the page background instead
+      // gets a soft brand-lavender tint so it doesn't blend into white.
+      color: strong ? AppColors.surfaceAlt.withOpacity(.94) : AppColors.searchFill,
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(
-        color: Colors.white.withOpacity(.90),
+        color: strong ? Colors.white.withOpacity(.90) : AppColors.searchBorder,
         width: 1.2,
       ),
       boxShadow: [
@@ -114,16 +112,10 @@ class BranchesScreenState extends State<BranchesScreen> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 10,
-          sigmaY: 10,
-        ),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           padding: padding,
-          decoration: _glassDecoration(
-            radius: radius,
-            strong: strong,
-          ),
+          decoration: _glassDecoration(radius: radius, strong: strong),
           child: child,
         ),
       ),
@@ -142,15 +134,10 @@ class BranchesScreenState extends State<BranchesScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            color.withOpacity(.16),
-            color.withOpacity(.07),
-          ],
+          colors: [color.withOpacity(.16), color.withOpacity(.07)],
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: color.withOpacity(.10),
-        ),
+        border: Border.all(color: color.withOpacity(.10)),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(.12),
@@ -159,11 +146,7 @@ class BranchesScreenState extends State<BranchesScreen> {
           ),
         ],
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: size * .48,
-      ),
+      child: Icon(icon, color: color, size: size * .48),
     );
   }
 
@@ -195,10 +178,7 @@ class BranchesScreenState extends State<BranchesScreen> {
               // Header
               Row(
                 children: [
-                  _softGlowIcon(
-                    Icons.business_rounded,
-                    size: 46,
-                  ),
+                  _softGlowIcon(Icons.business_rounded, size: 46),
                   const SizedBox(width: 13),
                   const Expanded(
                     child: Text(
@@ -269,9 +249,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                 onPressed: () async {
                   if (name.text.trim().isEmpty) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(
-                        content: Text('Branch name is required'),
-                      ),
+                      const SnackBar(content: Text('Branch name is required')),
                     );
                     return;
                   }
@@ -290,9 +268,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'Branch created successfully!',
-                            ),
+                            content: Text('Branch created successfully!'),
                             backgroundColor: AppColors.green,
                           ),
                         );
@@ -303,11 +279,9 @@ class BranchesScreenState extends State<BranchesScreen> {
                     }
                   } catch (e) {
                     if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                        ),
-                      );
+                      ScaffoldMessenger.of(
+                        ctx,
+                      ).showSnackBar(SnackBar(content: Text('Error: $e')));
                     }
                   }
                 },
@@ -334,8 +308,9 @@ class BranchesScreenState extends State<BranchesScreen> {
     final contact = TextEditingController(text: b.contact);
     final region = TextEditingController(text: b.region);
 
-    String status =
-        b.status.toLowerCase() == 'inactive' ? 'Inactive' : 'Active';
+    String status = b.status.toLowerCase() == 'inactive'
+        ? 'Inactive'
+        : 'Active';
 
     await showModalBottomSheet(
       context: context,
@@ -356,10 +331,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                 // Header
                 Row(
                   children: [
-                    _softGlowIcon(
-                      Icons.edit_rounded,
-                      size: 46,
-                    ),
+                    _softGlowIcon(Icons.edit_rounded, size: 46),
                     const SizedBox(width: 13),
                     const Expanded(
                       child: Text(
@@ -469,9 +441,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             backgroundColor: Colors.white.withOpacity(.70),
-                            side: BorderSide(
-                              color: Colors.grey.shade300,
-                            ),
+                            side: BorderSide(color: Colors.grey.shade300),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -497,25 +467,20 @@ class BranchesScreenState extends State<BranchesScreen> {
                           if (name.text.trim().isEmpty) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
                               const SnackBar(
-                                content: Text(
-                                  'Branch name is required',
-                                ),
+                                content: Text('Branch name is required'),
                               ),
                             );
                             return;
                           }
 
                           try {
-                            await api.updateBranch(
-                              b.id,
-                              {
-                                'branch_name': name.text.trim(),
-                                'address': address.text.trim(),
-                                'contact_info': contact.text.trim(),
-                                'region': region.text.trim(),
-                                'status': status,
-                              },
-                            );
+                            await api.updateBranch(b.id, {
+                              'branch_name': name.text.trim(),
+                              'address': address.text.trim(),
+                              'contact_info': contact.text.trim(),
+                              'region': region.text.trim(),
+                              'status': status,
+                            });
 
                             if (ctx.mounted) {
                               Navigator.pop(ctx);
@@ -536,9 +501,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                           } catch (e) {
                             if (ctx.mounted) {
                               ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                ),
+                                SnackBar(content: Text('Error: $e')),
                               );
                             }
                           }
@@ -565,23 +528,17 @@ class BranchesScreenState extends State<BranchesScreen> {
   // ================================================================
 
   Future<void> toggleBranchStatus(Branch b) async {
-    final newStatus =
-        b.status.toLowerCase() == 'active' ? 'Inactive' : 'Active';
+    final newStatus = b.status.toLowerCase() == 'active'
+        ? 'Inactive'
+        : 'Active';
 
     try {
-      await api.updateBranch(
-        b.id,
-        {
-          'status': newStatus,
-        },
-      );
+      await api.updateBranch(b.id, {'status': newStatus});
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Branch $newStatus successfully!',
-            ),
+            content: Text('Branch $newStatus successfully!'),
             backgroundColor: newStatus == 'Active'
                 ? AppColors.green
                 : const Color(0xFFEA580C),
@@ -593,13 +550,9 @@ class BranchesScreenState extends State<BranchesScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to update status: $e',
-            ),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to update status: $e')));
       }
     }
   }
@@ -614,9 +567,7 @@ class BranchesScreenState extends State<BranchesScreen> {
       barrierColor: Colors.black.withOpacity(.45),
       builder: (dialogCtx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(
-          horizontal: 24,
-        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
         child: _glass(
           radius: 25,
           strong: true,
@@ -689,9 +640,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                 decoration: BoxDecoration(
                   color: _purpleSoft,
                   borderRadius: BorderRadius.circular(13),
-                  border: Border.all(
-                    color: _purple.withOpacity(.08),
-                  ),
+                  border: Border.all(color: _purple.withOpacity(.08)),
                 ),
                 child: Text(
                   b.name,
@@ -707,10 +656,7 @@ class BranchesScreenState extends State<BranchesScreen> {
 
               const Text(
                 'This action will permanently remove the branch from the list.',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: Color(0xFF6B7280),
-                ),
+                style: TextStyle(fontSize: 12.5, color: Color(0xFF6B7280)),
               ),
 
               const SizedBox(height: 22),
@@ -720,10 +666,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(
-                          double.infinity,
-                          48,
-                        ),
+                        minimumSize: const Size(double.infinity, 48),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -731,9 +674,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                       onPressed: () => Navigator.pop(dialogCtx),
                       child: const Text(
                         'Cancel',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
@@ -742,10 +683,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFFE11D48),
-                        minimumSize: const Size(
-                          double.infinity,
-                          48,
-                        ),
+                        minimumSize: const Size(double.infinity, 48),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -762,15 +700,15 @@ class BranchesScreenState extends State<BranchesScreen> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text(
-                                    'Branch deleted successfully!',
-                                  ),
+                                  content: Text('Branch deleted successfully!'),
                                   backgroundColor: Color(0xFFE11D48),
                                 ),
                               );
 
-                              await context.read<BranchContext>().refreshBranches();
-        reload();
+                              await context
+                                  .read<BranchContext>()
+                                  .refreshBranches();
+                              reload();
                             }
                           }
                         } catch (e) {
@@ -780,9 +718,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                    'Failed to delete branch: $e',
-                                  ),
+                                  content: Text('Failed to delete branch: $e'),
                                 ),
                               );
                             }
@@ -791,9 +727,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                       },
                       child: const Text(
                         'Delete',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -834,10 +768,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFFEDE9FE),
-                        Color(0xFFF5F3FF),
-                      ],
+                      colors: [Color(0xFFEDE9FE), Color(0xFFF5F3FF)],
                     ),
                     borderRadius: BorderRadius.circular(17),
                     boxShadow: [
@@ -849,9 +780,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      b.name.isNotEmpty
-                          ? b.name[0].toUpperCase()
-                          : '?',
+                      b.name.isNotEmpty ? b.name[0].toUpperCase() : '?',
                       style: const TextStyle(
                         fontSize: 23,
                         fontWeight: FontWeight.w900,
@@ -876,17 +805,13 @@ class BranchesScreenState extends State<BranchesScreen> {
                       const SizedBox(height: 6),
                       _statusBadge(
                         b.status,
-                        isActive:
-                            b.status.toLowerCase() == 'active',
+                        isActive: b.status.toLowerCase() == 'active',
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: _purple,
-                  ),
+                  icon: const Icon(Icons.edit_outlined, color: _purple),
                   onPressed: () {
                     Navigator.pop(ctx);
                     editBranch(b);
@@ -912,9 +837,7 @@ class BranchesScreenState extends State<BranchesScreen> {
             _detailGlassRow(
               Icons.map_rounded,
               'Region',
-              b.region.isNotEmpty
-                  ? b.region
-                  : 'Not specified',
+              b.region.isNotEmpty ? b.region : 'Not specified',
             ),
 
             const SizedBox(height: 10),
@@ -922,9 +845,7 @@ class BranchesScreenState extends State<BranchesScreen> {
             _detailGlassRow(
               Icons.location_on_rounded,
               'Address',
-              b.address.isNotEmpty
-                  ? b.address
-                  : 'Not specified',
+              b.address.isNotEmpty ? b.address : 'Not specified',
             ),
 
             const SizedBox(height: 10),
@@ -932,9 +853,7 @@ class BranchesScreenState extends State<BranchesScreen> {
             _detailGlassRow(
               Icons.phone_rounded,
               'Contact Info',
-              b.contact.isNotEmpty
-                  ? b.contact
-                  : 'Not specified',
+              b.contact.isNotEmpty ? b.contact : 'Not specified',
             ),
 
             const SizedBox(height: 22),
@@ -947,15 +866,11 @@ class BranchesScreenState extends State<BranchesScreen> {
                 icon: const Icon(Icons.close_rounded),
                 label: const Text(
                   'Close',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Colors.white.withOpacity(.65),
-                  side: BorderSide(
-                    color: _purple.withOpacity(.18),
-                  ),
+                  side: BorderSide(color: _purple.withOpacity(.18)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
@@ -968,19 +883,13 @@ class BranchesScreenState extends State<BranchesScreen> {
     );
   }
 
-  Widget _detailGlassRow(
-    IconData icon,
-    String label,
-    String value,
-  ) {
+  Widget _detailGlassRow(IconData icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF9F7FF),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: _purple.withOpacity(.06),
-        ),
+        border: Border.all(color: _purple.withOpacity(.06)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -989,20 +898,13 @@ class BranchesScreenState extends State<BranchesScreen> {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surfaceAlt,
               borderRadius: BorderRadius.circular(11),
               boxShadow: [
-                BoxShadow(
-                  color: _purple.withOpacity(.08),
-                  blurRadius: 10,
-                ),
+                BoxShadow(color: _purple.withOpacity(.08), blurRadius: 10),
               ],
             ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: _purple,
-            ),
+            child: Icon(icon, size: 18, color: _purple),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1057,21 +959,30 @@ class BranchesScreenState extends State<BranchesScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            boxShadow: [BoxShadow(color: Color(0x559A22C7), blurRadius: 24, offset: Offset(0, 8))],
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x559A22C7),
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
         ),
-        title: const Text(
-          'Branch',
-          style: AppBarStyle.titleStyle,
-        ),
+        title: const Text('Branch', style: AppBarStyle.titleStyle),
         actions: [
+          IconButton(
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            },
+            icon: const Icon(Icons.person_rounded),
+          ),
           IconButton(
             onPressed: reload,
             tooltip: 'Refresh',
-            icon: const Icon(
-              Icons.refresh_rounded,
-            ),
+            icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
@@ -1081,7 +992,6 @@ class BranchesScreenState extends State<BranchesScreen> {
           // ==========================================================
           // BACKGROUND GLOW
           // ==========================================================
-
           Positioned(
             top: -80,
             right: -70,
@@ -1129,28 +1039,19 @@ class BranchesScreenState extends State<BranchesScreen> {
           // ==========================================================
           // MAIN CONTENT
           // ==========================================================
-
           Column(
             children: [
               // Search
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  16,
-                  13,
-                  16,
-                  10,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 13, 16, 10),
                 child: _glass(
                   radius: 17,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: TextField(
                     controller: search,
                     onSubmitted: (_) => reload(),
                     decoration: InputDecoration(
-                      hintText:
-                          'Search branch by name or location...',
+                      hintText: 'Search branch by name or location...',
                       hintStyle: const TextStyle(
                         color: Color(0xFF777382),
                         fontSize: 14.5,
@@ -1175,16 +1076,12 @@ class BranchesScreenState extends State<BranchesScreen> {
                                 search.clear();
                                 reload();
                               },
-                              icon: const Icon(
-                                Icons.clear_rounded,
-                                size: 19,
-                              ),
+                              icon: const Icon(Icons.clear_rounded, size: 19),
                             )
                           : null,
                       filled: false,
                       border: InputBorder.none,
-                      contentPadding:
-                          const EdgeInsets.symmetric(
+                      contentPadding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 15,
                       ),
@@ -1198,16 +1095,12 @@ class BranchesScreenState extends State<BranchesScreen> {
                 child: FutureBuilder<List<Branch>>(
                   future: future,
                   builder: (c, s) {
-                    if (s.connectionState !=
-                        ConnectionState.done) {
+                    if (s.connectionState != ConnectionState.done) {
                       return const LoadingView();
                     }
 
                     if (s.hasError) {
-                      return ErrorView(
-                        message: '${s.error}',
-                        onRetry: reload,
-                      );
+                      return ErrorView(message: '${s.error}', onRetry: reload);
                     }
 
                     final rows = s.requireData;
@@ -1220,18 +1113,12 @@ class BranchesScreenState extends State<BranchesScreen> {
                       color: _purple,
                       onRefresh: () async {
                         await context.read<BranchContext>().refreshBranches();
-        reload();
+                        reload();
                         await future;
                       },
                       child: ListView.builder(
-                        physics:
-                            const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(
-                          12,
-                          5,
-                          12,
-                          20,
-                        ),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(12, 5, 12, 20),
                         itemCount: rows.length,
                         itemBuilder: (c, i) {
                           final b = rows[i];
@@ -1268,10 +1155,7 @@ class BranchesScreenState extends State<BranchesScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
-          child: const Icon(
-            Icons.add_rounded,
-            size: 28,
-          ),
+          child: const Icon(Icons.add_rounded, size: 28),
         ),
       ),
     );
@@ -1282,13 +1166,10 @@ class BranchesScreenState extends State<BranchesScreen> {
   // ================================================================
 
   Widget _branchCard(Branch b) {
-    final isActive =
-        b.status.toLowerCase() == 'active';
+    final isActive = b.status.toLowerCase() == 'active';
 
     return Container(
-      margin: const EdgeInsets.only(
-        bottom: 12,
-      ),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -1303,10 +1184,7 @@ class BranchesScreenState extends State<BranchesScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: 8,
-            sigmaY: 8,
-          ),
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Material(
             color: Colors.white.withOpacity(.88),
             child: InkWell(
@@ -1315,22 +1193,16 @@ class BranchesScreenState extends State<BranchesScreen> {
               splashColor: _purple.withOpacity(.05),
               highlightColor: _purple.withOpacity(.025),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(
-                  14,
-                  14,
-                  7,
-                  14,
-                ),
+                padding: const EdgeInsets.fromLTRB(14, 14, 7, 14),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.white.withOpacity(.95),
+                    color: AppColors.surfaceAlt.withOpacity(.95),
                     width: 1.2,
                   ),
                 ),
                 child: Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Avatar
                     Container(
@@ -1340,20 +1212,13 @@ class BranchesScreenState extends State<BranchesScreen> {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFEDE9FE),
-                            Color(0xFFF5F3FF),
-                          ],
+                          colors: [Color(0xFFEDE9FE), Color(0xFFF5F3FF)],
                         ),
-                        borderRadius:
-                            BorderRadius.circular(15),
-                        border: Border.all(
-                          color: _purple.withOpacity(.07),
-                        ),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: _purple.withOpacity(.07)),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                _purple.withOpacity(.08),
+                            color: _purple.withOpacity(.08),
                             blurRadius: 13,
                             spreadRadius: 1,
                           ),
@@ -1361,9 +1226,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          b.name.isNotEmpty
-                              ? b.name[0].toUpperCase()
-                              : '?',
+                          b.name.isNotEmpty ? b.name[0].toUpperCase() : '?',
                           style: const TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.w900,
@@ -1378,14 +1241,12 @@ class BranchesScreenState extends State<BranchesScreen> {
                     // Details
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             b.name,
                             maxLines: 1,
-                            overflow:
-                                TextOverflow.ellipsis,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 15.5,
@@ -1407,15 +1268,11 @@ class BranchesScreenState extends State<BranchesScreen> {
                                   child: Text(
                                     b.region,
                                     maxLines: 1,
-                                    overflow:
-                                        TextOverflow.ellipsis,
-                                    style:
-                                        const TextStyle(
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
                                       fontSize: 12,
-                                      fontWeight:
-                                          FontWeight.w600,
-                                      color:
-                                          Color(0xFF666171),
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF666171),
                                     ),
                                   ),
                                 ),
@@ -1426,8 +1283,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                           if (b.address.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Row(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Icon(
                                   Icons.location_on_outlined,
@@ -1439,13 +1295,10 @@ class BranchesScreenState extends State<BranchesScreen> {
                                   child: Text(
                                     b.address,
                                     maxLines: 1,
-                                    overflow:
-                                        TextOverflow.ellipsis,
-                                    style:
-                                        const TextStyle(
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
                                       fontSize: 11.5,
-                                      color:
-                                          Color(0xFF77727E),
+                                      color: Color(0xFF77727E),
                                     ),
                                   ),
                                 ),
@@ -1467,13 +1320,10 @@ class BranchesScreenState extends State<BranchesScreen> {
                                   child: Text(
                                     b.contact,
                                     maxLines: 1,
-                                    overflow:
-                                        TextOverflow.ellipsis,
-                                    style:
-                                        const TextStyle(
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
                                       fontSize: 11.5,
-                                      color:
-                                          Color(0xFF77727E),
+                                      color: Color(0xFF77727E),
                                     ),
                                   ),
                                 ),
@@ -1488,13 +1338,9 @@ class BranchesScreenState extends State<BranchesScreen> {
 
                     // Right actions
                     Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        _statusBadge(
-                          b.status,
-                          isActive: isActive,
-                        ),
+                        _statusBadge(b.status, isActive: isActive),
 
                         const SizedBox(height: 1),
 
@@ -1507,18 +1353,15 @@ class BranchesScreenState extends State<BranchesScreen> {
                           padding: EdgeInsets.zero,
                           tooltip: 'Branch actions',
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           elevation: 8,
                           onSelected: (value) {
                             if (value == 'edit') {
                               editBranch(b);
-                            } else if (value ==
-                                'toggle') {
+                            } else if (value == 'toggle') {
                               toggleBranchStatus(b);
-                            } else if (value ==
-                                'delete') {
+                            } else if (value == 'delete') {
                               confirmDeleteBranch(b);
                             }
                           },
@@ -1537,8 +1380,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                                     'Edit Branch',
                                     style: TextStyle(
                                       fontSize: 13.5,
-                                      fontWeight:
-                                          FontWeight.w600,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -1551,15 +1393,11 @@ class BranchesScreenState extends State<BranchesScreen> {
                                 children: [
                                   Icon(
                                     isActive
-                                        ? Icons
-                                            .block_rounded
-                                        : Icons
-                                            .check_circle_outline_rounded,
+                                        ? Icons.block_rounded
+                                        : Icons.check_circle_outline_rounded,
                                     size: 18,
                                     color: isActive
-                                        ? const Color(
-                                            0xFFEA580C,
-                                          )
+                                        ? const Color(0xFFEA580C)
                                         : AppColors.green,
                                   ),
                                   const SizedBox(width: 10),
@@ -1569,12 +1407,9 @@ class BranchesScreenState extends State<BranchesScreen> {
                                         : 'Activate Branch',
                                     style: TextStyle(
                                       fontSize: 13.5,
-                                      fontWeight:
-                                          FontWeight.w600,
+                                      fontWeight: FontWeight.w600,
                                       color: isActive
-                                          ? const Color(
-                                              0xFFEA580C,
-                                            )
+                                          ? const Color(0xFFEA580C)
                                           : AppColors.green,
                                     ),
                                   ),
@@ -1582,30 +1417,24 @@ class BranchesScreenState extends State<BranchesScreen> {
                               ),
                             ),
 
-                            const PopupMenuDivider(
-                              height: 1,
-                            ),
+                            const PopupMenuDivider(height: 1),
 
                             const PopupMenuItem(
                               value: 'delete',
                               child: Row(
                                 children: [
                                   Icon(
-                                    Icons
-                                        .delete_outline_rounded,
+                                    Icons.delete_outline_rounded,
                                     size: 18,
-                                    color:
-                                        Color(0xFFE11D48),
+                                    color: Color(0xFFE11D48),
                                   ),
                                   SizedBox(width: 10),
                                   Text(
                                     'Delete Branch',
                                     style: TextStyle(
                                       fontSize: 13.5,
-                                      fontWeight:
-                                          FontWeight.w600,
-                                      color:
-                                          Color(0xFFE11D48),
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFE11D48),
                                     ),
                                   ),
                                 ],
@@ -1629,19 +1458,11 @@ class BranchesScreenState extends State<BranchesScreen> {
   // STATUS BADGE
   // ================================================================
 
-  Widget _statusBadge(
-    String status, {
-    required bool isActive,
-  }) {
-    final color = isActive
-        ? AppColors.green
-        : const Color(0xFF6B7280);
+  Widget _statusBadge(String status, {required bool isActive}) {
+    final color = isActive ? AppColors.green : const Color(0xFF6B7280);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 9,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: isActive
             ? const Color(0xFFDCFCE7).withOpacity(.90)
@@ -1652,12 +1473,7 @@ class BranchesScreenState extends State<BranchesScreen> {
               ? AppColors.green.withOpacity(.10)
               : Colors.grey.withOpacity(.08),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(.06),
-            blurRadius: 8,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: color.withOpacity(.06), blurRadius: 8)],
       ),
       child: Text(
         status,
@@ -1685,10 +1501,7 @@ class BranchesScreenState extends State<BranchesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _softGlowIcon(
-                Icons.business_rounded,
-                size: 62,
-              ),
+              _softGlowIcon(Icons.business_rounded, size: 62),
               const SizedBox(height: 18),
               const Text(
                 'No branches found',
@@ -1702,38 +1515,28 @@ class BranchesScreenState extends State<BranchesScreen> {
               const Text(
                 'Add your first branch to get started.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: Color(0xFF77727E),
-                ),
+                style: TextStyle(fontSize: 12.5, color: Color(0xFF77727E)),
               ),
               const SizedBox(height: 19),
               FilledButton.icon(
                 onPressed: addBranch,
-                icon: const Icon(
-                  Icons.add_rounded,
-                ),
+                icon: const Icon(Icons.add_rounded),
                 label: const Text(
                   'Add Branch',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w800),
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: _purple,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 13,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 5,
-                  shadowColor:
-                      _purple.withOpacity(.25),
+                  shadowColor: _purple.withOpacity(.25),
                 ),
               ),
             ],
@@ -1747,16 +1550,11 @@ class BranchesScreenState extends State<BranchesScreen> {
   // MODAL HELPERS
   // ================================================================
 
-  Widget _modalBackground(
-    BuildContext ctx, {
-    required Widget child,
-  }) {
+  Widget _modalBackground(BuildContext ctx, {required Widget child}) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFFDFCFF).withOpacity(.97),
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(30),
-        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         boxShadow: [
           BoxShadow(
             color: _purple.withOpacity(.15),
@@ -1783,10 +1581,7 @@ class BranchesScreenState extends State<BranchesScreen> {
         height: 4,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [
-              Color(0xFFD8D0EA),
-              Color(0xFFB9A9D9),
-            ],
+            colors: [Color(0xFFD8D0EA), Color(0xFFB9A9D9)],
           ),
           borderRadius: BorderRadius.circular(4),
         ),
@@ -1832,10 +1627,7 @@ class BranchesScreenState extends State<BranchesScreen> {
         ),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(
-            color: Color(0xFFA19CA8),
-            fontSize: 13.5,
-          ),
+          hintStyle: const TextStyle(color: Color(0xFFA19CA8), fontSize: 13.5),
           prefixIcon: Container(
             margin: const EdgeInsets.all(7),
             width: 36,
@@ -1844,35 +1636,23 @@ class BranchesScreenState extends State<BranchesScreen> {
               color: _purple.withOpacity(.08),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(
-              icon,
-              size: 19,
-              color: _purple,
-            ),
+            child: Icon(icon, size: 19, color: _purple),
           ),
           filled: true,
           fillColor: const Color(0xFFF9F8FC),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(
-              color: Colors.grey.withOpacity(.12),
-            ),
+            borderSide: BorderSide(color: Colors.grey.withOpacity(.12)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(
-              color: Colors.grey.withOpacity(.12),
-            ),
+            borderSide: BorderSide(color: Colors.grey.withOpacity(.12)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(
-              color: _purple,
-              width: 1.5,
-            ),
+            borderSide: const BorderSide(color: _purple, width: 1.5),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(
+          contentPadding: const EdgeInsets.symmetric(
             horizontal: 14,
             vertical: 14,
           ),
@@ -1894,10 +1674,7 @@ class BranchesScreenState extends State<BranchesScreen> {
           gradient: const LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: [
-              Color(0xFF9A22C7),
-              Color(0xFF6C1FB0),
-            ],
+            colors: [Color(0xFF9A22C7), Color(0xFF6C1FB0)],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
@@ -1911,16 +1688,10 @@ class BranchesScreenState extends State<BranchesScreen> {
         ),
         child: ElevatedButton.icon(
           onPressed: onPressed,
-          icon: Icon(
-            icon,
-            size: 20,
-          ),
+          icon: Icon(icon, size: 20),
           label: Text(
             label,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
@@ -1947,13 +1718,9 @@ class BranchesScreenState extends State<BranchesScreen> {
       borderRadius: BorderRadius.circular(15),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(
-          vertical: 13,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
-          color: selected
-              ? color.withOpacity(.09)
-              : const Color(0xFFF8F7FA),
+          color: selected ? color.withOpacity(.09) : const Color(0xFFF8F7FA),
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
             color: selected
@@ -1962,33 +1729,23 @@ class BranchesScreenState extends State<BranchesScreen> {
             width: selected ? 1.5 : 1,
           ),
           boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(.09),
-                    blurRadius: 13,
-                  ),
-                ]
+              ? [BoxShadow(color: color.withOpacity(.09), blurRadius: 13)]
               : null,
         ),
         child: Row(
-          mainAxisAlignment:
-              MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
               size: 18,
-              color: selected
-                  ? color
-                  : const Color(0xFF9CA3AF),
+              color: selected ? color : const Color(0xFF9CA3AF),
             ),
             const SizedBox(width: 7),
             Text(
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w800,
-                color: selected
-                    ? color
-                    : const Color(0xFF6B7280),
+                color: selected ? color : const Color(0xFF6B7280),
                 fontSize: 13.5,
               ),
             ),

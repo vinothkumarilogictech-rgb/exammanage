@@ -137,7 +137,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
       const SizedBox(height: 14),
       Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE5E7EB))),
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE5E7EB))),
         child: Row(children: [
           Expanded(child: TextField(
             controller: _searchCtrl,
@@ -145,7 +145,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
             decoration: InputDecoration(
               hintText: 'Search invoice, supplier or exam',
               prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              filled: true, fillColor: const Color(0xFFF8FAFC),
+              filled: true, fillColor: AppColors.searchFill,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(vertical: 11),
             ),
@@ -175,13 +175,13 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
 
   Widget _stat(String title, String value, IconData icon, Color bg, Color fg) => Container(
     padding: const EdgeInsets.all(11),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFFE5E7EB))),
+    decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFFE5E7EB))),
     child: Row(children: [Container(width: 32, height: 32, decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 17, color: fg)), const SizedBox(width: 7), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text(value, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w900), overflow: TextOverflow.ellipsis)]))]),
   );
 
   Widget _emptyInvoices() => Container(
     width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 38, horizontal: 20),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE5E7EB))),
+    decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE5E7EB))),
     child: Column(children: [Container(width: 58, height: 58, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(18)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 29)), const SizedBox(height: 12), const Text('No invoices found', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)), const SizedBox(height: 5), Text('Create an invoice for a bulk exam-voucher purchase.', style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5), textAlign: TextAlign.center), const SizedBox(height: 14), _smallAction(Icons.add_rounded, 'Create Invoice', _showAddInvoice)]),
   );
 
@@ -191,7 +191,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7E5E4)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.025), blurRadius: 10, offset: const Offset(0, 3))]),
+      decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7E5E4)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.025), blurRadius: 10, offset: const Offset(0, 3))]),
       child: Column(children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(width: 43, height: 43, decoration: BoxDecoration(color: const Color(0xFFF0E3FA), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 22)),
@@ -271,7 +271,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
           child: Container(
           constraints: BoxConstraints(maxHeight: availableHeight * .97),
           padding: EdgeInsets.fromLTRB(18, 10, 18, media.viewInsets.bottom + 12),
-          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          decoration: const BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
           child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(5)))),
             const SizedBox(height: 14),
@@ -309,7 +309,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
             _formLabel('Payment Details'), const SizedBox(height: 8),
             Row(children: [Expanded(child: DropdownButtonFormField<String>(value: paymentStatus, isExpanded: true, decoration: _decoration('Payment Status', Icons.payments_outlined), items: const ['Pending','Partial','Paid'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(), onChanged: (v) => setSheet(() => paymentStatus = v ?? 'Pending'))), const SizedBox(width: 8), Expanded(child: DropdownButtonFormField<String>(value: paymentMode, isExpanded: true, decoration: _decoration('Payment Mode', Icons.account_balance_rounded), items: const ['Cash','UPI','Card','Bank Transfer','Cheque','Other'].map((x) => DropdownMenuItem(value: x, child: Text(x, overflow: TextOverflow.ellipsis))).toList(), onChanged: (v) => setSheet(() => paymentMode = v ?? 'Bank Transfer')))]),
             const SizedBox(height: 8),
-            Row(children: [Expanded(child: _numberField(paid, 'Paid Amount', Icons.currency_rupee_rounded, onChanged: () => setSheet(() {}))), const SizedBox(width: 8), Expanded(child: Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFEDE9FE))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Balance', style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, fontWeight: FontWeight.w700)), const SizedBox(height: 3), Text(_money(balanceValue), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))])))]),
+            Row(children: [Expanded(child: _numberField(paid, 'Paid Amount', Icons.currency_rupee_rounded, onChanged: () => setSheet(() {}))), const SizedBox(width: 8), Expanded(child: Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14), decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFEDE9FE))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Balance', style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, fontWeight: FontWeight.w700)), const SizedBox(height: 3), Text(_money(balanceValue), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))])))]),
             const SizedBox(height: 8),
             _field(reference, 'Payment Reference (optional)', Icons.confirmation_number_outlined), const SizedBox(height: 8), _field(notes, 'Notes (optional)', Icons.notes_rounded, maxLines: 2),
             const SizedBox(height: 16),
@@ -352,7 +352,7 @@ class _VoucherPurchaseInvoicesTabState extends State<VoucherPurchaseInvoicesTab>
           constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .88),
           padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceAlt,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SingleChildScrollView(

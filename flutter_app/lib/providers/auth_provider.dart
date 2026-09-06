@@ -14,6 +14,11 @@ class AuthProvider extends ChangeNotifier {
   String? error;
   int? employeeId;
 
+  // Preserves which tab (Admin/User) was last signed in, so that after
+  // logout the login screen reopens on the same tab instead of always
+  // defaulting to Admin.
+  String lastRole = 'Admin';
+
   Future<void> checkSession() async {
     final token = await api.readAccessToken();
     final session = await SessionService.getSession();
@@ -39,6 +44,7 @@ class AuthProvider extends ChangeNotifier {
         authenticated = true;
         username = '${data['username'] ?? session['username'] ?? ''}';
         role = '${data['role'] ?? session['role'] ?? 'Admin'}';
+        lastRole = role;
 
         final rawEmployeeId = data['employee_id'] ?? session['employeeId'];
         employeeId = rawEmployeeId is int
@@ -95,17 +101,14 @@ class AuthProvider extends ChangeNotifier {
           return false;
         }
 
-        final responseData =
-            Map<String, dynamic>.from(response.data);
+        final responseData = Map<String, dynamic>.from(response.data);
 
         if (responseData['success'] != true) {
           error = 'Invalid username or password.';
           return false;
         }
 
-        final data = Map<String, dynamic>.from(
-          responseData['data'] ?? {},
-        );
+        final data = Map<String, dynamic>.from(responseData['data'] ?? {});
 
         final rawTokens = data['tokens'];
         if (rawTokens is! Map) {
@@ -127,8 +130,7 @@ class AuthProvider extends ChangeNotifier {
             ? Map<String, dynamic>.from(data['user'])
             : <String, dynamic>{};
 
-        final loggedRole =
-            '${userData['role'] ?? data['role'] ?? 'Admin'}';
+        final loggedRole = '${userData['role'] ?? data['role'] ?? 'Admin'}';
 
         // Admin tab must authenticate an Admin.
         if (adminMode && loggedRole != 'Admin') {
@@ -149,9 +151,9 @@ class AuthProvider extends ChangeNotifier {
         authenticated = true;
         username = '${userData['username'] ?? cleanUser}';
         role = loggedRole;
+        lastRole = loggedRole;
 
-        final rawEmployeeId =
-            userData['employee_id'] ?? data['employee_id'];
+        final rawEmployeeId = userData['employee_id'] ?? data['employee_id'];
         employeeId = rawEmployeeId is int
             ? rawEmployeeId
             : int.tryParse('$rawEmployeeId');
@@ -193,6 +195,8 @@ class AuthProvider extends ChangeNotifier {
     await SessionService.clearSession();
     authenticated = false;
     username = '';
+    // lastRole is intentionally NOT reset here — it's what tells the
+    // login screen which tab (Admin/User) to reopen on.
     role = 'Admin';
     employeeId = null;
     error = null;

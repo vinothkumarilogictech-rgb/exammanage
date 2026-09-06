@@ -112,7 +112,7 @@ class _AvailableVouchersScreenState extends State<AvailableVouchersScreen> {
       builder: (_) => Container(
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .9),
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -169,7 +169,7 @@ class _AvailableVouchersScreenState extends State<AvailableVouchersScreen> {
   Widget _section(String title, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
@@ -245,7 +245,7 @@ class _AvailableVouchersScreenState extends State<AvailableVouchersScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE9D5FF)),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(.04), blurRadius: 10, offset: const Offset(0, 3))],
@@ -310,7 +310,7 @@ class _AvailableVoucherTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE5E7EB))),
+      decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE5E7EB))),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
         leading: Container(width: 42, height: 42, decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.confirmation_num_outlined, color: AppColors.primary)),
@@ -336,7 +336,7 @@ class _AvailableVoucherTile extends StatelessWidget {
         backgroundColor: Colors.transparent,
         builder: (_) => Container(
           constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .85),
-          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          decoration: const BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
           child: ListView(children: [
             Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
