@@ -2717,9 +2717,15 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
+        color: isCancelled
+            ? AppColors.red.withOpacity(.08)
+            : CardTint.fill(e.category),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(
+          color: isCancelled
+              ? AppColors.red.withOpacity(.26)
+              : CardTint.border(e.category),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(.03),
@@ -2740,22 +2746,24 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: isCancelled
-                            ? const Color(0xFFFEE2E2)
-                            : const Color(0xFFEDE9FE),
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                      child: Icon(
-                        isCancelled
-                            ? Icons.cancel_rounded
-                            : Icons.receipt_rounded,
-                        color: isCancelled ? AppColors.red : AppColors.primary,
-                      ),
-                    ),
+                    isCancelled
+                        ? Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEE2E2),
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            child: const Icon(
+                              Icons.cancel_rounded,
+                              color: AppColors.red,
+                            ),
+                          )
+                        : EntityAvatar(
+                            seed: e.category,
+                            icon: Icons.receipt_rounded,
+                            size: 42,
+                          ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -3134,9 +3142,15 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.surfaceAlt,
+                color: isInactive
+                    ? AppColors.red.withOpacity(.08)
+                    : CardTint.fill(cat.name),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                border: Border.all(
+                  color: isInactive
+                      ? AppColors.red.withOpacity(.26)
+                      : CardTint.border(cat.name),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(.03),
@@ -3147,21 +3161,25 @@ class ExpensesScreenState extends State<ExpensesScreen> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isInactive
-                          ? const Color(0xFFFEE2E2)
-                          : const Color(0xFFEDE9FE),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.label_rounded,
-                      color: isInactive ? AppColors.red : AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
+                  isInactive
+                      ? Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.label_rounded,
+                            color: AppColors.red,
+                            size: 20,
+                          ),
+                        )
+                      : EntityAvatar(
+                          seed: cat.name,
+                          icon: Icons.label_rounded,
+                          size: 40,
+                        ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

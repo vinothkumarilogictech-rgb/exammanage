@@ -145,6 +145,14 @@ class Expense(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # --- Voucher purchase invoice payment tracking ---
+    # 'status' above only tracks Active/Cancelled; these track whether the
+    # invoice itself has been fully paid, so voucher-purchase invoices can
+    # be Pending/Partial/Paid the same way voucher sales are.
+    payment_status = db.Column(db.String(20), default='Paid')  # Paid / Pending / Partial
+    paid_amount = db.Column(db.Float, nullable=True)
+    payment_reference = db.Column(db.String(100), nullable=True)
+
     branch = db.relationship('Branch', backref='expenses')
     expense_category = db.relationship('ExpenseCategory', backref='expenses')
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=True, index=True)
@@ -153,6 +161,7 @@ class Expense(db.Model):
     # `note` is the BRD's name for this field; it's the same column as the
     # pre-existing `description` so old records/routes keep working.
     note = synonym('description')
+
 
 class Setting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -525,6 +534,7 @@ class VoucherSaleHistory(db.Model):
     selling_price = db.Column(db.Float, nullable=False, default=0.0)
     discount = db.Column(db.Float, nullable=False, default=0.0)
     final_amount = db.Column(db.Float, nullable=False, default=0.0)
+    paid_amount = db.Column(db.Float, nullable=False, default=0.0)
     payment_status = db.Column(db.String(20), nullable=False, default='Pending')
     payment_mode = db.Column(db.String(50), nullable=True)
     payment_reference = db.Column(db.String(150), nullable=True)
@@ -532,6 +542,10 @@ class VoucherSaleHistory(db.Model):
     sold_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     voucher = db.relationship('Voucher', backref=db.backref('sale_history', lazy=True))
+
+    @property
+    def balance_amount(self):
+        return max(0.0, (self.final_amount or 0.0) - (self.paid_amount or 0.0))
 
 
 class Voucher(db.Model):

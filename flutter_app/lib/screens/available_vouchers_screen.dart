@@ -308,13 +308,14 @@ class _AvailableVoucherTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final code = '${voucher['voucher_code'] ?? '-'}';
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE5E7EB))),
+      decoration: BoxDecoration(color: CardTint.fill(code), borderRadius: BorderRadius.circular(16), border: Border.all(color: CardTint.border(code))),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-        leading: Container(width: 42, height: 42, decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.confirmation_num_outlined, color: AppColors.primary)),
-        title: Text('${voucher['voucher_code'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.w800)),
+        leading: EntityAvatar(seed: code, icon: Icons.confirmation_num_outlined, size: 42),
+        title: Text(code, style: const TextStyle(fontWeight: FontWeight.w800)),
         subtitle: Text('Selling price: ₹${double.tryParse('${voucher['selling_price'] ?? 0}')?.toStringAsFixed(2) ?? '0.00'}'),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: () => _openDetails(context),

@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 import '../app_theme.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
+import '../services/pdf_report_kit.dart';
 import '../widgets/common.dart';
 import 'profile_screen.dart';
 import '../providers/branch_context.dart';
@@ -679,15 +680,13 @@ class _ExamsScreenState extends State<ExamsScreen>
                       width: 46,
                       height: 46,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF10B981), Color(0xFF047857)],
-                        ),
+                        gradient: brandLinearGradient(),
                         borderRadius: BorderRadius.circular(15),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
-                            color: Color(0x33059669),
+                            color: AppColors.primary.withOpacity(.20),
                             blurRadius: 14,
-                            offset: Offset(0, 6),
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
@@ -1131,9 +1130,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
-                        ),
+                        gradient: brandLinearGradient(),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(
@@ -1448,9 +1445,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
-                        ),
+                        gradient: brandLinearGradient(),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(
@@ -1657,9 +1652,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
-                        ),
+                        gradient: brandLinearGradient(),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(
@@ -1826,9 +1819,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF9A22C7), Color(0xFF9A3412)],
-                        ),
+                        gradient: brandLinearGradient(),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(
@@ -2020,6 +2011,7 @@ class _ExamsScreenState extends State<ExamsScreen>
   }
 
   Future<void> _exportTeamPdf(ExamTeam team, {bool all = false}) async {
+    final logo = await loadBrandLogo();
     final document = pw.Document();
     final report = all ? null : await _loadTeamReport(team);
     if (!all && report == null) return;
@@ -2032,24 +2024,19 @@ class _ExamsScreenState extends State<ExamsScreen>
         pageFormat: pdf.PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(28),
         build: (context) => [
-          pw.Text(
-            all ? 'Exam Team Report' : '${team.name} — Team Report',
-            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 5),
-          pw.Text(
-            'Generated: ${DateTime.now().toString().split('.').first}',
-            style: const pw.TextStyle(
-              fontSize: 10,
-              color: pdf.PdfColors.grey700,
-            ),
+          pdfReportHeader(
+            logo: logo,
+            title: all ? 'Exam Team Report' : team.name,
+            subtitle: all ? null : 'Team Report',
+            docDate:
+                'Generated: ${DateTime.now().toString().split('.').first}',
           ),
           pw.SizedBox(height: 16),
           if (!all) ...[
             pw.Container(
               padding: const pw.EdgeInsets.all(12),
               decoration: pw.BoxDecoration(
-                color: const pdf.PdfColor.fromInt(0xFFF3E8FF),
+                color: PdfBrand.tint,
                 borderRadius: pw.BorderRadius.circular(8),
               ),
               child: pw.Column(
@@ -2059,26 +2046,29 @@ class _ExamsScreenState extends State<ExamsScreen>
                     'Team Details',
                     style: pw.TextStyle(
                       fontWeight: pw.FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 13,
+                      color: PdfBrand.primaryDark,
                     ),
                   ),
-                  pw.SizedBox(height: 5),
-                  pw.Text('Team: ${team.name}'),
+                  pw.SizedBox(height: 6),
+                  pw.Text('Team: ${team.name}', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
                   pw.Text(
                     'Location: ${team.location.isEmpty ? '-' : team.location}',
+                    style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark),
                   ),
-                  pw.Text('Phone: ${team.phone.isEmpty ? '-' : team.phone}'),
+                  pw.Text('Phone: ${team.phone.isEmpty ? '-' : team.phone}', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
                   pw.Text(
                     'Exam: ${team.examTypeName.isEmpty ? '-' : team.examTypeName}',
+                    style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark),
                   ),
-                  pw.Text('Candidates: ${candidates.length}'),
+                  pw.Text('Candidates: ${candidates.length}', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
                 ],
               ),
             ),
             pw.SizedBox(height: 16),
             pw.Text(
               'Assigned Candidates',
-              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfBrand.textDark),
             ),
             pw.SizedBox(height: 8),
             pw.TableHelper.fromTextArray(
@@ -2093,19 +2083,26 @@ class _ExamsScreenState extends State<ExamsScreen>
                   '${c['status'] ?? '-'}',
                 ];
               }).toList(),
-              headerStyle: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                color: pdf.PdfColors.white,
-              ),
-              headerDecoration: const pw.BoxDecoration(
-                color: pdf.PdfColor.fromInt(0xFFE85D04),
-              ),
-              cellStyle: const pw.TextStyle(fontSize: 8),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(1.6),
+                1: pw.FlexColumnWidth(1.4),
+                2: pw.FlexColumnWidth(1.2),
+                3: pw.FlexColumnWidth(1.3),
+                4: pw.FlexColumnWidth(1.2),
+              },
+              headerStyle: pdfTableHeaderStyle(fontSize: 9),
+              headerDecoration: pdfTableHeaderDecoration,
+              headerAlignment: pw.Alignment.centerLeft,
+              headerPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 5),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellStyle: const pw.TextStyle(fontSize: 8.5, color: PdfBrand.textDark),
+              cellPadding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+              oddRowDecoration: pdfTableOddRowDecoration,
             ),
           ] else ...[
             pw.Text(
               'All Teams',
-              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfBrand.textDark),
             ),
             pw.SizedBox(height: 8),
             pw.TableHelper.fromTextArray(
@@ -2129,14 +2126,23 @@ class _ExamsScreenState extends State<ExamsScreen>
                     ],
                   )
                   .toList(),
-              headerStyle: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                color: pdf.PdfColors.white,
-              ),
-              headerDecoration: const pw.BoxDecoration(
-                color: pdf.PdfColor.fromInt(0xFFE85D04),
-              ),
-              cellStyle: const pw.TextStyle(fontSize: 9),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(1.6),
+                1: pw.FlexColumnWidth(1.3),
+                2: pw.FlexColumnWidth(1.3),
+                3: pw.FlexColumnWidth(1.2),
+                4: pw.FlexColumnWidth(1.0),
+                5: pw.FlexColumnWidth(1.1),
+              },
+              headerStyle: pdfTableHeaderStyle(fontSize: 9.5),
+              headerDecoration: pdfTableHeaderDecoration,
+              headerAlignment: pw.Alignment.centerLeft,
+              headerPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 5),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellAlignments: const {4: pw.Alignment.center},
+              cellStyle: const pw.TextStyle(fontSize: 9, color: PdfBrand.textDark),
+              cellPadding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+              oddRowDecoration: pdfTableOddRowDecoration,
             ),
           ],
         ],
@@ -3119,9 +3125,9 @@ class _TeamCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
+        color: CardTint.fill(team.name),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: CardTint.border(team.name)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0D000000),
@@ -3135,20 +3141,10 @@ class _TeamCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFEDE9FE), Color(0xFFF5F3FF)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.groups_rounded,
-                  color: AppColors.primary,
-                  size: 25,
-                ),
+              EntityAvatar(
+                seed: team.name,
+                icon: Icons.groups_rounded,
+                size: 48,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -3177,6 +3173,13 @@ class _TeamCard extends StatelessWidget {
                 ),
               ),
               PopupMenuButton<String>(
+                icon: MenuTriggerIcon(
+                  color: AvatarPalette.forSeed(team.name).first,
+                ),
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 onSelected: (v) {
                   if (v == 'report')
                     onReport();
@@ -3186,9 +3189,60 @@ class _TeamCard extends StatelessWidget {
                     onDelete();
                 },
                 itemBuilder: (ctx) => const [
-                  PopupMenuItem(value: 'report', child: Text('Team Report')),
-                  PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  PopupMenuItem(
+                    value: 'report',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.download_rounded,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Team Report',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Edit',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: Color(0xFFE11D48),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Delete',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFE11D48),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -3273,9 +3327,9 @@ class _ExamTypeCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
+        color: CardTint.fill(examType.name),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: CardTint.border(examType.name)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0D000000),
@@ -3290,7 +3344,9 @@ class _ExamTypeCard extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               left: BorderSide(
-                color: isActive ? AppColors.primary : Colors.grey,
+                color: isActive
+                    ? AvatarPalette.forSeed(examType.name).first
+                    : Colors.grey,
                 width: 5,
               ),
             ),
@@ -3298,19 +3354,12 @@ class _ExamTypeCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: const Color(0xFFEDE9FE),
-                child: Text(
-                  examType.name.isNotEmpty
-                      ? examType.name[0].toUpperCase()
-                      : 'E',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                  ),
-                ),
+              EntityAvatar(
+                seed: examType.name,
+                letter: examType.name.isNotEmpty
+                    ? examType.name[0].toUpperCase()
+                    : 'E',
+                size: 44,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -3567,9 +3616,9 @@ class _CandidateCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
+          color: CardTint.fill(candidate.name),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          border: Border.all(color: CardTint.border(candidate.name)),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0D000000),
@@ -3580,25 +3629,12 @@ class _CandidateCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEDE9FE),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: Text(
-                  candidate.name.isNotEmpty
-                      ? candidate.name[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
+            EntityAvatar(
+              seed: candidate.name,
+              letter: candidate.name.isNotEmpty
+                  ? candidate.name[0].toUpperCase()
+                  : '?',
+              size: 44,
             ),
             const SizedBox(width: 12),
             Expanded(

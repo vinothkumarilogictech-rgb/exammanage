@@ -1183,10 +1183,8 @@ class BranchesScreenState extends State<BranchesScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Material(
-            color: Colors.white.withOpacity(.88),
+        child: Material(
+            color: CardTint.fill(b.name),
             child: InkWell(
               onTap: () => _showBranchDetails(b),
               borderRadius: BorderRadius.circular(20),
@@ -1197,7 +1195,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.surfaceAlt.withOpacity(.95),
+                    color: CardTint.border(b.name),
                     width: 1.2,
                   ),
                 ),
@@ -1205,35 +1203,10 @@ class BranchesScreenState extends State<BranchesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Avatar
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFFEDE9FE), Color(0xFFF5F3FF)],
-                        ),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: _purple.withOpacity(.07)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _purple.withOpacity(.08),
-                            blurRadius: 13,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          b.name.isNotEmpty ? b.name[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w900,
-                            color: _purple,
-                          ),
-                        ),
-                      ),
+                    EntityAvatar(
+                      seed: b.name,
+                      letter: b.name.isNotEmpty ? b.name[0].toUpperCase() : '?',
+                      size: 48,
                     ),
 
                     const SizedBox(width: 12),
@@ -1345,11 +1318,7 @@ class BranchesScreenState extends State<BranchesScreen> {
                         const SizedBox(height: 1),
 
                         PopupMenuButton<String>(
-                          icon: const Icon(
-                            Icons.more_vert_rounded,
-                            color: Color(0xFF6F6978),
-                            size: 21,
-                          ),
+                          icon: MenuTriggerIcon(color: AvatarPalette.forSeed(b.name).first),
                           padding: EdgeInsets.zero,
                           tooltip: 'Branch actions',
                           shape: RoundedRectangleBorder(
@@ -1450,7 +1419,6 @@ class BranchesScreenState extends State<BranchesScreen> {
             ),
           ),
         ),
-      ),
     );
   }
 

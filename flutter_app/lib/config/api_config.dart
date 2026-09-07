@@ -53,4 +53,5 @@ class ApiConfig {
   static const String voucherSellPath = '/vouchers/sell/';
   static const String voucherStudentsPath = '/vouchers/students/';
   static const String voucherHistoryPath = '/vouchers/history/';
+  static String voucherPaymentPath(int voucherId) => '/vouchers/$voucherId/payment/';
 }

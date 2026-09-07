@@ -152,3 +152,124 @@ class BrandSearchField extends StatelessWidget {
     );
   }
 }
+
+/// A varied, brand-consistent palette so each list card's leading avatar
+/// gets a distinct color drawn from the entity's name, instead of every
+/// row on a page (branches, employees, teams...) reusing the same flat
+/// purple square.
+class AvatarPalette {
+  static const List<List<Color>> gradients = [
+    [Color(0xFF2A17C9), Color(0xFF6C1FB0)], // blue -> purple
+    [Color(0xFF0EA5A5), Color(0xFF14B8A6)], // teal
+    [Color(0xFFD97706), Color(0xFFF59E0B)], // amber
+    [Color(0xFFDC2626), Color(0xFFEF4444)], // red
+    [Color(0xFF15803D), Color(0xFF22C55E)], // green
+    [Color(0xFFE0189E), Color(0xFFEC4899)], // magenta
+    [Color(0xFF2563EB), Color(0xFF60A5FA)], // blue
+    [Color(0xFF7C3AED), Color(0xFFA78BFA)], // violet
+  ];
+
+  static List<Color> forSeed(String seed) {
+    if (seed.isEmpty) return gradients.first;
+    final hash = seed.codeUnits.fold<int>(0, (a, b) => a + b);
+    return gradients[hash % gradients.length];
+  }
+}
+
+/// Colorful rounded-square avatar used on list rows (branches, employees,
+/// teams, etc). Picks a gradient from [AvatarPalette] keyed to [seed] (the
+/// entity's name) so a whole list of cards reads as lively and distinct
+/// rather than one repeated color, and lines up consistently with the
+/// title/subtitle text next to it.
+class EntityAvatar extends StatelessWidget {
+  final String seed;
+  final String? letter;
+  final IconData? icon;
+  final double size;
+
+  const EntityAvatar({
+    super.key,
+    required this.seed,
+    this.letter,
+    this.icon,
+    this.size = 52,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AvatarPalette.forSeed(seed);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
+        borderRadius: BorderRadius.circular(size * .32),
+        boxShadow: [
+          BoxShadow(
+            color: colors.last.withOpacity(.35),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Center(
+        child: icon != null
+            ? Icon(icon, color: Colors.white, size: size * .46)
+            : Text(
+                letter ?? '?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * .36,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// Soft, seed-based tint for a whole list-row card background (not just its
+/// avatar), so a list of cards each reads as a distinct colorful block
+/// instead of uniform white/lavender rows. Mirrors [AvatarPalette] so a
+/// card's background always harmonizes with its own avatar color.
+class CardTint {
+  static Color fill(String seed, {double opacity = .16}) =>
+      AvatarPalette.forSeed(seed).first.withOpacity(opacity);
+
+  static Color border(String seed, {double opacity = .30}) =>
+      AvatarPalette.forSeed(seed).first.withOpacity(opacity);
+
+  /// Ready-to-use decoration for a colorful list-row card: tinted fill,
+  /// tinted border, rounded corners. Pass the same [seed] used for that
+  /// row's [EntityAvatar] so the whole card and its avatar match.
+  static BoxDecoration decoration(String seed, {double radius = 20}) => BoxDecoration(
+        color: fill(seed),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: border(seed), width: 1.1),
+      );
+}
+/// PopupMenuButton's `icon:` instead of a bare Icon so the edit/delete
+/// menu reads as a deliberate, professional control instead of a plain
+/// 3-dot glyph sitting on white.
+class MenuTriggerIcon extends StatelessWidget {
+  final Color color;
+  final double size;
+  const MenuTriggerIcon({super.key, this.color = AppColors.primary, this.size = 34});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color.withOpacity(.12),
+        borderRadius: BorderRadius.circular(size * .32),
+      ),
+      child: Icon(Icons.more_vert_rounded, color: color, size: size * .56),
+    );
+  }
+}

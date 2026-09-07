@@ -8,8 +8,10 @@ import 'package:public_file_saver/public_file_saver.dart';
 
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../widgets/common.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
+import '../services/pdf_report_kit.dart';
 import '../widgets/common.dart';
 import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
@@ -25,7 +27,8 @@ class AttendedCandidatesScreen extends StatefulWidget {
   });
 
   @override
-  State<AttendedCandidatesScreen> createState() => _AttendedCandidatesScreenState();
+  State<AttendedCandidatesScreen> createState() =>
+      _AttendedCandidatesScreenState();
 }
 
 class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
@@ -121,11 +124,7 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
           rangeStart!.month,
           rangeStart!.day,
         );
-        final end = DateTime(
-          rangeEnd!.year,
-          rangeEnd!.month,
-          rangeEnd!.day,
-        );
+        final end = DateTime(rangeEnd!.year, rangeEnd!.month, rangeEnd!.day);
         if (day.isBefore(start) || day.isAfter(end)) return false;
       }
 
@@ -134,7 +133,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
       // than showing every candidate scheduled for today.
       if (statusFilter != null &&
           statusFilter!.trim().isNotEmpty &&
-          row.result.trim().toLowerCase() != statusFilter!.trim().toLowerCase()) {
+          row.result.trim().toLowerCase() !=
+              statusFilter!.trim().toLowerCase()) {
         return false;
       }
 
@@ -143,7 +143,6 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
 
     return {'rows': rows};
   }
-
 
   String _label(DateTime? d) => d == null
       ? 'Select'
@@ -205,8 +204,10 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
   String _exportFilterLabel() {
     if (filter == 'Today') return 'Today';
     if (filter == 'Date') return 'Date ${_label(selectedDate)}';
-    if (filter == 'Month') return 'Month ${monthDate?.month}/${monthDate?.year}';
-    if (filter == 'Range') return 'Range ${_label(rangeStart)} - ${_label(rangeEnd)}';
+    if (filter == 'Month')
+      return 'Month ${monthDate?.month}/${monthDate?.year}';
+    if (filter == 'Range')
+      return 'Range ${_label(rangeStart)} - ${_label(rangeEnd)}';
     return 'All';
   }
 
@@ -259,21 +260,30 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
     pw.Widget countRow(String label, int count, {bool isTotal = false}) {
       return pw.Container(
         width: double.infinity,
-        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: pw.BoxDecoration(
-          color: isTotal ? const pdf.PdfColor.fromInt(0xFFF3F4F6) : pdf.PdfColors.white,
-          border: const pw.Border(top: pw.BorderSide(color: pdf.PdfColors.grey300, width: 0.5)),
+          color: isTotal ? PdfBrand.surfaceAlt : pdf.PdfColors.white,
+          border: const pw.Border(
+            top: pw.BorderSide(color: PdfBrand.borderSoft, width: 0.5),
+          ),
         ),
         child: pw.RichText(
           text: pw.TextSpan(
             children: [
               pw.TextSpan(
                 text: isTotal ? label : label.toUpperCase(),
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 9.5,
+                  color: PdfBrand.textDark,
+                ),
               ),
               pw.TextSpan(
                 text: ' - $count candidate${count == 1 ? '' : 's'}',
-                style: const pw.TextStyle(fontSize: 9.5),
+                style: const pw.TextStyle(
+                  fontSize: 9.5,
+                  color: PdfBrand.textMuted,
+                ),
               ),
             ],
           ),
@@ -283,19 +293,23 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
 
     return pw.Container(
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: pdf.PdfColors.grey400, width: 0.5),
-        borderRadius: pw.BorderRadius.circular(4),
+        border: pw.Border.all(color: PdfBrand.borderSoft, width: 0.6),
+        borderRadius: pw.BorderRadius.circular(6),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Container(
             width: double.infinity,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: const pw.BoxDecoration(color: PdfBrand.tint),
             child: pw.Text(
               'Team-wise Candidate Count',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: pdf.PdfColors.white),
+              style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 10.5,
+                color: PdfBrand.primaryDark,
+              ),
             ),
           ),
           for (final entry in counts.entries) countRow(entry.key, entry.value),
@@ -308,20 +322,50 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
   Future<void> _exportPdf() async {
     try {
       final rows = await _currentFilteredRows();
+      final logo = await loadBrandLogo();
       final doc = pw.Document();
       doc.addPage(
         pw.MultiPage(
           pageFormat: pdf.PdfPageFormat.a4.landscape,
           margin: const pw.EdgeInsets.all(24),
           build: (context) => [
-            pw.Text('Attended Candidates', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 6),
-            pw.Text('Branch: ${_branchContext.selectedBranchName}'),
-            pw.SizedBox(height: 4),
-            pw.Text('Filter: ${_exportFilterLabel()}${searchQuery.trim().isEmpty ? '' : ' | Search: ${searchQuery.trim()}'}'),
+            pdfReportHeader(
+              logo: logo,
+              title: 'Attended Candidates',
+              docDate:
+                  'Generated: ${DateTime.now().toString().split('.').first}',
+            ),
+            pw.SizedBox(height: 10),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 7,
+              ),
+              decoration: pw.BoxDecoration(
+                color: PdfBrand.tintStrong,
+                borderRadius: pw.BorderRadius.circular(6),
+              ),
+              child: pw.Text(
+                'Branch: ${_branchContext.selectedBranchName}    |    Filter: ${_exportFilterLabel()}${searchQuery.trim().isEmpty ? '' : '    |    Search: ${searchQuery.trim()}'}',
+                style: pw.TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfBrand.primaryDark,
+                ),
+              ),
+            ),
             pw.SizedBox(height: 14),
-            pw.Table.fromTextArray(
-              headers: const ['S.No', 'Date', 'Candidate Name', 'Team', 'Exam Type', 'Status', 'Remarks'],
+            pw.TableHelper.fromTextArray(
+              headers: const [
+                'S.No',
+                'Date',
+                'Candidate Name',
+                'Team',
+                'Exam Type',
+                'Status',
+                'Remarks',
+              ],
               data: rows.asMap().entries.map((entry) {
                 final index = entry.key;
                 final r = entry.value;
@@ -335,13 +379,38 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                   r.remarks.isNotEmpty ? r.remarks : '-',
                 ];
               }).toList(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdf.PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: pdf.PdfColors.deepPurple),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(0.6),
+                1: pw.FlexColumnWidth(1.1),
+                2: pw.FlexColumnWidth(2.0),
+                3: pw.FlexColumnWidth(1.6),
+                4: pw.FlexColumnWidth(1.2),
+                5: pw.FlexColumnWidth(1.0),
+                6: pw.FlexColumnWidth(1.8),
+              },
+              headerStyle: pdfTableHeaderStyle(fontSize: 9.5),
+              headerDecoration: pdfTableHeaderDecoration,
               headerAlignment: pw.Alignment.center,
-              cellStyle: const pw.TextStyle(fontSize: 8),
-              cellAlignment: pw.Alignment.center,
-              cellPadding: const pw.EdgeInsets.all(5),
-              border: pw.TableBorder.all(color: pdf.PdfColors.grey400, width: 0.5),
+              cellStyle: const pw.TextStyle(
+                fontSize: 8.5,
+                color: PdfBrand.textDark,
+              ),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellAlignments: const {
+                0: pw.Alignment.center,
+                1: pw.Alignment.center,
+                4: pw.Alignment.center,
+                5: pw.Alignment.center,
+              },
+              cellPadding: const pw.EdgeInsets.symmetric(
+                vertical: 5,
+                horizontal: 6,
+              ),
+              oddRowDecoration: pdfTableOddRowDecoration,
+              border: pw.TableBorder.all(
+                color: PdfBrand.borderSoft,
+                width: 0.5,
+              ),
             ),
             pw.SizedBox(height: 20),
             _buildTeamSummaryBlock(rows),
@@ -351,7 +420,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
       final bytes = Uint8List.fromList(await doc.save());
       await PublicFileSaver().saveBytes(
         bytes: bytes,
-        fileName: 'attended_candidates_${DateTime.now().millisecondsSinceEpoch}.pdf',
+        fileName:
+            'attended_candidates_${DateTime.now().millisecondsSinceEpoch}.pdf',
         mimeType: 'application/pdf',
       );
       if (mounted) _showExportMessage('PDF downloaded successfully.');
@@ -366,9 +436,14 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
       final workbook = ex.Excel.createExcel();
       final sheet = workbook['Attended Candidates'];
       sheet.appendRow([
-        ex.TextCellValue('S.No'), ex.TextCellValue('Date'), ex.TextCellValue('Candidate Name'),
-        ex.TextCellValue('Team'), ex.TextCellValue('Exam Type'), ex.TextCellValue('Branch'),
-        ex.TextCellValue('Status'), ex.TextCellValue('Remarks'),
+        ex.TextCellValue('S.No'),
+        ex.TextCellValue('Date'),
+        ex.TextCellValue('Candidate Name'),
+        ex.TextCellValue('Team'),
+        ex.TextCellValue('Exam Type'),
+        ex.TextCellValue('Branch'),
+        ex.TextCellValue('Status'),
+        ex.TextCellValue('Remarks'),
       ]);
       for (final entry in rows.asMap().entries) {
         final r = entry.value;
@@ -387,8 +462,10 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
       if (bytes == null) throw Exception('Could not create Excel file.');
       await PublicFileSaver().saveBytes(
         bytes: Uint8List.fromList(bytes),
-        fileName: 'attended_candidates_${DateTime.now().millisecondsSinceEpoch}.xlsx',
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        fileName:
+            'attended_candidates_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
       if (mounted) _showExportMessage('Excel downloaded successfully.');
     } catch (e) {
@@ -398,7 +475,10 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
 
   void _showExportMessage(String message, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: error ? Colors.redAccent : AppColors.green),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: error ? Colors.redAccent : AppColors.green,
+      ),
     );
   }
 
@@ -478,12 +558,19 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: rows.isEmpty ? null : _exportPdf,
-                              icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                              icon: const Icon(
+                                Icons.picture_as_pdf_rounded,
+                                size: 18,
+                              ),
                               label: const Text('PDF'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFB91C1C),
-                                side: const BorderSide(color: Color(0xFFFECACA)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: const BorderSide(
+                                  color: Color(0xFFFECACA),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ),
@@ -491,12 +578,19 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: rows.isEmpty ? null : _exportExcel,
-                              icon: const Icon(Icons.table_chart_rounded, size: 18),
+                              icon: const Icon(
+                                Icons.table_chart_rounded,
+                                size: 18,
+                              ),
                               label: const Text('Excel'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFF047857),
-                                side: const BorderSide(color: Color(0xFFA7F3D0)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: const BorderSide(
+                                  color: Color(0xFFA7F3D0),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ),
@@ -505,7 +599,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                       const SizedBox(height: 12),
                       _GlassSearchField(
                         value: searchQuery,
-                        onChanged: (value) => setState(() => searchQuery = value),
+                        onChanged: (value) =>
+                            setState(() => searchQuery = value),
                         onClear: searchQuery.isEmpty
                             ? null
                             : () => setState(() => searchQuery = ''),
@@ -560,18 +655,22 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                       ),
                       if (filter == 'Date') ...[
                         const SizedBox(height: 10),
-                        _FilterContext(text: 'Selected date: ${_label(selectedDate)}'),
+                        _FilterContext(
+                          text: 'Selected date: ${_label(selectedDate)}',
+                        ),
                       ],
                       if (filter == 'Month') ...[
                         const SizedBox(height: 10),
                         _FilterContext(
-                          text: 'Selected month: ${monthDate?.month}/${monthDate?.year}',
+                          text:
+                              'Selected month: ${monthDate?.month}/${monthDate?.year}',
                         ),
                       ],
                       if (filter == 'Range') ...[
                         const SizedBox(height: 10),
                         _FilterContext(
-                          text: 'Range: ${_label(rangeStart)} - ${_label(rangeEnd)}',
+                          text:
+                              'Range: ${_label(rangeStart)} - ${_label(rangeEnd)}',
                         ),
                       ],
                     ],
@@ -841,7 +940,10 @@ class _GlassSearchField extends StatelessWidget {
                 width: 1.2,
               ),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 11,
+            ),
           ),
         ),
       ),
@@ -873,10 +975,7 @@ class _AttendanceFilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: selected
               ? LinearGradient(
-                  colors: [
-                    AppColors.primaryLight,
-                    AppColors.primary,
-                  ],
+                  colors: [AppColors.primaryLight, AppColors.primary],
                 )
               : null,
           color: selected ? null : Colors.white.withOpacity(0.70),
@@ -1029,31 +1128,9 @@ class _HistoryCard extends StatelessWidget {
 
   const _HistoryCard({required this.row});
 
-  Color _avatarBg(String name) {
-    final colors = [
-      const Color(0xFFEDE9FE),
-      const Color(0xFFDCFCE7),
-      const Color(0xFFDBEAFE),
-      const Color(0xFFFFE4E6),
-      const Color(0xFFFEF3C7),
-    ];
-    if (name.isEmpty) return colors[0];
-    final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
-    return colors[hash % colors.length];
-  }
+  Color _avatarBg(String name) => AvatarPalette.forSeed(name).first;
 
-  Color _avatarText(String name) {
-    final colors = [
-      AppColors.primary,
-      AppColors.green,
-      AppColors.blue,
-      const Color(0xFFE11D48),
-      const Color(0xFFD97706),
-    ];
-    if (name.isEmpty) return colors[0];
-    final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
-    return colors[hash % colors.length];
-  }
+  Color _avatarText(String name) => Colors.white;
 
   @override
   Widget build(BuildContext context) {
@@ -1085,9 +1162,9 @@ class _HistoryCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surfaceAlt.withOpacity(0.78),
+            color: CardTint.fill(row.candidateName),
             borderRadius: BorderRadius.circular(19),
-            border: Border.all(color: Colors.white.withOpacity(0.95)),
+            border: Border.all(color: CardTint.border(row.candidateName)),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withOpacity(0.065),
@@ -1113,7 +1190,9 @@ class _HistoryCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: _avatarText(row.candidateName).withOpacity(0.18),
+                          color: _avatarText(
+                            row.candidateName,
+                          ).withOpacity(0.18),
                           blurRadius: 12,
                           spreadRadius: 1,
                         ),
@@ -1162,7 +1241,8 @@ class _HistoryCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(7),
                               ),
                               child: Text(
-                                row.registerNumber.isNotEmpty && row.registerNumber != '-'
+                                row.registerNumber.isNotEmpty &&
+                                        row.registerNumber != '-'
                                     ? '#${row.registerNumber}'
                                     : 'ID: ${row.candidateId}',
                                 style: const TextStyle(
@@ -1189,7 +1269,10 @@ class _HistoryCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeBg.withOpacity(0.92),
                       borderRadius: BorderRadius.circular(20),
@@ -1214,10 +1297,7 @@ class _HistoryCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 11),
-              Container(
-                height: 1,
-                color: AppColors.primary.withOpacity(0.06),
-              ),
+              Container(height: 1, color: AppColors.primary.withOpacity(0.06)),
               const SizedBox(height: 9),
               Row(
                 children: [

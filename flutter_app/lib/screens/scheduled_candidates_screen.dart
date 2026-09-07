@@ -315,33 +315,9 @@ class _CandidateCard extends StatelessWidget {
   const _CandidateCard({required this.candidate});
 
   // Color generator based on name
-  Color _avatarBg(String name) {
-    final colors = [
-      const Color(0xFFEDE9FE),
-      const Color(0xFFDCFCE7),
-      const Color(0xFFDBEAFE),
-      const Color(0xFFFFE4E6),
-      const Color(0xFFFEF3C7),
-      const Color(0xFFF3E8FF),
-    ];
-    if (name.isEmpty) return colors[0];
-    final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
-    return colors[hash % colors.length];
-  }
+  Color _avatarBg(String name) => AvatarPalette.forSeed(name).first;
 
-  Color _avatarText(String name) {
-    final colors = [
-      AppColors.primary,
-      AppColors.green,
-      AppColors.blue,
-      const Color(0xFFE11D48),
-      const Color(0xFFD97706),
-      const Color(0xFF9333EA),
-    ];
-    if (name.isEmpty) return colors[0];
-    final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
-    return colors[hash % colors.length];
-  }
+  Color _avatarText(String name) => Colors.white;
 
   @override
   Widget build(BuildContext context) {
@@ -350,9 +326,9 @@ class _CandidateCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
+        color: CardTint.fill(candidate.name),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
+        border: Border.all(color: CardTint.border(candidate.name)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A000000),

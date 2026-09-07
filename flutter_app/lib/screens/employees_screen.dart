@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models.dart';
 import '../providers/branch_context.dart';
 import '../services/dio_client.dart';
+import '../widgets/common.dart';
 import 'profile_screen.dart';
 
 class EmployeesScreen extends StatefulWidget {
@@ -716,9 +717,9 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 14),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt,
+                          color: CardTint.fill(e.fullName),
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: const Color(0xFFEDE9FE)),
+                          border: Border.all(color: CardTint.border(e.fullName)),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x10000000),
@@ -734,28 +735,10 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                             padding: const EdgeInsets.all(15),
                             child: Row(
                               children: [
-                                Container(
-                                  width: 54,
-                                  height: 54,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFF0E3FA),
-                                        Color(0xFFD8B4FE),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      initial,
-                                      style: const TextStyle(
-                                        color: Color(0xFF6C1FB0),
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
+                                EntityAvatar(
+                                  seed: e.fullName,
+                                  letter: initial,
+                                  size: 54,
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
@@ -790,7 +773,11 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                                   ),
                                 ),
                                 PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert_rounded),
+                                  icon: MenuTriggerIcon(color: AvatarPalette.forSeed(e.fullName).first),
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
                                   onSelected: (v) async {
                                     if (v == 'edit') await editEmployee(e);
                                     if (v == 'delete') {
@@ -826,11 +813,23 @@ class EmployeesScreenState extends State<EmployeesScreen> {
                                   itemBuilder: (_) => const [
                                     PopupMenuItem(
                                       value: 'edit',
-                                      child: Text('Edit'),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                                          SizedBox(width: 10),
+                                          Text('Edit', style: TextStyle(fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
                                     ),
                                     PopupMenuItem(
                                       value: 'delete',
-                                      child: Text('Delete / Deactivate'),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFE11D48)),
+                                          SizedBox(width: 10),
+                                          Text('Delete / Deactivate', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFE11D48))),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
