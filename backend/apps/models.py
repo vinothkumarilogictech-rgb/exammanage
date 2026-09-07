@@ -709,6 +709,13 @@ class PaymentNotificationLog(db.Model):
         nullable=False
     )
 
+    # 'morning' or 'evening' - allows 2 notifications/day
+    slot = db.Column(
+        db.String(20),
+        nullable=False,
+        default='morning'
+    )
+
     payment_status = db.Column(
         db.String(20),
         nullable=False
@@ -723,6 +730,7 @@ class PaymentNotificationLog(db.Model):
         db.UniqueConstraint(
             'voucher_sale_id',
             'notification_date',
+            'slot',
             name='uq_payment_notification_daily'
         ),
     )

@@ -14,6 +14,11 @@ from dotenv import load_dotenv
 
 # Firebase Admin SDK
 from firebase.firebase_config import initialize_firebase
+from firebase.payment_notification_service import send_daily_payment_notifications
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.util import astimezone
+
+IST = astimezone('Asia/Kolkata')
 
 
 load_dotenv(override=True)
@@ -31,6 +36,33 @@ app = create_app()
 #     └── serviceAccountKey.json
 #
 initialize_firebase()
+
+
+# ============================================================
+# DAILY PAYMENT NOTIFICATION SCHEDULER (8:00 AM & 5:00 PM)
+# ============================================================
+
+def run_notification_job(flask_app, slot):
+    with flask_app.app_context():
+        send_daily_payment_notifications(slot=slot)
+
+
+def start_scheduler(flask_app):
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        func=lambda: run_notification_job(flask_app, 'morning'),
+        trigger='cron', hour=8, minute=0, timezone=IST,
+        id='payment_notif_morning',
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        func=lambda: run_notification_job(flask_app, 'evening'),
+        trigger='cron', hour=17, minute=0, timezone=IST,
+        id='payment_notif_evening',
+        replace_existing=True,
+    )
+    scheduler.start()
+    print("✅ Payment notification scheduler started (8:00 AM & 5:00 PM)")
 
 
 # ============================================================
@@ -876,26 +908,24 @@ if __name__ == '__main__':
     port = int(
         os.environ.get(
             'PORT',
-            5000
+            5001
         )
     )
 
     debug = (
         os.environ.get(
             'FLASK_DEBUG',
-            '0'
+            '1'
         ) == '1'
     )
+
+    # Avoid starting the scheduler twice when Flask's debug
+    # reloader spawns a second process.
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        start_scheduler(app)
 
     app.run(
         host='0.0.0.0',
         port=port,
         debug=debug
-    )
-
-    if __name__ == '__main__':
-      app.run(
-        host='0.0.0.0',
-        port=5001,
-        debug=True
     )

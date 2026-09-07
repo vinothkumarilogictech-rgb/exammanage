@@ -1714,63 +1714,62 @@ def voucher_sell_api():
     return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(history)}, 'Voucher sold successfully.', 201)
 
 
-    @api_bp.post('/vouchers/<int:voucher_id>/payment/')
-    @api_token_required
-    def voucher_payment_update_api(voucher_id):
-        v = Voucher.query.get_or_404(voucher_id)
-        latest = (VoucherSaleHistory.query.filter_by(voucher_id=v.id)
-                .order_by(VoucherSaleHistory.sold_at.desc(), VoucherSaleHistory.id.desc()).first())
-        if not latest:
-            return fail('This voucher has no sale record to update.', 409)
+@api_bp.post('/vouchers/<int:voucher_id>/payment/')
+@api_token_required
+def voucher_payment_update_api(voucher_id):
+    v = Voucher.query.get_or_404(voucher_id)
+    latest = (VoucherSaleHistory.query.filter_by(voucher_id=v.id)
+            .order_by(VoucherSaleHistory.sold_at.desc(), VoucherSaleHistory.id.desc()).first())
+    if not latest:
+        return fail('This voucher has no sale record to update.', 409)
 
-        d = body()
-        payment_status = str(d.get('payment_status') or latest.payment_status)
-        if payment_status not in ('Paid', 'Pending', 'Partial'):
-            return fail('Payment status must be Paid, Pending, or Partial.', 422)
+    d = body()
+    payment_status = str(d.get('payment_status') or latest.payment_status)
+    if payment_status not in ('Paid', 'Pending', 'Partial'):
+        return fail('Payment status must be Paid, Pending, or Partial.', 422)
 
-        try:
-            if d.get('paid_amount') is not None:
-                paid_amount = float(d.get('paid_amount'))
-            elif payment_status == 'Paid':
-                paid_amount = latest.final_amount
-            elif payment_status == 'Pending':
-                paid_amount = 0.0
-            else:
-                paid_amount = latest.paid_amount or 0.0
-        except (ValueError, TypeError):
-            return fail('Invalid paid amount.', 422)
-
-        if paid_amount < 0 or paid_amount > latest.final_amount:
-            return fail('Paid amount must be between 0 and the final amount.', 422)
-        if payment_status == 'Paid':
+    try:
+        if d.get('paid_amount') is not None:
+            paid_amount = float(d.get('paid_amount'))
+        elif payment_status == 'Paid':
             paid_amount = latest.final_amount
-        if payment_status == 'Pending':
+        elif payment_status == 'Pending':
             paid_amount = 0.0
-        if payment_status == 'Partial' and (paid_amount <= 0 or paid_amount >= latest.final_amount):
-            return fail('Enter an amount paid that is less than the final amount for a Partial status.', 422)
+        else:
+            paid_amount = latest.paid_amount or 0.0
+    except (ValueError, TypeError):
+        return fail('Invalid paid amount.', 422)
 
-        latest.payment_status = payment_status
-        latest.paid_amount = paid_amount
-        if d.get('payment_mode') is not None:
-            latest.payment_mode = str(d.get('payment_mode')).strip() or None
-        if d.get('payment_reference') is not None:
-            latest.payment_reference = str(d.get('payment_reference')).strip() or None
-        if d.get('notes') is not None:
-            latest.notes = str(d.get('notes')).strip() or None
+    if paid_amount < 0 or paid_amount > latest.final_amount:
+        return fail('Paid amount must be between 0 and the final amount.', 422)
+    if payment_status == 'Paid':
+        paid_amount = latest.final_amount
+    if payment_status == 'Pending':
+        paid_amount = 0.0
+    if payment_status == 'Partial' and (paid_amount <= 0 or paid_amount >= latest.final_amount):
+        return fail('Enter an amount paid that is less than the final amount for a Partial status.', 422)
 
-        v.payment_status = latest.payment_status
-        v.payment_mode = latest.payment_mode
-        v.payment_reference = latest.payment_reference
-        v.notes = latest.notes
-        db.session.commit()
-        return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(latest)}, 'Payment updated.')
+    latest.payment_status = payment_status
+    latest.paid_amount = paid_amount
+    if d.get('payment_mode') is not None:
+        latest.payment_mode = str(d.get('payment_mode')).strip() or None
+    if d.get('payment_reference') is not None:
+        latest.payment_reference = str(d.get('payment_reference')).strip() or None
+    if d.get('notes') is not None:
+        latest.notes = str(d.get('notes')).strip() or None
+
+    v.payment_status = latest.payment_status
+    v.payment_mode = latest.payment_mode
+    v.payment_reference = latest.payment_reference
+    v.notes = latest.notes
+    db.session.commit()
+    return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(latest)}, 'Payment updated.')
 
 
-    @api_bp.post('/notifications/device-token/')
-    @api_token_required
-    def register_device_token():
-        data = body()
-
+@api_bp.post('/notifications/device-token/')
+@api_token_required
+def register_device_token():
+    data = body()
     token = (data.get('token') or '').strip()
     platform = (data.get('platform') or 'android').strip().lower()
 
@@ -1783,7 +1782,8 @@ def voucher_sell_api():
     try:
         user_id = int(identity.get('sub'))
     except (TypeError, ValueError):
-        return fail('Invalid user identity.', 401)
+        # Handles the hardcoded default admin login (id='admin', non-numeric)
+        user_id = 0
 
     device = DeviceToken.query.filter_by(token=token).first()
 
@@ -1814,3 +1814,23 @@ def voucher_sell_api():
         message='FCM device token registered successfully.',
         status=201
     )
+
+
+@api_bp.get('/notifications/test/')
+@api_token_required
+def test_notification():
+    from firebase.notification_sender import send_to_all_active_devices
+    count = send_to_all_active_devices(
+        title="Test Notification",
+        body="Backend இருந்து அனுப்பிய test message"
+    )
+    return ok({'sent_to': count}, f'Notification sent to {count} device(s).')
+
+
+@api_bp.get('/notifications/test-daily/')
+@api_token_required
+def test_daily_notification():
+    from firebase.payment_notification_service import send_daily_payment_notifications
+    slot = request.args.get('slot', 'morning')
+    result = send_daily_payment_notifications(slot=slot)
+    return ok(result, f'Daily notification job ({slot}) triggered.')

@@ -14,7 +14,8 @@ class ApiConfig {
   static const String _dartDefineUrl =
       String.fromEnvironment('API_SERVER_URL');
 
-  static String get baseUrl => 'http://10.223.169.206:5001';
+  static String get baseUrl => 'http://192.168.1.38:5001';
+  ///static String get baseUrl => 'http://10.223.169.206:5001';
 
   static const String apiBasePath = '/api/v1';
 

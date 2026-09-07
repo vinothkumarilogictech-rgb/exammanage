@@ -72,9 +72,9 @@ def _employee_allowed_path(path):
         '/api/v1/expenses/',
         '/api/v1/employees/',
         '/api/v1/auth/me/',
+        '/api/v1/notifications/',
     )
     return path.startswith(allowed_prefixes)
-
 
 def api_token_required(fn):
     @wraps(fn)

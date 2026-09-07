@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
@@ -35,8 +36,11 @@ class DioClient {
           handler.next(options);
         },
 
-        onError: (error, handler) async {
-          if (error.response?.statusCode == 401) {
+                onError: (error, handler) async {
+          final alreadyRetried =
+              error.requestOptions.extra['retried'] == true;
+
+          if (error.response?.statusCode == 401 && !alreadyRetried) {
             try {
               final p = await SharedPreferences.getInstance();
 
@@ -68,15 +72,17 @@ class DioClient {
 
                   final opts = error.requestOptions;
 
-                  opts.headers['Authorization'] =
-                      'Bearer $newToken';
+                  opts.headers['Authorization'] = 'Bearer $newToken';
+                  opts.extra['retried'] = true;
 
                   final cloneReq = await dio.fetch(opts);
 
                   return handler.resolve(cloneReq);
                 }
               }
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('Refresh/retry failed: $e');
+            }
           }
 
           handler.next(error);

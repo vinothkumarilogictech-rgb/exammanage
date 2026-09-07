@@ -8,9 +8,9 @@ from apps.models import (
 from firebase.notification_sender import send_to_all_active_devices
 
 
-def send_daily_payment_notifications():
+def send_daily_payment_notifications(slot='morning'):
     print("==========================================")
-    print("STARTING DAILY PAYMENT NOTIFICATIONS")
+    print(f"STARTING PAYMENT NOTIFICATIONS - {slot.upper()}")
     print("==========================================")
 
     today = date.today()
@@ -24,7 +24,6 @@ def send_daily_payment_notifications():
     skipped = 0
 
     for payment in payments:
-
         total += 1
 
         # Calculate remaining balance
@@ -35,15 +34,16 @@ def send_daily_payment_notifications():
             skipped += 1
             continue
 
-        # Check whether today's notification was already sent
+        # Check whether THIS slot's notification was already sent today
         existing_log = PaymentNotificationLog.query.filter_by(
             voucher_sale_id=payment.id,
             notification_date=today,
+            slot=slot,
         ).first()
 
         if existing_log:
             print(
-                f"SKIPPED - Already notified today: "
+                f"SKIPPED ({slot}) - Already notified today: "
                 f"{payment.student_name}"
             )
             skipped += 1
@@ -68,6 +68,7 @@ def send_daily_payment_notifications():
         print("Student:", student_name)
         print("Status:", payment.payment_status)
         print("Balance:", balance)
+        print("Slot:", slot)
         print("Sending:", title)
         print("Body:", body)
 
@@ -84,6 +85,7 @@ def send_daily_payment_notifications():
             log = PaymentNotificationLog(
                 voucher_sale_id=payment.id,
                 notification_date=today,
+                slot=slot,
                 payment_status=payment.payment_status,
             )
 
@@ -94,7 +96,7 @@ def send_daily_payment_notifications():
 
             print(
                 f"SUCCESS - Notification logged "
-                f"for payment {payment.id}"
+                f"for payment {payment.id} ({slot})"
             )
 
         else:
@@ -104,7 +106,7 @@ def send_daily_payment_notifications():
             )
 
     print("==========================================")
-    print("DAILY PAYMENT NOTIFICATION COMPLETED")
+    print(f"{slot.upper()} PAYMENT NOTIFICATION COMPLETED")
     print("==========================================")
     print("Total Pending/Partial:", total)
     print("Notifications Sent:", sent)
