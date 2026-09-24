@@ -1,17 +1,154 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/branch_context.dart';
 import 'screens/login_screen.dart';
 import 'screens/app_shell.dart';
+import 'firebase_options.dart';
+import 'services/notification_service.dart';
+import 'services/dio_client.dart';
+
+// ============================================================
+// FCM TOKEN STATE
+// ============================================================
+String? _latestFcmToken;
+bool _isRegisteringFcmToken = false;
+String? _lastRegisteredFcmToken;
+
+// ============================================================
+// FIREBASE FCM BACKGROUND MESSAGE HANDLER
+// ============================================================
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    debugPrint('Background notification received: ${message.messageId}');
+  } catch (e) {
+    debugPrint('Background Firebase error: $e');
+  }
+}
+
+// ============================================================
+// REGISTER FCM TOKEN WITH BACKEND
+// ============================================================
+Future<void> registerFcmTokenWithBackend(String token) async {
+  if (_isRegisteringFcmToken || _lastRegisteredFcmToken == token) return;
+  _isRegisteringFcmToken = true;
+  try {
+    final dioClient = DioClient();
+    final accessToken = await dioClient.readAccessToken();
+    if (accessToken == null || accessToken.isEmpty) return;
+
+    final response = await dioClient.registerDeviceToken(token: token, platform: 'android');
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      _lastRegisteredFcmToken = token;
+      debugPrint('FCM token registered: ${response.statusCode}');
+    } else {
+      debugPrint('FCM token registration failed: ${response.statusCode}');
+    }
+  } catch (e) {
+    debugPrint('FCM registration error: $e');
+  } finally {
+    _isRegisteringFcmToken = false;
+  }
+}
+
+// ============================================================
+// REGISTER TOKEN ONLY WHEN USER IS LOGGED IN
+// ============================================================
+Future<void> registerFcmTokenIfLoggedIn(AuthProvider auth) async {
+  if (!auth.authenticated) return;
+  if (_latestFcmToken == null || _latestFcmToken!.isEmpty) return;
+  await registerFcmTokenWithBackend(_latestFcmToken!);
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    debugPrint('Firebase initialization error: $e');
+  }
+
+  if (!kIsWeb) {
+    try {
+      await NotificationService.initialize();
+    } catch (e) {
+      debugPrint('Local notification initialization error: $e');
+    }
+  }
+
+  if (!kIsWeb) {
+    try {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      final messaging = FirebaseMessaging.instance;
+
+      await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      final token = await messaging.getToken();
+      if (token != null && token.isNotEmpty) {
+        _latestFcmToken = token;
+      }
+
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        _latestFcmToken = newToken;
+        final dioClient = DioClient();
+        final accessToken = await dioClient.readAccessToken();
+        if (accessToken != null && accessToken.isNotEmpty) {
+          await registerFcmTokenWithBackend(newToken);
+        }
+      });
+
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+        final notification = message.notification;
+        if (notification != null) {
+          try {
+            await NotificationService.showNotification(
+              title: notification.title ?? 'Payment Reminder',
+              body: notification.body ?? '',
+            );
+          } catch (e) {
+            debugPrint('Foreground local notification error: $e');
+          }
+        }
+      });
+
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('Notification tapped: ${message.data}');
+        // Later: navigate using message.data['payment_id']
+      });
+
+      await FirebaseMessaging.instance.getInitialMessage();
+    } catch (e) {
+      debugPrint('FCM setup error: $e');
+    }
+  }
+
   final auth = AuthProvider();
   await auth.checkSession();
+
+  if (auth.authenticated) {
+    await registerFcmTokenIfLoggedIn(auth);
+  }
+
+  auth.addListener(() {
+    if (auth.authenticated) {
+      unawaited(registerFcmTokenIfLoggedIn(auth));
+    }
+  });
+
   runApp(
     MultiProvider(
       providers: [
@@ -22,6 +159,7 @@ Future<void> main() async {
     ),
   );
 }
+
 
 class OfficeApp extends StatelessWidget {
   const OfficeApp({super.key});

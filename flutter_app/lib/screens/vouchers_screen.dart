@@ -35,6 +35,20 @@ class _VouchersScreenState extends State<VouchersScreen>
   DateTime? _selectedHistoryDate;
   late final BranchContext _branchContext;
 
+  // Available Exam Types for filters
+  List<String> _availableExamTypes = [];
+
+  // Sold Vouchers Filtering state
+  final TextEditingController _soldCandidateCtrl = TextEditingController();
+  String _soldCandidateFilter = '';
+  String? _soldSelectedExamType;
+  List<Map<String, dynamic>> _filteredSold = [];
+
+  // History Filtering state
+  final TextEditingController _historyCandidateCtrl = TextEditingController();
+  String _historyCandidateFilter = '';
+  String? _historySelectedExamType;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +71,8 @@ class _VouchersScreenState extends State<VouchersScreen>
   void dispose() {
     _branchContext.removeListener(_onBranchChanged);
     _tabs.dispose();
+    _soldCandidateCtrl.dispose();
+    _historyCandidateCtrl.dispose();
     super.dispose();
   }
 
@@ -69,6 +85,7 @@ class _VouchersScreenState extends State<VouchersScreen>
         api.voucherDashboard(branchId: branchId),
         api.vouchers(branchId: branchId),
         api.voucherHistory(branchId: branchId),
+        api.examTypes(),
       ]);
       stats = Map<String, dynamic>.from(results[0].data['data'] ?? {});
       vouchers = (results[1].data['data'] as List? ?? [])
@@ -77,6 +94,25 @@ class _VouchersScreenState extends State<VouchersScreen>
       history = (results[2].data['data'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
+
+      final examTypeSet = <String>{};
+      for (final v in vouchers) {
+        final et = '${v['exam_type_name'] ?? v['exam_type'] ?? ''}'.trim();
+        if (et.isNotEmpty) examTypeSet.add(et);
+      }
+      for (final h in history) {
+        final et = '${h['exam_type_name'] ?? h['exam_type'] ?? ''}'.trim();
+        if (et.isNotEmpty) examTypeSet.add(et);
+      }
+      final etList = (results[3].data['data'] as List? ?? []);
+      for (final item in etList) {
+        final n = '${item['name'] ?? ''}'.trim();
+        if (n.isNotEmpty) examTypeSet.add(n);
+      }
+      final sortedTypes = examTypeSet.toList()..sort();
+      _availableExamTypes = sortedTypes;
+
+      _applySoldFilter();
       _applyHistoryFilter();
     } catch (e) {
       if (mounted) _toast('Voucher data load failed: $e', error: true);
@@ -239,7 +275,7 @@ class _VouchersScreenState extends State<VouchersScreen>
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 1.5,
+          childAspectRatio: 1.15,
           children: [
             _VoucherKpiCard(
               title: 'Available',
@@ -408,10 +444,242 @@ class _VouchersScreenState extends State<VouchersScreen>
   // SOLD TAB
   // ================================================================
 
-  Widget _soldTab() {
-    final sold = vouchers
+  void _applySoldFilter() {
+    final allSold = vouchers
         .where((v) => ['Sold', 'Assigned', 'Used'].contains(v['status']))
         .toList();
+
+    _filteredSold = allSold.where((v) {
+      // 1. Candidate Name filter
+      if (_soldCandidateFilter.trim().isNotEmpty) {
+        final query = _soldCandidateFilter.trim().toLowerCase();
+        final name = '${v['student_name'] ?? v['candidate_name'] ?? ''}'.toLowerCase();
+        final mobile = '${v['student_mobile'] ?? v['mobile'] ?? ''}'.toLowerCase();
+        final code = '${v['voucher_code'] ?? ''}'.toLowerCase();
+        if (!name.contains(query) && !mobile.contains(query) && !code.contains(query)) {
+          return false;
+        }
+      }
+
+      // 2. Exam Type filter
+      if (_soldSelectedExamType != null &&
+          _soldSelectedExamType!.isNotEmpty &&
+          _soldSelectedExamType != 'All') {
+        final et = '${v['exam_type_name'] ?? v['exam_type'] ?? ''}'.trim().toLowerCase();
+        if (et != _soldSelectedExamType!.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+  }
+
+  void _clearSoldFilter() {
+    setState(() {
+      _soldCandidateCtrl.clear();
+      _soldCandidateFilter = '';
+      _soldSelectedExamType = null;
+      _applySoldFilter();
+    });
+  }
+
+  Widget _soldFilterBar() {
+    final hasActiveFilter = _soldCandidateFilter.isNotEmpty ||
+        (_soldSelectedExamType != null && _soldSelectedExamType != 'All');
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: hasActiveFilter ? const Color(0xFFC4B5FD) : const Color(0xFFE5E7EB),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 12,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.filter_list_rounded, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Text(
+                'Filter Sold Vouchers',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13.5,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              const Spacer(),
+              if (hasActiveFilter)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Active',
+                    style: TextStyle(
+                      color: Color(0xFF6C1FB0),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _soldCandidateCtrl,
+            decoration: InputDecoration(
+              hintText: 'Candidate name, mobile, or voucher...',
+              hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF9CA3AF)),
+              prefixIcon: const Icon(Icons.person_search_rounded, size: 20, color: Color(0xFF6C1FB0)),
+              suffixIcon: _soldCandidateCtrl.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () {
+                        _soldCandidateCtrl.clear();
+                        setState(() {
+                          _soldCandidateFilter = '';
+                          _applySoldFilter();
+                        });
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+            ),
+            onChanged: (val) {
+              setState(() {});
+            },
+            onSubmitted: (val) {
+              setState(() {
+                _soldCandidateFilter = val.trim();
+                _applySoldFilter();
+              });
+            },
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            value: _soldSelectedExamType,
+            decoration: InputDecoration(
+              hintText: 'Select Exam Type (All)',
+              hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF9CA3AF)),
+              prefixIcon: const Icon(Icons.school_outlined, size: 20, color: Color(0xFF6C1FB0)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('All Exam Types', style: TextStyle(fontSize: 13)),
+              ),
+              ..._availableExamTypes.map(
+                (et) => DropdownMenuItem<String>(
+                  value: et,
+                  child: Text(et, style: const TextStyle(fontSize: 13)),
+                ),
+              ),
+            ],
+            onChanged: (val) {
+              setState(() {
+                _soldSelectedExamType = val;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _soldCandidateFilter = _soldCandidateCtrl.text.trim();
+                      _applySoldFilter();
+                    });
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C1FB0),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.check_rounded, size: 16),
+                  label: const Text('Apply Filter', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              if (hasActiveFilter) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _clearSoldFilter,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
+                    label: const Text(
+                      'Clear',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _soldTab() {
+    final allSold = vouchers
+        .where((v) => ['Sold', 'Assigned', 'Used'].contains(v['status']))
+        .toList();
+    final hasFilter = _soldCandidateFilter.isNotEmpty ||
+        (_soldSelectedExamType != null && _soldSelectedExamType != 'All');
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
@@ -428,7 +696,9 @@ class _VouchersScreenState extends State<VouchersScreen>
               ),
             ),
             Text(
-              '${sold.length} total',
+              hasFilter
+                  ? '${_filteredSold.length} of ${allSold.length}'
+                  : '${allSold.length} total',
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontWeight: FontWeight.w600,
@@ -437,10 +707,14 @@ class _VouchersScreenState extends State<VouchersScreen>
           ],
         ),
         const SizedBox(height: 12),
-        if (sold.isEmpty)
+        _soldFilterBar(),
+        const SizedBox(height: 14),
+        if (allSold.isEmpty)
           _empty('No vouchers have been sold yet.')
+        else if (_filteredSold.isEmpty)
+          _empty('No sold vouchers match your filter criteria.')
         else
-          ...sold.map((v) => _voucherTile(v)),
+          ..._filteredSold.map((v) => _voucherTile(v)),
       ],
     );
   }
@@ -477,22 +751,42 @@ class _VouchersScreenState extends State<VouchersScreen>
   }
 
   void _applyHistoryFilter() {
-    if (_selectedHistoryDate == null) {
-      _filteredHistory = List<Map<String, dynamic>>.from(history);
-      return;
-    }
-
-    final selected = DateTime(
-      _selectedHistoryDate!.year,
-      _selectedHistoryDate!.month,
-      _selectedHistoryDate!.day,
-    );
-
     _filteredHistory = history.where((h) {
-      final soldAt = _parseHistoryDate(h['sold_at']);
-      if (soldAt == null) return false;
-      final saleDay = DateTime(soldAt.year, soldAt.month, soldAt.day);
-      return saleDay == selected;
+      // 1. Date filter (keeps existing date filtering)
+      if (_selectedHistoryDate != null) {
+        final soldAt = _parseHistoryDate(h['sold_at']);
+        if (soldAt == null) return false;
+        final saleDay = DateTime(soldAt.year, soldAt.month, soldAt.day);
+        final selected = DateTime(
+          _selectedHistoryDate!.year,
+          _selectedHistoryDate!.month,
+          _selectedHistoryDate!.day,
+        );
+        if (saleDay != selected) return false;
+      }
+
+      // 2. Candidate Name filter
+      if (_historyCandidateFilter.trim().isNotEmpty) {
+        final query = _historyCandidateFilter.trim().toLowerCase();
+        final name = '${h['student_name'] ?? h['candidate_name'] ?? ''}'.toLowerCase();
+        final mobile = '${h['mobile'] ?? h['student_mobile'] ?? ''}'.toLowerCase();
+        final code = '${h['voucher_code'] ?? ''}'.toLowerCase();
+        if (!name.contains(query) && !mobile.contains(query) && !code.contains(query)) {
+          return false;
+        }
+      }
+
+      // 3. Exam Type filter
+      if (_historySelectedExamType != null &&
+          _historySelectedExamType!.isNotEmpty &&
+          _historySelectedExamType != 'All') {
+        final et = '${h['exam_type_name'] ?? h['exam_type'] ?? ''}'.trim().toLowerCase();
+        if (et != _historySelectedExamType!.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      return true;
     }).toList();
   }
 
@@ -522,6 +816,100 @@ class _VouchersScreenState extends State<VouchersScreen>
     });
   }
 
+  void _clearHistoryFilters() {
+    setState(() {
+      _selectedHistoryDate = null;
+      _historyCandidateCtrl.clear();
+      _historyCandidateFilter = '';
+      _historySelectedExamType = null;
+      _applyHistoryFilter();
+    });
+  }
+
+  Future<void> _showHistoryExportOptions(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Export Sales History',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Color(0xFFB91C1C),
+                ),
+              ),
+              title: const Text(
+                'PDF',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: const Text('Download as a PDF document'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportHistoryPdf();
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.table_chart_rounded,
+                  color: Color(0xFF047857),
+                ),
+              ),
+              title: const Text(
+                'Excel',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: const Text('Download as a spreadsheet (CSV)'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportHistoryExcel();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _exportHistoryPdf() async {
     if (_filteredHistory.isEmpty) {
       _toast('No voucher sales found for the selected filter.', error: true);
@@ -539,9 +927,21 @@ class _VouchersScreenState extends State<VouchersScreen>
       (sum, h) => sum + (double.tryParse('${h['balance_amount'] ?? 0}') ?? 0),
     );
 
-    final filterLabel = _selectedHistoryDate == null
-        ? 'All Dates'
-        : '${_selectedHistoryDate!.day.toString().padLeft(2, '0')}-${_selectedHistoryDate!.month.toString().padLeft(2, '0')}-${_selectedHistoryDate!.year}';
+    final List<String> activeFilterList = [];
+    if (_selectedHistoryDate != null) {
+      activeFilterList.add(
+        'Date: ${_selectedHistoryDate!.day.toString().padLeft(2, '0')}-${_selectedHistoryDate!.month.toString().padLeft(2, '0')}-${_selectedHistoryDate!.year}',
+      );
+    } else {
+      activeFilterList.add('Date: All Dates');
+    }
+    if (_historyCandidateFilter.trim().isNotEmpty) {
+      activeFilterList.add('Candidate: ${_historyCandidateFilter.trim()}');
+    }
+    if (_historySelectedExamType != null && _historySelectedExamType != 'All') {
+      activeFilterList.add('Exam: $_historySelectedExamType');
+    }
+    final filterLabel = activeFilterList.join('  |  ');
 
     pdf.addPage(
       pw.MultiPage(
@@ -558,12 +958,14 @@ class _VouchersScreenState extends State<VouchersScreen>
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(
-                  'Sale Date: $filterLabel',
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfBrand.textDark,
+                pw.Expanded(
+                  child: pw.Text(
+                    'Filters: $filterLabel',
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfBrand.textDark,
+                    ),
                   ),
                 ),
                 pw.Text(
@@ -592,21 +994,27 @@ class _VouchersScreenState extends State<VouchersScreen>
             pw.SizedBox(height: 14),
             pw.TableHelper.fromTextArray(
               headers: [
+                'S.No',
+                'Date',
                 'Voucher',
-                'Student',
+                'Candidate',
+                'Exam',
                 'Mobile',
-                'Sold At',
                 'Amount (Rs)',
                 'Pending (Rs)',
                 'Payment',
                 'Status',
               ],
-              data: _filteredHistory.map((h) {
+              data: _filteredHistory.asMap().entries.map((entry) {
+                final i = entry.key;
+                final h = entry.value;
                 return [
+                  '${i + 1}',
+                  dateTime(h['sold_at']).split(' ').first,
                   '${h['voucher_code'] ?? '-'}',
                   '${h['student_name'] ?? '-'}',
+                  '${h['exam_type_name'] ?? '-'}',
                   '${h['mobile'] ?? h['student_mobile'] ?? '-'}',
-                  dateTime(h['sold_at']),
                   (double.tryParse('${h['final_amount'] ?? 0}') ?? 0)
                       .toStringAsFixed(2),
                   (double.tryParse('${h['balance_amount'] ?? 0}') ?? 0)
@@ -616,24 +1024,22 @@ class _VouchersScreenState extends State<VouchersScreen>
                 ];
               }).toList(),
               columnWidths: const {
-                0: pw.FlexColumnWidth(2.1),
-                1: pw.FlexColumnWidth(1.3),
-                2: pw.FlexColumnWidth(1.3),
-                3: pw.FlexColumnWidth(1.3),
+                0: pw.FlexColumnWidth(0.6),
+                1: pw.FlexColumnWidth(1.1),
+                2: pw.FlexColumnWidth(1.8),
+                3: pw.FlexColumnWidth(1.2),
                 4: pw.FlexColumnWidth(1.1),
-                5: pw.FlexColumnWidth(1.1),
+                5: pw.FlexColumnWidth(1.2),
                 6: pw.FlexColumnWidth(1.0),
                 7: pw.FlexColumnWidth(1.0),
+                8: pw.FlexColumnWidth(0.9),
+                9: pw.FlexColumnWidth(0.9),
               },
               headerStyle: pdfTableHeaderStyle(fontSize: 8),
               headerDecoration: pdfTableHeaderDecoration,
-              headerAlignment: pw.Alignment.centerLeft,
+              headerAlignment: pw.Alignment.center,
               headerPadding: const pw.EdgeInsets.symmetric(vertical: 7, horizontal: 5),
-              cellAlignment: pw.Alignment.centerLeft,
-              cellAlignments: const {
-                4: pw.Alignment.centerRight,
-                5: pw.Alignment.centerRight,
-              },
+              cellAlignment: pw.Alignment.center,
               cellStyle: const pw.TextStyle(fontSize: 8, color: PdfBrand.textDark),
               cellPadding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 5),
               oddRowDecoration: pdfTableOddRowDecoration,
@@ -692,16 +1098,20 @@ class _VouchersScreenState extends State<VouchersScreen>
       filename: 'voucher_history_${DateTime.now().millisecondsSinceEpoch}.csv',
     );
   }
-
   Widget _historyFilterBar() {
     final selected = _selectedHistoryDate;
+    final hasActiveFilter = selected != null ||
+        _historyCandidateFilter.isNotEmpty ||
+        (_historySelectedExamType != null && _historySelectedExamType != 'All');
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(
+          color: hasActiveFilter ? const Color(0xFFC4B5FD) : const Color(0xFFE5E7EB),
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x08000000),
@@ -715,66 +1125,226 @@ class _VouchersScreenState extends State<VouchersScreen>
         children: [
           Row(
             children: [
-              Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _pickHistoryFilterDate,
-                    onLongPress: _clearHistoryFilterDate,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      height: 42,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: selected != null
-                            ? const Color(0xFFEDE9FE)
-                            : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: selected != null
-                              ? const Color(0xFFC4B5FD)
-                              : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_month_rounded,
-                            size: 19,
-                            color: selected != null
-                                ? const Color(0xFF6C1FB0)
-                                : const Color(0xFF64748B),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              selected == null
-                                  ? 'Filter by sale date'
-                                  : 'Date: ${_historyDateLabel(selected)} ${selected.year}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: selected != null
-                                    ? const Color(0xFF6C1FB0)
-                                    : const Color(0xFF475569),
-                              ),
-                            ),
-                          ),
-                          if (selected != null)
-                            GestureDetector(
-                              onTap: _clearHistoryFilterDate,
-                              child: const Icon(
-                                Icons.close_rounded,
-                                size: 18,
-                                color: Color(0xFF6C1FB0),
-                              ),
-                            ),
-                        ],
-                      ),
+              const Icon(Icons.filter_list_rounded, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Text(
+                'History Filters',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13.5,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              const Spacer(),
+              if (hasActiveFilter)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Active',
+                    style: TextStyle(
+                      color: Color(0xFF6C1FB0),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 1. Date filter (Existing)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _pickHistoryFilterDate,
+              onLongPress: _clearHistoryFilterDate,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: selected != null
+                      ? const Color(0xFFEDE9FE)
+                      : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected != null
+                        ? const Color(0xFFC4B5FD)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_month_rounded,
+                      size: 19,
+                      color: selected != null
+                          ? const Color(0xFF6C1FB0)
+                          : const Color(0xFF64748B),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        selected == null
+                            ? 'Filter by sale date'
+                            : 'Date: ${_historyDateLabel(selected)} ${selected.year}',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: selected != null
+                              ? const Color(0xFF6C1FB0)
+                              : const Color(0xFF475569),
+                        ),
+                      ),
+                    ),
+                    if (selected != null)
+                      GestureDetector(
+                        onTap: _clearHistoryFilterDate,
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: Color(0xFF6C1FB0),
+                        ),
+                      ),
+                  ],
+                ),
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // 2. Candidate Name input
+          TextField(
+            controller: _historyCandidateCtrl,
+            decoration: InputDecoration(
+              hintText: 'Candidate name, mobile, or voucher...',
+              hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF9CA3AF)),
+              prefixIcon: const Icon(Icons.person_search_rounded, size: 20, color: Color(0xFF6C1FB0)),
+              suffixIcon: _historyCandidateCtrl.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () {
+                        _historyCandidateCtrl.clear();
+                        setState(() {
+                          _historyCandidateFilter = '';
+                          _applyHistoryFilter();
+                        });
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+            ),
+            onChanged: (val) {
+              setState(() {});
+            },
+            onSubmitted: (val) {
+              setState(() {
+                _historyCandidateFilter = val.trim();
+                _applyHistoryFilter();
+              });
+            },
+          ),
+          const SizedBox(height: 10),
+          // 3. Exam Type Dropdown
+          DropdownButtonFormField<String>(
+            value: _historySelectedExamType,
+            decoration: InputDecoration(
+              hintText: 'Select Exam Type (All)',
+              hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF9CA3AF)),
+              prefixIcon: const Icon(Icons.school_outlined, size: 20, color: Color(0xFF6C1FB0)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('All Exam Types', style: TextStyle(fontSize: 13)),
+              ),
+              ..._availableExamTypes.map(
+                (et) => DropdownMenuItem<String>(
+                  value: et,
+                  child: Text(et, style: const TextStyle(fontSize: 13)),
+                ),
+              ),
+            ],
+            onChanged: (val) {
+              setState(() {
+                _historySelectedExamType = val;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          // Action buttons: Apply Filter & Clear
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _historyCandidateFilter = _historyCandidateCtrl.text.trim();
+                      _applyHistoryFilter();
+                    });
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C1FB0),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.check_rounded, size: 16),
+                  label: const Text('Apply Filter', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              if (hasActiveFilter) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _clearHistoryFilters,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
+                    label: const Text(
+                      'Clear',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -784,7 +1354,7 @@ class _VouchersScreenState extends State<VouchersScreen>
             children: [
               Expanded(
                 child: InkWell(
-                  onTap: _exportHistoryPdf,
+                  onTap: () => _showHistoryExportOptions(context),
                   borderRadius: BorderRadius.circular(24),
                   child: Container(
                     alignment: Alignment.center,
@@ -794,53 +1364,20 @@ class _VouchersScreenState extends State<VouchersScreen>
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: const Color(0xFFC4B5FD)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.picture_as_pdf_rounded,
+                        const Icon(
+                          Icons.print_rounded,
                           size: 15,
                           color: Color(0xFF6C1FB0),
                         ),
-                        SizedBox(width: 5),
+                        const SizedBox(width: 5),
                         Text(
-                          'Export PDF',
-                          style: TextStyle(
-                            color: Color(0xFF6C1FB0),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  onTap: _exportHistoryExcel,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceAlt,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFC4B5FD)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.table_chart_rounded,
-                          size: 15,
-                          color: Color(0xFF6C1FB0),
-                        ),
-                        SizedBox(width: 5),
-                        Text(
-                          'Export Excel',
-                          style: TextStyle(
+                          hasActiveFilter
+                              ? 'Export Filtered Report (${_filteredHistory.length})'
+                              : 'Print / Export Report (${_filteredHistory.length})',
+                          style: const TextStyle(
                             color: Color(0xFF6C1FB0),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
@@ -859,6 +1396,10 @@ class _VouchersScreenState extends State<VouchersScreen>
   }
 
   Widget _historyTab() {
+    final hasActiveFilter = _selectedHistoryDate != null ||
+        _historyCandidateFilter.isNotEmpty ||
+        (_historySelectedExamType != null && _historySelectedExamType != 'All');
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
@@ -875,7 +1416,9 @@ class _VouchersScreenState extends State<VouchersScreen>
               ),
             ),
             Text(
-              '${_filteredHistory.length} records',
+              hasActiveFilter
+                  ? '${_filteredHistory.length} of ${history.length}'
+                  : '${_filteredHistory.length} records',
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontWeight: FontWeight.w600,
@@ -888,9 +1431,9 @@ class _VouchersScreenState extends State<VouchersScreen>
         const SizedBox(height: 14),
         if (_filteredHistory.isEmpty)
           _empty(
-            _selectedHistoryDate == null
-                ? 'Every voucher sale will appear here with the complete student and payment details.'
-                : 'No voucher sales found for the selected date.',
+            hasActiveFilter
+                ? 'No voucher sales found matching your filter criteria.'
+                : 'Every voucher sale will appear here with the complete student and payment details.',
           )
         else
           ..._filteredHistory.map(_historyTile),

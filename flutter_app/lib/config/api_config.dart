@@ -11,20 +11,11 @@ class ApiConfig {
   ///
   /// Real phone:
   /// flutter run --dart-define=API_SERVER_URL=http://YOUR-PC-LAN-IP:5000
-  static const String _dartDefineUrl =
-      String.fromEnvironment('API_SERVER_URL');
+  static const String _dartDefineUrl = String.fromEnvironment('API_SERVER_URL');
 
-  static String get baseUrl {
-    if (_dartDefineUrl.isNotEmpty) {
-      return _dartDefineUrl.replaceFirst(RegExp(r'/$'), '');
-    }
-
-    if (kIsWeb) {
-      return 'http://localhost:5001';
-    }
-
-    return 'http://10.0.2.2:5000';
-  }
+  static String get baseUrl => 'http://10.246.141.206:5001';
+  
+    
 
   static const String apiBasePath = '/api/v1';
 
@@ -53,5 +44,6 @@ class ApiConfig {
   static const String voucherSellPath = '/vouchers/sell/';
   static const String voucherStudentsPath = '/vouchers/students/';
   static const String voucherHistoryPath = '/vouchers/history/';
-  static String voucherPaymentPath(int voucherId) => '/vouchers/$voucherId/payment/';
+  static String voucherPaymentPath(int voucherId) =>
+      '/vouchers/$voucherId/payment/';
 }

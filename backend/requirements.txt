@@ -11,4 +11,7 @@ openpyxl
 
 python-dotenv
 pyodbc
+firebase-admin
+APScheduler
+pytz
 

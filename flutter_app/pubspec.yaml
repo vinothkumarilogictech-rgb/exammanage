@@ -1,6 +1,6 @@
 name: office_management_mobile
 description: "Office Management mobile app using the Flask REST API."
-publish_to: "none"
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
@@ -24,6 +24,9 @@ dependencies:
   image_picker: ^1.2.3
   excel: ^4.0.6
   public_file_saver: ^1.1.0
+  firebase_core: ^4.14.0
+  firebase_messaging: ^16.6.0
+  flutter_local_notifications: ^22.3.0
 
 dev_dependencies:
   flutter_test:

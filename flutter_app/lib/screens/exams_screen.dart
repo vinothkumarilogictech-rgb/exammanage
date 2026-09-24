@@ -9,6 +9,7 @@ import '../services/dio_client.dart';
 import '../services/pdf_report_kit.dart';
 import '../widgets/common.dart';
 import 'profile_screen.dart';
+import 'add_candidate_screen.dart';
 import '../providers/branch_context.dart';
 import 'package:provider/provider.dart';
 
@@ -335,7 +336,15 @@ class _ExamsScreenState extends State<ExamsScreen>
         ),
       ),
     );
-    controller.dispose();
+    if (!mounted) {
+      controller.dispose();
+      return;
+    }
+    // Defer disposal until after the sheet's exit animation finishes,
+    // so the closing TextField widget never touches a disposed controller.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.dispose();
+    });
     if (saved == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -543,489 +552,21 @@ class _ExamsScreenState extends State<ExamsScreen>
   );
 
   // ================================================================
-  // ADD CANDIDATE DIALOG
+  // ADD CANDIDATE SCREEN
   // ================================================================
 
   Future<void> _showAddCandidateDialog() async {
-    final globalBranchId = _branchContext.selectedBranchId;
-    if (globalBranchId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please select a branch from Dashboard before adding a candidate.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    if (_branchesList.isEmpty || _examTypesList.isEmpty) {
-      await _loadLookups();
-    }
-
-    // Fallback if still empty
-    List<Map<String, dynamic>> branchesList = List.from(_branchesList);
-    List<Map<String, dynamic>> examTypesList = List.from(_examTypesList);
-    List<ExamTeam> teamsList = [];
-    try {
-      final tr = await api.teams(status: 'Active', branchId: globalBranchId);
-      teamsList = (tr.data['data'] as List? ?? const [])
-          .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
-          .toList();
-    } catch (_) {}
-
-    if (branchesList.isEmpty) {
-      try {
-        final br = await api.branches();
-        branchesList = (br.data['data'] as List? ?? [])
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-        _branchesList = branchesList;
-      } catch (_) {}
-    }
-
-    if (examTypesList.isEmpty) {
-      try {
-        final et = await api.examTypes();
-        examTypesList = (et.data['data'] as List? ?? [])
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-        _examTypesList = examTypesList;
-      } catch (_) {}
-    }
-
-    // Keep dropdown values valid even when the API returns no team for the selected exam.
-    // Also de-duplicate lookup records by primary key so Flutter's DropdownButton
-    // never receives multiple items with the same value.
-    branchesList = {
-      for (final b in branchesList)
-        if (b['id'] != null) b['id']: b,
-    }.values.toList();
-    if (globalBranchId != null) {
-      branchesList = branchesList
-          .where((b) => b['id'] == globalBranchId)
-          .toList();
-    }
-    examTypesList = {
-      for (final e in examTypesList)
-        if (e['id'] != null) e['id']: e,
-    }.values.toList();
-    teamsList = {for (final t in teamsList) t.id: t}.values.toList();
-
-    int? selectedBranchId =
-        globalBranchId ??
-        (branchesList.isNotEmpty ? branchesList.first['id'] as int? : null);
-    int? selectedExamTypeId = examTypesList.isNotEmpty
-        ? examTypesList.first['id'] as int?
-        : null;
-    List<ExamTeam> teamsForSelectedExam() => teamsList
-        .where(
-          (t) =>
-              t.examTypeId == null ||
-              selectedExamTypeId == null ||
-              t.examTypeId == selectedExamTypeId,
-        )
-        .toList();
-    // Team assignment is optional. Candidates can be added without a team.
-    int? selectedTeamId;
-
-    // Candidate status can be selected while adding the candidate.
-    String selectedStatus = 'Registered';
-
-    final nameCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    final remarksCtrl = TextEditingController();
-    final dateCtrl = TextEditingController(
-      text: DateTime.now().toIso8601String().split('T').first,
-    );
-
-    if (!mounted) return;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            24,
-            16,
-            24,
-            MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        gradient: brandLinearGradient(),
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(.20),
-                            blurRadius: 14,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.person_add_rounded,
-                        color: Colors.white,
-                        size: 23,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Add',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Register a new exam candidate',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: Color(0xFF6B7280),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () => Navigator.pop(ctx),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          size: 18,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-
-                _formSectionCard(
-                  title: 'CANDIDATE DETAILS',
-                  icon: Icons.badge_rounded,
-                  color: const Color(0xFF059669),
-                  children: [
-                    _label('Full Name *'),
-                    const SizedBox(height: 6),
-                    _field(
-                      nameCtrl,
-                      'Enter candidate name',
-                      icon: Icons.person_outline_rounded,
-                    ),
-                    const SizedBox(height: 14),
-                    _label('Email'),
-                    const SizedBox(height: 6),
-                    _field(
-                      emailCtrl,
-                      'Candidate email',
-                      icon: Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 14),
-                    _label('Phone'),
-                    const SizedBox(height: 6),
-                    _field(
-                      phoneCtrl,
-                      'Candidate phone',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 14),
-                    _label('Remarks'),
-                    const SizedBox(height: 6),
-                    _field(
-                      remarksCtrl,
-                      'Add a note about this candidate...',
-                      icon: Icons.notes_rounded,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                _formSectionCard(
-                  title: 'EXAM ASSIGNMENT',
-                  icon: Icons.school_rounded,
-                  color: AppColors.primary,
-                  children: [
-                    _label('Branch'),
-                    const SizedBox(height: 6),
-                    _fixedBranchField(globalBranchId, branchesList),
-                    const SizedBox(height: 14),
-                    _label('Exam Type'),
-                    const SizedBox(height: 6),
-                    _dropdown<int>(
-                      value: selectedExamTypeId,
-                      hint: 'Select exam type',
-                      items: examTypesList
-                          .map(
-                            (e) => DropdownMenuItem<int>(
-                              value: e['id'],
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.school_rounded,
-                                    size: 18,
-                                    color: Color(0xFF6B7280),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text('${e['name'] ?? ''}'),
-                                ],
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) {
-                        setSheetState(() {
-                          selectedExamTypeId = val;
-                          // Do not auto-assign a team when the exam changes.
-                          selectedTeamId = null;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    _label('Team'),
-                    const SizedBox(height: 6),
-                    _dropdown<int>(
-                      // -1 is a UI-only sentinel for the optional "Not Assigned" choice.
-                      // It lets the dropdown have a visible item while the API receives null.
-                      value: selectedTeamId ?? -1,
-                      hint: 'Select team (optional)',
-                      items: [
-                        const DropdownMenuItem<int>(
-                          value: -1,
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.person_outline_rounded,
-                                size: 18,
-                                color: Color(0xFF6B7280),
-                              ),
-                              SizedBox(width: 8),
-                              Expanded(child: Text('Not Assigned')),
-                            ],
-                          ),
-                        ),
-                        ...teamsForSelectedExam().map(
-                          (t) => DropdownMenuItem<int>(
-                            value: t.id,
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.groups_rounded,
-                                  size: 18,
-                                  color: Color(0xFF6B7280),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    t.name,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                      onChanged: (val) => setSheetState(
-                        () => selectedTeamId = val == null || val == -1
-                            ? null
-                            : val,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _label('Exam Date'),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: dateCtrl,
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        hintText: 'Select date',
-                        prefixIcon: const Icon(
-                          Icons.calendar_today_rounded,
-                          size: 19,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
-                        ),
-                      ),
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: ctx,
-                          initialDate: DateTime.now(),
-                          // Candidate exam dates are unrestricted: past, today and future are allowed.
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked != null) {
-                          dateCtrl.text =
-                              '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                _formSectionCard(
-                  title: 'STATUS',
-                  icon: Icons.flag_rounded,
-                  color: const Color(0xFF7C3AED),
-                  children: [
-                    Row(
-                      children: [
-                        _statusChip(
-                          label: 'Registered',
-                          icon: Icons.check_circle_rounded,
-                          color: const Color(0xFF059669),
-                          selected: selectedStatus == 'Registered',
-                          onTap: () => setSheetState(
-                            () => selectedStatus = 'Registered',
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        _statusChip(
-                          label: 'Not Completed',
-                          icon: Icons.person_off_rounded,
-                          color: const Color(0xFFEA580C),
-                          selected: selectedStatus == 'Not Completed',
-                          onTap: () => setSheetState(
-                            () => selectedStatus = 'Not Completed',
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        _statusChip(
-                          label: 'Rescheduled',
-                          icon: Icons.event_repeat_rounded,
-                          color: const Color(0xFF7C3AED),
-                          selected: selectedStatus == 'Rescheduled',
-                          onTap: () => setSheetState(
-                            () => selectedStatus = 'Rescheduled',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Icons.person_add_alt_1_rounded, size: 19),
-                    onPressed: () async {
-                      if (nameCtrl.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text('Candidate name is required'),
-                          ),
-                        );
-                        return;
-                      }
-                      try {
-                        await api.createCandidate({
-                          'name': nameCtrl.text.trim(),
-                          'email': emailCtrl.text.trim(),
-                          'phone': phoneCtrl.text.trim(),
-                          'branch_id': selectedBranchId,
-                          'exam_type_id': selectedExamTypeId,
-                          'team_id': selectedTeamId,
-                          'status': selectedStatus,
-                          'exam_date': dateCtrl.text,
-                          'remarks': remarksCtrl.text.trim(),
-                        });
-                        if (ctx.mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Candidate added!'),
-                              backgroundColor: AppColors.green,
-                            ),
-                          );
-                          reload();
-                        }
-                      } catch (e) {
-                        if (ctx.mounted) {
-                          ScaffoldMessenger.of(
-                            ctx,
-                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
-                        }
-                      }
-                    },
-                    label: const Text(
-                      'Add',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+    final res = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddCandidateScreen(
+          initialBranchId: _branchContext.selectedBranchId,
         ),
       ),
     );
+    if (res == true && mounted) {
+      reload();
+    }
   }
 
   // ================================================================
@@ -1356,7 +897,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                               backgroundColor: AppColors.green,
                             ),
                           );
-                          reload();
+                          WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) reload(); });
                         }
                       } catch (e) {
                         if (ctx.mounted) {
@@ -1567,7 +1108,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                               backgroundColor: AppColors.green,
                             ),
                           );
-                          reload();
+                          WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) reload(); });
                         }
                       } catch (e) {
                         if (ctx.mounted) {
@@ -1748,7 +1289,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                               backgroundColor: AppColors.green,
                             ),
                           );
-                          reload();
+                          WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) reload(); });
                         }
                       } catch (e) {
                         if (ctx.mounted)
@@ -1913,7 +1454,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                               backgroundColor: AppColors.green,
                             ),
                           );
-                          reload();
+                          WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) reload(); });
                         }
                       } catch (e) {
                         if (ctx.mounted)
@@ -2061,6 +1602,17 @@ class _ExamsScreenState extends State<ExamsScreen>
                     'Exam: ${team.examTypeName.isEmpty ? '-' : team.examTypeName}',
                     style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark),
                   ),
+                  pw.Text(
+                    'Branch: ${(() {
+                      final names = candidates
+                          .map((c) => '${Map<String, dynamic>.from(c)['branch_name'] ?? ''}')
+                          .where((b) => b.isNotEmpty)
+                          .toSet()
+                          .join(', ');
+                      return names.isEmpty ? '-' : names;
+                    })()}',
+                    style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark),
+                  ),
                   pw.Text('Candidates: ${candidates.length}', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
                 ],
               ),
@@ -2072,21 +1624,22 @@ class _ExamsScreenState extends State<ExamsScreen>
             ),
             pw.SizedBox(height: 8),
             pw.TableHelper.fromTextArray(
-              headers: ['Candidate', 'Branch', 'Exam', 'Date', 'Status'],
-              data: candidates.map((item) {
-                final c = Map<String, dynamic>.from(item);
+              headers: ['S.No', 'Date', 'Candidate', 'Exam', 'Status'],
+              data: candidates.asMap().entries.map((entry) {
+                final i = entry.key;
+                final c = Map<String, dynamic>.from(entry.value);
                 return [
-                  '${c['name'] ?? '-'}',
-                  '${c['branch_name'] ?? '-'}',
-                  '${c['exam_type_name'] ?? '-'}',
+                  '${i + 1}',
                   '${c['exam_date'] ?? '-'}',
+                  '${c['name'] ?? '-'}',
+                  '${c['exam_type_name'] ?? '-'}',
                   '${c['status'] ?? '-'}',
                 ];
               }).toList(),
               columnWidths: const {
-                0: pw.FlexColumnWidth(1.6),
-                1: pw.FlexColumnWidth(1.4),
-                2: pw.FlexColumnWidth(1.2),
+                0: pw.FlexColumnWidth(0.6),
+                1: pw.FlexColumnWidth(1.3),
+                2: pw.FlexColumnWidth(1.8),
                 3: pw.FlexColumnWidth(1.3),
                 4: pw.FlexColumnWidth(1.2),
               },
@@ -2095,6 +1648,7 @@ class _ExamsScreenState extends State<ExamsScreen>
               headerAlignment: pw.Alignment.centerLeft,
               headerPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 5),
               cellAlignment: pw.Alignment.centerLeft,
+              cellAlignments: const {0: pw.Alignment.center},
               cellStyle: const pw.TextStyle(fontSize: 8.5, color: PdfBrand.textDark),
               cellPadding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 5),
               oddRowDecoration: pdfTableOddRowDecoration,
@@ -3071,7 +2625,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                                     backgroundColor: AppColors.green,
                                   ),
                                 );
-                                reload();
+                                WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) reload(); });
                               } catch (e) {
                                 if (ctx.mounted) {
                                   setSheetState(() => saving = false);
@@ -3094,11 +2648,13 @@ class _ExamsScreenState extends State<ExamsScreen>
         ),
       );
     } finally {
-      nameCtrl.dispose();
-      emailCtrl.dispose();
-      phoneCtrl.dispose();
-      remarksCtrl.dispose();
-      dateCtrl.dispose();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        nameCtrl.dispose();
+        emailCtrl.dispose();
+        phoneCtrl.dispose();
+        remarksCtrl.dispose();
+        dateCtrl.dispose();
+      });
     }
   }
 }
@@ -3410,6 +2966,7 @@ class _ExamTypeCard extends StatelessWidget {
       ),
     );
   }
+
 }
 
 // ================================================================
@@ -3667,6 +3224,8 @@ class _CandidateCard extends StatelessWidget {
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   const SizedBox(height: 2),
                   Text(
@@ -3771,54 +3330,68 @@ class _CandidateCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Material(
-              color: const Color(0xFFF3E8FF),
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                onTap: () => onEditCandidate(candidate),
-                borderRadius: BorderRadius.circular(12),
-                child: const Padding(
-                  padding: EdgeInsets.all(7),
-                  child: Icon(
-                    Icons.edit_rounded,
-                    size: 15,
-                    color: AppColors.primary,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Material(
+                      color: const Color(0xFFF3E8FF),
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        onTap: () => onEditCandidate(candidate),
+                        borderRadius: BorderRadius.circular(12),
+                        child: const Padding(
+                          padding: EdgeInsets.all(7),
+                          child: Icon(
+                            Icons.edit_rounded,
+                            size: 15,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Material(
+                      color: const Color(0xFFFFE4E6),
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        onTap: () => onDeleteCandidate(candidate),
+                        borderRadius: BorderRadius.circular(12),
+                        child: const Padding(
+                          padding: EdgeInsets.all(7),
+                          child: Icon(
+                            Icons.delete_outline_rounded,
+                            size: 15,
+                            color: AppColors.red,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _statusBg(status),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      color: _statusColor(status),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Material(
-              color: const Color(0xFFFFE4E6),
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                onTap: () => onDeleteCandidate(candidate),
-                borderRadius: BorderRadius.circular(12),
-                child: const Padding(
-                  padding: EdgeInsets.all(7),
-                  child: Icon(
-                    Icons.delete_outline_rounded,
-                    size: 15,
-                    color: AppColors.red,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-              decoration: BoxDecoration(
-                color: _statusBg(status),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                status,
-                style: TextStyle(
-                  color: _statusColor(status),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              ],
             ),
           ],
         ),

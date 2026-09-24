@@ -35,7 +35,6 @@ class AppColors {
   static const textMuted = Color(0xFF6B6280);
 }
 
-
 LinearGradient brandLinearGradient({
   AlignmentGeometry begin = Alignment.topLeft,
   AlignmentGeometry end = Alignment.bottomRight,
@@ -44,9 +43,9 @@ LinearGradient brandLinearGradient({
 
 class AppBarStyle {
   static const double height = 72;
-  // Flat/square app bar — no rounded bottom corners, used consistently
-  // across every screen's top bar.
-  static const shape = RoundedRectangleBorder();
+  static const shape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+  );
   static const titleStyle = TextStyle(
     fontWeight: FontWeight.w800,
     fontSize: 21,

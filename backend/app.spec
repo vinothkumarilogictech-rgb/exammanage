@@ -22,6 +22,11 @@ a = Analysis(
         # error out looking for it next to the exe. Remove this line if
         # you don't want the sqlite file bundled into the exe.
         ('flask_erp.db', '.'),
+        # Firebase Admin service account key - required by
+        # firebase/firebase_config.py's initialize_firebase(). Without this,
+        # the exe fails at startup with FileNotFoundError looking for
+        # _MEIxxxxxx\firebase\serviceAccountKey.json.
+        ('firebase/serviceAccountKey.json', 'firebase'),
     ],
     hiddenimports=[
         # pyodbc + the SQL Server SQLAlchemy dialect - not picked up by

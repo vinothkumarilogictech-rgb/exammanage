@@ -342,8 +342,38 @@ class Employee {
   final String employeeId, fullName, designation, phone, email, address, joiningDate, status, branchName;
   final int branchId;
   final double basicSalary;
-  Employee({required this.id, required this.employeeId, required this.fullName, required this.designation, required this.phone, required this.email, required this.address, required this.joiningDate, required this.status, required this.branchId, required this.branchName, required this.basicSalary});
+  final String? username;
+
+  Employee({
+    required this.id,
+    required this.employeeId,
+    required this.fullName,
+    required this.designation,
+    required this.phone,
+    required this.email,
+    required this.address,
+    required this.joiningDate,
+    required this.status,
+    required this.branchId,
+    required this.branchName,
+    required this.basicSalary,
+    this.username,
+  });
+
   factory Employee.fromMap(Map<String,dynamic> m) => Employee(
-    id: m['id'] ?? 0, employeeId: '${m['employee_id'] ?? m['employee_code'] ?? ''}', fullName: '${m['full_name'] ?? m['name'] ?? ''}', designation: '${m['designation'] ?? ''}', phone: '${m['contact_number'] ?? m['phone'] ?? ''}', email: '${m['email'] ?? ''}', address: '${m['address'] ?? ''}', joiningDate: '${m['joining_date'] ?? ''}', status: '${m['status'] ?? 'Active'}', branchId: int.tryParse('${m['branch_id'] ?? 0}') ?? 0, branchName: '${m['branch_name'] ?? ''}', basicSalary: double.tryParse('${m['basic_salary'] ?? 0}') ?? 0,
+    id: m['id'] ?? 0,
+    employeeId: '${m['employee_id'] ?? m['employee_code'] ?? ''}',
+    fullName: '${m['full_name'] ?? m['name'] ?? ''}',
+    designation: '${m['designation'] ?? ''}',
+    phone: '${m['contact_number'] ?? m['phone'] ?? ''}',
+    email: '${m['email'] ?? ''}',
+    address: '${m['address'] ?? ''}',
+    joiningDate: '${m['joining_date'] ?? ''}',
+    status: '${m['status'] ?? 'Active'}',
+    branchId: int.tryParse('${m['branch_id'] ?? 0}') ?? 0,
+    branchName: '${m['branch_name'] ?? ''}',
+    basicSalary: double.tryParse('${m['basic_salary'] ?? 0}') ?? 0,
+    username: (m['username'] != null && '${m['username']}'.trim().isNotEmpty) ? '${m['username']}'.trim() : null,
   );
 }
+

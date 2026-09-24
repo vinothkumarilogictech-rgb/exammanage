@@ -9,6 +9,7 @@ const _brand = Color(0xFF9A22C7);
 const _brandDark = Color(0xFF6C1FB0);
 const _brandSoft = Color(0xFFEDE9FE);
 
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -395,6 +396,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
+
             boxShadow: [
               BoxShadow(
                 color: Color(0x559A22C7),
@@ -637,4 +639,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
 }

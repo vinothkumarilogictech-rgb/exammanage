@@ -17,12 +17,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
-  late final user = TextEditingController(
-    text: widget.initialAdminMode ? 'admin' : '',
-  );
-  late final pass = TextEditingController(
-    text: widget.initialAdminMode ? '1234' : '',
-  );
+  late final user = TextEditingController();
+  late final pass = TextEditingController();
 
   bool obscure = true;
   late bool adminMode = widget.initialAdminMode;
@@ -287,26 +283,6 @@ class _LoginScreenState extends State<LoginScreen>
                     : Icons.visibility_off_rounded,
                 color: const Color(0xFF7B14B5),
                 size: 21,
-              ),
-            ),
-          ),
-
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {},
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text(
-                'Forgot password?',
-                style: TextStyle(
-                  color: Color(0xFF7B14B5),
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                ),
               ),
             ),
           ),

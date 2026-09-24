@@ -169,6 +169,45 @@ def ensure_candidate_columns(app):
         conn.close()
 
 
+def ensure_exam_team_columns(app):
+    # Older databases were created before ExamTeam had branch_id /
+    # exam_type_id columns (teams used to be global, not per-branch).
+    # Without this, every /exams/teams/ and /exams/candidates/ query that
+    # touches the exam_team table 500s with "no such column".
+    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
+    db_path = os.path.abspath(db_path)
+
+    if not os.path.exists(db_path):
+        return
+
+    conn = sqlite3.connect(db_path)
+    try:
+        table_exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='exam_team'"
+        ).fetchone()
+        if not table_exists:
+            # Table doesn't exist yet at all — db.create_all() (which runs
+            # right after these migrations) will create it fresh with every
+            # current column, so there's nothing to alter here.
+            return
+
+        cursor = conn.execute("PRAGMA table_info(exam_team)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        migrations = {
+            "exam_type_id": "INTEGER",
+            "branch_id": "INTEGER",
+            "status": "VARCHAR(20) DEFAULT 'Active'",
+        }
+
+        for column_name, column_type in migrations.items():
+            if column_name not in columns:
+                conn.execute(f"ALTER TABLE exam_team ADD COLUMN {column_name} {column_type}")
+    finally:
+        conn.commit()
+        conn.close()
+
+
 
 def ensure_employee_columns(app):
     db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
@@ -180,9 +219,14 @@ def ensure_employee_columns(app):
         columns = {row[1] for row in conn.execute("PRAGMA table_info(employee)").fetchall()}
         if 'basic_salary' not in columns:
             conn.execute("ALTER TABLE employee ADD COLUMN basic_salary FLOAT DEFAULT 0.0")
+        if 'photo_url' not in columns:
+            conn.execute("ALTER TABLE employee ADD COLUMN photo_url VARCHAR(300)")
         ecols = {row[1] for row in conn.execute("PRAGMA table_info(expense)").fetchall()}
         if 'employee_id' not in ecols:
             conn.execute("ALTER TABLE expense ADD COLUMN employee_id INTEGER")
+        scols = {row[1] for row in conn.execute("PRAGMA table_info(setting)").fetchall()}
+        if 'admin_photo_url' not in scols:
+            conn.execute("ALTER TABLE setting ADD COLUMN admin_photo_url VARCHAR(300)")
         conn.commit()
     finally:
         conn.close()
@@ -342,6 +386,7 @@ def create_app():
     ensure_expense_columns(app)
     ensure_employee_columns(app)
     ensure_candidate_columns(app)
+    ensure_exam_team_columns(app)
     ensure_exam_attempt_columns(app)
 
     # SQL Server deployments need explicit additive migrations because create_all
@@ -354,6 +399,21 @@ def create_app():
                 cols = {c['name'] for c in insp.get_columns('employee')}
                 if 'basic_salary' not in cols:
                     db.session.execute(text("ALTER TABLE employee ADD basic_salary FLOAT NOT NULL CONSTRAINT DF_employee_basic_salary DEFAULT 0"))
+                if 'photo_url' not in cols:
+                    db.session.execute(text("ALTER TABLE employee ADD photo_url NVARCHAR(300) NULL"))
+            if 'setting' in insp.get_table_names():
+                cols = {c['name'] for c in insp.get_columns('setting')}
+                if 'admin_photo_url' not in cols:
+                    db.session.execute(text("ALTER TABLE setting ADD admin_photo_url NVARCHAR(300) NULL"))
+            if 'exam_team' in insp.get_table_names():
+                cols = {c['name'] for c in insp.get_columns('exam_team')}
+                if 'exam_type_id' not in cols:
+                    db.session.execute(text("ALTER TABLE exam_team ADD exam_type_id INT NULL"))
+                if 'branch_id' not in cols:
+                    db.session.execute(text("ALTER TABLE exam_team ADD branch_id INT NULL"))
+                if 'status' not in cols:
+                    db.session.execute(text("ALTER TABLE exam_team ADD status VARCHAR(20) NOT NULL CONSTRAINT DF_exam_team_status DEFAULT 'Active'"))
+                db.session.commit()
             if 'expense' in insp.get_table_names():
                 cols = {c['name'] for c in insp.get_columns('expense')}
                 if 'employee_id' not in cols:

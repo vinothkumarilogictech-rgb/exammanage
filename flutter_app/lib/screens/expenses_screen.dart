@@ -12,10 +12,18 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'invoice_tab.dart';
 import 'profile_screen.dart';
+import '../services/pdf_report_kit.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final bool openAddOnStart;
-  const ExpensesScreen({super.key, this.openAddOnStart = false});
+  // Called after any expense is successfully added, edited, or deleted.
+  // AppShell uses this to reload the Dashboard KPI totals immediately.
+  final VoidCallback? onExpenseChanged;
+  const ExpensesScreen({
+    super.key,
+    this.openAddOnStart = false,
+    this.onExpenseChanged,
+  });
 
   @override
   State<ExpensesScreen> createState() => ExpensesScreenState();
@@ -108,7 +116,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
       await _branchContext.ensureLoaded();
       final globalBranchId = _branchContext.selectedBranchId;
       final results = await Future.wait([
-        api.expenses(branchId: globalBranchId),
+        api.expenses(branchId: globalBranchId, status: 'Active'),
         api.branches(),
         api.expenseCategories(),
         api.employees(branchId: globalBranchId, status: 'Active'),
@@ -454,6 +462,251 @@ class ExpensesScreenState extends State<ExpensesScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error updating category: $e')));
+      }
+    }
+  }
+
+  Future<void> _editCategory(ExpenseCategoryItem cat) async {
+    final nameCtrl = TextEditingController(text: cat.name);
+    final formKey = GlobalKey<FormState>();
+
+    final updatedName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.edit_rounded, color: AppColors.primary, size: 22),
+            SizedBox(width: 8),
+            Text('Edit Category', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Update category name below:',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Category Name',
+                  hintText: 'Enter category name',
+                  filled: true,
+                  fillColor: const Color(0xFFF9FAFB),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.label_rounded, size: 20, color: AppColors.primary),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Please enter a category name';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.pop(ctx, nameCtrl.text.trim());
+              }
+            },
+            child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (updatedName == null || updatedName.isEmpty || updatedName == cat.name) return;
+
+    try {
+      await api.updateExpenseCategory(cat.id, updatedName);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Category "$updatedName" updated successfully.'),
+            backgroundColor: AppColors.green,
+          ),
+        );
+      }
+      await reload();
+    } catch (e) {
+      if (mounted) {
+        String msg = 'Error updating category: $e';
+        if (e is DioException) {
+          final resData = e.response?.data;
+          if (resData is Map && resData['message'] != null) {
+            msg = '${resData['message']}';
+          } else if (e.response?.statusCode == 404 || e.response?.statusCode == 405) {
+            msg = 'Category edit endpoint is not supported by the backend.';
+          }
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteCategory(ExpenseCategoryItem cat) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_outline_rounded, color: AppColors.red, size: 24),
+            SizedBox(width: 10),
+            Text('Delete Category', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete the category "${cat.name}"?',
+          style: const TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final res = await api.deleteExpenseCategory(cat.id);
+      if (mounted) {
+        final message = (res.data is Map && res.data['message'] != null)
+            ? '${res.data['message']}'
+            : 'Category "${cat.name}" deleted successfully.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.green,
+          ),
+        );
+      }
+      await reload();
+    } catch (e) {
+      if (mounted) {
+        String msg = 'Error deleting category: $e';
+        if (e is DioException) {
+          final resData = e.response?.data;
+          if (resData is Map && resData['message'] != null) {
+            msg = '${resData['message']}';
+          } else if (resData is Map && resData['error'] != null) {
+            msg = '${resData['error']}';
+          } else if (e.response?.statusCode == 404 || e.response?.statusCode == 405) {
+            msg = 'Category delete endpoint is not supported by the backend.';
+          } else if (e.response?.statusMessage != null && e.response!.statusMessage!.isNotEmpty) {
+            msg = e.response!.statusMessage!;
+          }
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteExpense(Expense e) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_outline_rounded, color: AppColors.red, size: 24),
+            SizedBox(width: 10),
+            Text('Delete Expense', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete this expense for ${e.category} (₹${e.amount.toStringAsFixed(2)})?',
+          style: const TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final res = await api.deleteExpense(e.id);
+      if (mounted) {
+        final message = (res.data is Map && res.data['message'] != null)
+            ? '${res.data['message']}'
+            : 'Expense deleted successfully.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.green,
+          ),
+        );
+      }
+      await reload();
+      widget.onExpenseChanged?.call();
+    } catch (err) {
+      if (mounted) {
+        String msg = 'Error deleting expense: $err';
+        if (err is DioException) {
+          final resData = err.response?.data;
+          if (resData is Map && resData['message'] != null) {
+            msg = '${resData['message']}';
+          } else if (resData is Map && resData['error'] != null) {
+            msg = '${resData['error']}';
+          }
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.red,
+          ),
+        );
       }
     }
   }
@@ -1044,6 +1297,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                               ),
                             );
                             reload();
+                            widget.onExpenseChanged?.call();
                           }
                         }
                       } catch (e) {
@@ -1553,6 +1807,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                               ),
                             );
                             reload();
+                            widget.onExpenseChanged?.call();
                           }
                         }
                       } catch (err) {
@@ -1715,7 +1970,26 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                     label: const Text('Close'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.red,
+                      side: const BorderSide(color: AppColors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _confirmDeleteExpense(e);
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    label: const Text('Delete'),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
@@ -1867,6 +2141,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
 
   // --- PDF Export ---
   Future<void> _exportPdf() async {
+    final logo = await loadBrandLogo();
     final pdf = pw.Document();
 
     // Calculate total of the filtered expenses only (for the selected branch/filter)
@@ -1895,96 +2170,79 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
+        margin: const pw.EdgeInsets.all(28),
         build: (pw.Context context) {
           return [
-            pw.Header(
-              level: 0,
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            pdfReportHeader(
+              logo: logo,
+              title: 'Expense Management Report',
+              subtitle: 'Branch expense summary',
+              docDate: _formatDateDisplay(DateTime.now().toIso8601String()),
+            ),
+            pw.SizedBox(height: 16),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfBrand.tint,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    'Expense Management Report',
+                    'Report Details',
                     style: pw.TextStyle(
-                      fontSize: 22,
                       fontWeight: pw.FontWeight.bold,
+                      fontSize: 13,
+                      color: PdfBrand.primaryDark,
                     ),
                   ),
+                  pw.SizedBox(height: 6),
+                  pw.Text('Branch: $branchLabel', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
+                  pw.Text('Filter Period: $_selectedPeriod', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
                   pw.Text(
-                    _formatDateDisplay(DateTime.now().toIso8601String()),
-                    style: const pw.TextStyle(fontSize: 12),
+                    'Total Expenses: Rs ${filteredTotal.toStringAsFixed(2)}',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: PdfBrand.primaryDark),
                   ),
+                  pw.Text('Total Records: ${_filteredExpenses.length}', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
                 ],
               ),
             ),
+            pw.SizedBox(height: 16),
+            pw.Text(
+              'Expenses',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfBrand.textDark),
+            ),
             pw.SizedBox(height: 8),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'Branch: $branchLabel',
-                  style: pw.TextStyle(
-                    fontSize: 13,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.Text(
-                  'Filter Period: $_selectedPeriod',
-                  style: const pw.TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 6),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'Total Expenses: Rs ${filteredTotal.toStringAsFixed(2)}',
-                  style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 13,
-                    color: PdfColors.purple900,
-                  ),
-                ),
-                pw.Text(
-                  'Total Records: ${_filteredExpenses.length}',
-                  style: const pw.TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 14),
             pw.TableHelper.fromTextArray(
-              headers: [
-                'Date',
-                'Branch',
-                'Category',
-                'Amount (Rs)',
-                'Payment Mode',
-                'Status',
-              ],
-              data: _filteredExpenses.map((e) {
+              headers: ['S.No', 'Date', 'Remarks', 'Amount (Rs)'],
+              data: _filteredExpenses.asMap().entries.map((entry) {
+                final i = entry.key;
+                final e = entry.value;
+                final remarks = e.description.trim().isNotEmpty
+                    ? e.description.trim()
+                    : (e.category.isNotEmpty ? e.category : '-');
                 return [
+                  '${i + 1}',
                   _formatDateDisplay(e.date),
-                  e.branch.isNotEmpty ? e.branch : '-',
-                  e.category,
+                  remarks,
                   e.amount.toStringAsFixed(2),
-                  e.paymentMode,
-                  e.status,
                 ];
               }).toList(),
-              headerStyle: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.white,
-              ),
-              headerDecoration: const pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFF6C1FB0),
-              ),
-              cellAlignment: pw.Alignment.centerLeft,
-              rowDecoration: const pw.BoxDecoration(
-                border: pw.Border(
-                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-                ),
-              ),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(0.6),
+                1: pw.FlexColumnWidth(1.3),
+                2: pw.FlexColumnWidth(2.6),
+                3: pw.FlexColumnWidth(1.2),
+              },
+              headerStyle: pdfTableHeaderStyle(fontSize: 9),
+              headerDecoration: pdfTableHeaderDecoration,
+              headerAlignment: pw.Alignment.center,
+              headerPadding: const pw.EdgeInsets.symmetric(vertical: 7, horizontal: 5),
+              cellAlignment: pw.Alignment.center,
+              cellStyle: const pw.TextStyle(fontSize: 8.5, color: PdfBrand.textDark),
+              cellPadding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+              oddRowDecoration: pdfTableOddRowDecoration,
             ),
           ];
         },
@@ -2927,6 +3185,27 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 4),
+                    TextButton.icon(
+                      onPressed: () => _confirmDeleteExpense(e),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.red,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 15),
+                      label: const Text(
+                        'Delete',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -3218,26 +3497,49 @@ class ExpensesScreenState extends State<ExpensesScreen> {
                       ],
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => _toggleCategoryStatus(cat),
-                    style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFEEF2FF),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        tooltip: 'Edit Category',
+                        color: const Color(0xFF6C1FB0),
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(),
+                        onPressed: () => _editCategory(cat),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                      const SizedBox(width: 2),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                        tooltip: 'Delete Category',
+                        color: AppColors.red,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(),
+                        onPressed: () => _confirmDeleteCategory(cat),
                       ),
-                    ),
-                    child: Text(
-                      cat.status == 'Active' ? 'Deactivate' : 'Activate',
-                      style: const TextStyle(
-                        color: Color(0xFF6C1FB0),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11.5,
+                      const SizedBox(width: 4),
+                      TextButton(
+                        onPressed: () => _toggleCategoryStatus(cat),
+                        style: TextButton.styleFrom(
+                          backgroundColor: const Color(0xFFEEF2FF),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          cat.status == 'Active' ? 'Deactivate' : 'Activate',
+                          style: const TextStyle(
+                            color: Color(0xFF6C1FB0),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),

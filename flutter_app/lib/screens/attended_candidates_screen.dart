@@ -144,6 +144,7 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
     return {'rows': rows};
   }
 
+
   String _label(DateTime? d) => d == null
       ? 'Select'
       : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
@@ -319,6 +320,90 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
     );
   }
 
+  Future<void> _showExportOptions(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Export Attendance History',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Color(0xFFB91C1C),
+                ),
+              ),
+              title: const Text(
+                'PDF',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: const Text('Download as a PDF document'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportPdf();
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.table_chart_rounded,
+                  color: Color(0xFF047857),
+                ),
+              ),
+              title: const Text(
+                'Excel',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: const Text('Download as a spreadsheet (CSV)'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportExcel();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _exportPdf() async {
     try {
       final rows = await _currentFilteredRows();
@@ -399,6 +484,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
               cellAlignments: const {
                 0: pw.Alignment.center,
                 1: pw.Alignment.center,
+                2: pw.Alignment.center,
+                3: pw.Alignment.center,
                 4: pw.Alignment.center,
                 5: pw.Alignment.center,
               },
@@ -553,48 +640,22 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: rows.isEmpty ? null : _exportPdf,
-                              icon: const Icon(
-                                Icons.picture_as_pdf_rounded,
-                                size: 18,
-                              ),
-                              label: const Text('PDF'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFFB91C1C),
-                                side: const BorderSide(
-                                  color: Color(0xFFFECACA),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: rows.isEmpty
+                              ? null
+                              : () => _showExportOptions(context),
+                          icon: const Icon(Icons.print_rounded, size: 18),
+                          label: const Text('Print'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: Color(0xFFE4D9F7)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: rows.isEmpty ? null : _exportExcel,
-                              icon: const Icon(
-                                Icons.table_chart_rounded,
-                                size: 18,
-                              ),
-                              label: const Text('Excel'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF047857),
-                                side: const BorderSide(
-                                  color: Color(0xFFA7F3D0),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 12),
                       _GlassSearchField(

@@ -9,6 +9,9 @@ import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'attended_candidates_screen.dart';
 import 'scheduled_candidates_screen.dart';
+import 'upcoming_exams_screen.dart';
+import 'today_exams_screen.dart';
+import 'add_candidate_screen.dart';
 import 'expenses_screen.dart';
 import 'vouchers_screen.dart';
 import 'available_vouchers_screen.dart';
@@ -60,11 +63,12 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadPendingSales() async {
     try {
-      await _branchContext.ensureLoaded();
-      final branchId = _branchContext.selectedBranchId;
+      // Intentionally NOT scoped to the currently selected branch — the
+      // bell should always reflect pending/partial payments across every
+      // branch, regardless of which branch is selected on the dashboard.
       final results = await Future.wait([
-        api.voucherHistory(branchId: branchId),
-        api.invoices(branchId: branchId),
+        api.voucherHistory(),
+        api.invoices(),
       ]);
 
       final saleRows = (results[0].data['data'] as List? ?? [])
@@ -119,6 +123,7 @@ class DashboardScreenState extends State<DashboardScreen> {
           '_date': '${s['sold_at'] ?? ''}',
           'title': '${s['student_name'] ?? '-'}',
           'subtitle': '${s['voucher_code'] ?? '-'}',
+          'branch': '${s['branch_name'] ?? ''}',
           'status': '${s['payment_status'] ?? ''}',
           'balance': s['balance_amount'],
         },
@@ -129,6 +134,7 @@ class DashboardScreenState extends State<DashboardScreen> {
           '_date': '${inv['invoice_date'] ?? ''}',
           'title': '${inv['supplier'] ?? '-'}',
           'subtitle': 'Invoice ${inv['invoice_number'] ?? '-'}',
+          'branch': '${inv['branch_name'] ?? ''}',
           'status': '${inv['payment_status'] ?? ''}',
           'balance': inv['balance_amount'],
         },
@@ -228,6 +234,21 @@ class DashboardScreenState extends State<DashboardScreen> {
                                   Text('${item['title']}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                                   const SizedBox(height: 2),
                                   Text('${item['subtitle']}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                  if ('${item['branch'] ?? ''}'.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Row(mainAxisSize: MainAxisSize.min, children: [
+                                      Icon(Icons.apartment_rounded, size: 12, color: AppColors.primary.withOpacity(.7)),
+                                      const SizedBox(width: 3),
+                                      Flexible(
+                                        child: Text(
+                                          '${item['branch']}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary.withOpacity(.85)),
+                                        ),
+                                      ),
+                                    ]),
+                                  ],
                                 ]),
                               ),
                               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -482,6 +503,9 @@ class DashboardScreenState extends State<DashboardScreen> {
     // datasets for employee/user sessions.
     double currentMonthExpense = 0;
     double previousMonthExpense = 0;
+    // totalExpenses: sum of ALL active expenses for the selected branch,
+    // regardless of month. This is what the "Total Expenses" KPI card shows.
+    double totalExpenses = 0;
     Map<String, dynamic> voucherStats = {};
     if (isAdmin) {
       try {
@@ -499,6 +523,8 @@ class DashboardScreenState extends State<DashboardScreen> {
         for (final raw in expenses) {
           final e = Map<String, dynamic>.from(raw);
           final amount = double.tryParse('${e['amount'] ?? 0}') ?? 0;
+          // Accumulate all active expenses for the total.
+          totalExpenses += amount;
           final dateRaw = '${e['date_incurred'] ?? ''}';
           final d = DateTime.tryParse(dateRaw);
           if (d != null && d.year == now.year && d.month == now.month) {
@@ -539,6 +565,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       'currentMonthCompleted': currentMonthCompleted,
       'currentMonthExpense': currentMonthExpense,
       'previousMonthExpense': previousMonthExpense,
+      'totalExpenses': totalExpenses,
       'voucherStats': voucherStats,
       'selectedBranchId': branchId,
     };
@@ -991,375 +1018,21 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ===========================================================
-  // ADD CANDIDATE DIALOG
+  // ADD CANDIDATE SCREEN
   // ===========================================================
 
   Future<void> _showAddCandidateDialog() async {
-    // Load branches and exam types for dropdowns
-    List<Map<String, dynamic>> branchesList = [];
-    List<Map<String, dynamic>> examTypesList = [];
-    try {
-      final br = await api.branches();
-      branchesList = (br.data['data'] as List? ?? [])
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final et = await api.examTypes();
-      examTypesList = (et.data['data'] as List? ?? [])
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-    } catch (_) {}
-
-    int? selectedBranchId = branchesList.isNotEmpty
-        ? branchesList.first['id']
-        : null;
-    int? selectedExamTypeId = examTypesList.isNotEmpty
-        ? examTypesList.first['id']
-        : null;
-
-    // Candidate status can also be selected while adding the candidate.
-    String selectedStatus = 'Registered';
-
-    final nameCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    final regNumCtrl = TextEditingController();
-    final dateCtrl = TextEditingController();
-
-    if (!mounted) return;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceAlt,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: EdgeInsets.fromLTRB(
-              24,
-              16,
-              24,
-              MediaQuery.of(ctx).viewInsets.bottom + 24,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Drag handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Title
-                  Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF9A22C7), Color(0xFF6C1FB0)],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.person_add_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Add Candidate',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Name
-                  _FieldLabel('Full Name *'),
-                  const SizedBox(height: 6),
-                  _StyledTextField(
-                    controller: nameCtrl,
-                    hint: 'Enter candidate name',
-                    icon: Icons.person_outline_rounded,
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Register Number
-                  _FieldLabel('Register Number'),
-                  const SizedBox(height: 6),
-                  _StyledTextField(
-                    controller: regNumCtrl,
-                    hint: 'Enter register number',
-                    icon: Icons.badge_outlined,
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Branch dropdown
-                  _FieldLabel('Branch'),
-                  const SizedBox(height: 6),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        isExpanded: true,
-                        value: selectedBranchId,
-                        hint: const Text('Select branch'),
-                        items: branchesList.map((b) {
-                          return DropdownMenuItem<int>(
-                            value: b['id'],
-                            child: Text(
-                              '${b['branch_name'] ?? ''}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setSheetState(() {
-                            selectedBranchId = val;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Exam Type dropdown
-                  _FieldLabel('Exam Type'),
-                  const SizedBox(height: 6),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        isExpanded: true,
-                        value: selectedExamTypeId,
-                        hint: const Text('Select exam type'),
-                        items: examTypesList.map((e) {
-                          return DropdownMenuItem<int>(
-                            value: e['id'],
-                            child: Text(
-                              '${e['name'] ?? ''}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setSheetState(() {
-                            selectedExamTypeId = val;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Candidate Status
-                  _FieldLabel('Status'),
-                  const SizedBox(height: 6),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: selectedStatus,
-                        hint: const Text('Select status'),
-                        items: const [
-                          DropdownMenuItem<String>(
-                            value: 'Registered',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.how_to_reg_rounded,
-                                  size: 18,
-                                  color: Color(0xFF2563EB),
-                                ),
-                                SizedBox(width: 8),
-                                Expanded(child: Text('Registered')),
-                              ],
-                            ),
-                          ),
-                          DropdownMenuItem<String>(
-                            value: 'Absent',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.person_off_rounded,
-                                  size: 18,
-                                  color: Color(0xFFEA580C),
-                                ),
-                                SizedBox(width: 8),
-                                Expanded(child: Text('Absent')),
-                              ],
-                            ),
-                          ),
-                          DropdownMenuItem<String>(
-                            value: 'Rescheduled',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.event_repeat_rounded,
-                                  size: 18,
-                                  color: Color(0xFF9A22C7),
-                                ),
-                                SizedBox(width: 8),
-                                Expanded(child: Text('Rescheduled')),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setSheetState(() => selectedStatus = val);
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Exam Date
-                  _FieldLabel('Exam Date'),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: dateCtrl,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      hintText: 'Select date',
-                      suffixIcon: const Icon(Icons.calendar_today_rounded),
-                      filled: true,
-                      fillColor: const Color(0xFFF9FAFB),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                    ),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        initialDate: DateTime.now(),
-                        // Candidate dates are intentionally unrestricted:
-                        // past, today, and future dates are all allowed.
-                        firstDate: DateTime(1900),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        dateCtrl.text =
-                            '${picked.year}-'
-                            '${picked.month.toString().padLeft(2, '0')}-'
-                            '${picked.day.toString().padLeft(2, '0')}';
-                      }
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Save button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF9A22C7),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () async {
-                        if (nameCtrl.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            const SnackBar(
-                              content: Text('Candidate name is required'),
-                            ),
-                          );
-                          return;
-                        }
-                        try {
-                          await api.createCandidate({
-                            'name': nameCtrl.text.trim(),
-                            'email': emailCtrl.text.trim(),
-                            'phone': phoneCtrl.text.trim(),
-                            'register_number': regNumCtrl.text.trim(),
-                            'branch_id': selectedBranchId,
-                            'exam_type_id': selectedExamTypeId,
-                            'status': selectedStatus,
-                            'exam_date': dateCtrl.text,
-                          });
-                          if (ctx.mounted) {
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Candidate added!'),
-                                backgroundColor: AppColors.green,
-                              ),
-                            );
-                            reload();
-                          }
-                        } catch (e) {
-                          if (ctx.mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
-                        }
-                      },
-                      child: const Text(
-                        'Add Candidate',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+    final res = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddCandidateScreen(
+          initialBranchId: _branchContext.selectedBranchId,
+        ),
       ),
     );
+    if (res == true && mounted) {
+      reload();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -2159,7 +1832,17 @@ class DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ],
-          onChanged: (id) => branchContext.selectBranch(id),
+          onChanged: (id) {
+            if (id == null) return;
+            // Defer this until after the dropdown's own menu route has
+            // fully closed — calling notifyListeners() (which several
+            // screens listen to) synchronously inside onChanged races
+            // with the dropdown menu's closing animation and is what
+            // was triggering the '_dependents.isEmpty' crash.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              branchContext.selectBranch(id);
+            });
+          },
         ),
       ),
     );
@@ -2334,43 +2017,40 @@ class DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
 
-        title: Text(
-          context.watch<AuthProvider>().role.trim().toLowerCase() == 'admin'
-              ? 'Dashboard'
-              : 'User Dashboard',
-          style: AppBarStyle.titleStyle,
-        ),
+        title: const Text('Dashboard', style: AppBarStyle.titleStyle),
 
         actions: [
-          IconButton(
-            tooltip: 'Pending Payments',
-            onPressed: _showPendingPaymentsSheet,
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.notifications_rounded),
-                if (_pendingCount > 0)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.red,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF9A22C7), width: 1.4),
-                      ),
-                      child: Text(
-                        _pendingCount > 99 ? '99+' : '$_pendingCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
+          if (context.watch<AuthProvider>().role.trim().toLowerCase() ==
+              'admin')
+            IconButton(
+              tooltip: 'Pending Payments',
+              onPressed: _showPendingPaymentsSheet,
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.notifications_rounded),
+                  if (_pendingCount > 0)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.red,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF9A22C7), width: 1.4),
+                        ),
+                        child: Text(
+                          _pendingCount > 99 ? '99+' : '$_pendingCount',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
           IconButton(
             tooltip: 'Profile',
             onPressed: () {
@@ -2415,6 +2095,10 @@ class DashboardScreenState extends State<DashboardScreen> {
               (data['currentMonthExpense'] as num?)?.toDouble() ?? 0.0;
           final previousMonthExpense =
               (data['previousMonthExpense'] as num?)?.toDouble() ?? 0.0;
+          // totalExpenses: actual sum of ALL active expenses (recalculated
+          // fresh from the database on every load / reload).
+          final totalExpenses =
+              (data['totalExpenses'] as num?)?.toDouble() ?? 0.0;
           final voucherStats = Map<String, dynamic>.from(
             data['voucherStats'] ?? {},
           );
@@ -2540,67 +2224,64 @@ class DashboardScreenState extends State<DashboardScreen> {
                   Container(
                     padding: EdgeInsets.zero,
                     decoration: const BoxDecoration(color: Colors.transparent),
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.45,
-                      children: [
-                        // ---------------------------------------------
-                        // TOTAL EXAMS - FIRST
-                        // ---------------------------------------------
-                        _KpiCard(
-                          title: 'Total Exams',
-                          value: '${stats.totalExams}',
-                          icon: Icons.menu_book_rounded,
-                          tint: const Color(0xFFE0E7FF),
-                          iconColor: const Color(0xFF4F46E5),
-                        ),
-
-                        // ---------------------------------------------
-                        // TODAY'S EXAM
-                        // ---------------------------------------------
-                        _KpiCard(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final todayCard = _KpiCard(
                           title: "Today's Exam",
                           value: '${stats.todayCandidates}',
                           icon: Icons.groups_rounded,
                           tint: const Color(0xFFDCFCE7),
                           iconColor: AppColors.green,
-                        ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TodayExamsScreen(),
+                              ),
+                            );
+                          },
+                        );
 
-                        // ---------------------------------------------
-                        // NEXT DAY EXAM
-                        // ---------------------------------------------
-                        _KpiCard(
+                        final nextDayCard = _KpiCard(
                           title: 'Next Day Exam',
                           value: '${stats.tomorrowCandidates}',
                           icon: Icons.event_available_rounded,
                           tint: const Color(0xFFFFE4E6),
                           iconColor: const Color(0xFFE11D48),
-                        ),
-
-                        // ---------------------------------------------
-                        // TOTAL CANDIDATES
-                        // ---------------------------------------------
-                        _KpiCard(
-                          title: 'Total Candidates',
-                          value: '$currentMonthTotal',
-                          icon: Icons.verified_rounded,
-                          tint: const Color(0xFFDBEAFE),
-                          iconColor: AppColors.blue,
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    const AttendedCandidatesScreen(),
+                                builder: (_) => const UpcomingExamsScreen(),
                               ),
                             );
                           },
-                        ),
-                      ],
+                        );
+
+
+                        if (constraints.maxWidth > 600) {
+                          return GridView.count(
+                            crossAxisCount: 2,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1.25,
+                            children: [
+                              todayCard,
+                              nextDayCard,
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(child: todayCard),
+                            const SizedBox(width: 12),
+                            Expanded(child: nextDayCard),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -2632,7 +2313,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 1.45,
+                        childAspectRatio: 1.15,
                         children: [
                           _KpiCard(
                             title: 'Total Profit',
@@ -2668,17 +2349,23 @@ class DashboardScreenState extends State<DashboardScreen> {
                           ),
                           _KpiCard(
                             title: 'Total Expenses',
-                            value: '₹${currentMonthExpense.toStringAsFixed(2)}',
+                            value: '₹${totalExpenses.toStringAsFixed(2)}',
                             icon: Icons.account_balance_wallet_rounded,
                             tint: const Color(0xFFF0E3FA),
                             iconColor: const Color(0xFF6C1FB0),
-                            onTap: () {
-                              Navigator.push(
+                            onTap: () async {
+                              await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => const ExpensesScreen(),
                                 ),
                               );
+                              if (mounted) {
+                                setState(() {
+                                  future = load();
+                                });
+                                _loadPendingSales();
+                              }
                             },
                           ),
                           _KpiCard(
@@ -2704,6 +2391,29 @@ class DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 20),
 
                     // =================================================
+                    // TOTAL CANDIDATES CARD (directly above Dashboard Overview)
+                    // =================================================
+                    _KpiCardWide(
+                      title: 'Total Candidates',
+                      value: '$currentMonthTotal',
+                      subtitle: 'Attended candidates this month',
+                      icon: Icons.verified_rounded,
+                      tint: const Color(0xFFDBEAFE),
+                      iconColor: AppColors.blue,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const AttendedCandidatesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // =================================================
                     // DASHBOARD GRAPHICAL REPRESENTATION
                     // =================================================
                     _DashboardMetricsChart(
@@ -2711,13 +2421,19 @@ class DashboardScreenState extends State<DashboardScreen> {
                       previousExpense: previousMonthExpense,
                       profit: totalProfit,
                       sales: salesRevenue,
-                      onExpensesTap: () {
-                        Navigator.push(
+                      onExpensesTap: () async {
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => const ExpensesScreen(),
                           ),
                         );
+                        if (mounted) {
+                          setState(() {
+                            future = load();
+                          });
+                          _loadPendingSales();
+                        }
                       },
                       onProfitTap: () {
                         Navigator.push(
@@ -2748,6 +2464,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
+
 
 // ================================================================
 // FIELD LABEL (for dialogs)
@@ -3330,6 +3047,134 @@ class _KpiCard extends StatelessWidget {
   }
 }
 
+class _KpiCardWide extends StatelessWidget {
+  final String title;
+  final String value;
+  final String? subtitle;
+  final IconData icon;
+  final Color tint;
+  final Color iconColor;
+  final VoidCallback? onTap;
+
+  const _KpiCardWide({
+    required this.title,
+    required this.value,
+    this.subtitle,
+    required this.icon,
+    required this.tint,
+    required this.iconColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [tint.withOpacity(.38), Colors.white.withOpacity(.94)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: iconColor.withOpacity(.14), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: iconColor.withOpacity(.09),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textDark,
+                        letterSpacing: -.35,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: iconColor.withOpacity(.85),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (onTap != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: iconColor,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 11,
+                        color: iconColor,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _KpiSparklinePainter extends CustomPainter {
   final Color color;
 
@@ -3461,6 +3306,7 @@ class _SectionCard extends StatelessWidget {
     );
   }
 }
+
 
 void _showDashboardBranchDetails(BuildContext context, DashboardBranch b) {
   showModalBottomSheet(

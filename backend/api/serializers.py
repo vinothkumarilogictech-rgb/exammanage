@@ -33,6 +33,7 @@ def session_dict(s):
 def team_dict(t):
     return {'id': t.id, 'name': t.name, 'location': t.location, 'phone': t.phone,
             'exam_type_id': t.exam_type_id, 'exam_type_name': t.exam_type.name if t.exam_type else None,
+            'branch_id': t.branch_id, 'branch_name': t.branch.branch_name if t.branch else None,
             'status': t.status, 'candidate_count': len(t.candidates or []),
             'created_at': iso(t.created_at), 'updated_at': iso(t.updated_at)}
 

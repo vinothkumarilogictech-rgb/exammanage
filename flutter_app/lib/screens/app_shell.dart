@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/gradient_bottom_nav.dart';
 import 'dashboard_screen.dart';
@@ -31,7 +30,12 @@ class _AppShellState extends State<AppShell> {
       DashboardScreen(key: _dashboardKey),
       if (!employee) const BranchesScreen(),
       const ExamsScreen(),
-      if (!employee) ExpensesScreen(key: _expenseKey),
+      if (!employee)
+        ExpensesScreen(
+          key: _expenseKey,
+          // Reload Dashboard totals immediately after any expense mutation.
+          onExpenseChanged: () => _dashboardKey.currentState?.reload(),
+        ),
       if (!employee) const VouchersScreen(),
       if (!employee) EmployeesScreen(),
     ];
@@ -93,33 +97,6 @@ class _AppShellState extends State<AppShell> {
             ),
         ],
       ),
-      floatingActionButton: !employee && index == 1
-          ? Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: brandLinearGradient(),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(.4),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: FloatingActionButton(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                foregroundColor: Colors.white,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const BranchesScreen(openAddOnStart: true),
-                  ),
-                ),
-                child: const Icon(Icons.add),
-              ),
-            )
-          : null,
     );
   }
 }

@@ -1,13 +1,17 @@
 from datetime import datetime
 from flask import request, jsonify, g
 from flask import current_app
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 
 from . import api_bp
 from .auth import authenticate, issue_tokens, verify_token, api_token_required
 from .serializers import *
-from apps.models import (db, Branch, ExamType, BranchExam, ExamSession, Candidate, ExamAttempt, ExamTeam,
-                         Expense, ExpenseCategory, ExpenseBudget, Voucher, SessionCandidate, Employee, EmployeeCredential)
+from apps.models import (
+    db, Branch, ExamType, BranchExam, ExamSession, Candidate,
+    ExamAttempt, ExamTeam, Expense, ExpenseCategory, ExpenseBudget,
+    Voucher, SessionCandidate, Employee, EmployeeCredential,
+    DeviceToken
+)
 
 
 def ok(data=None, message=None, status=200):
@@ -446,6 +450,11 @@ def exam_teams():
     exam_type_id = request.args.get('exam_type_id', type=int)
     status = (request.args.get('status') or '').strip()
     term = (request.args.get('q') or '').strip()
+    bid = _employee_branch_required(request.args.get('branch_id', type=int))
+    if g.api_identity.get('role') == 'Employee' and bid is None:
+        return fail('Employees can only access their assigned branch.', 403)
+    if bid:
+        q = q.filter(ExamTeam.branch_id == bid)
     if exam_type_id:
         q = q.filter(ExamTeam.exam_type_id == exam_type_id)
     if status and status != 'All':
@@ -462,12 +471,23 @@ def exam_team_create():
     name = (d.get('name') or '').strip()
     if not name:
         return fail('Team name is required.', 422)
+    try:
+        bid = int(d.get('branch_id'))
+    except (TypeError, ValueError):
+        return fail('branch_id is required.', 422)
+    branch = Branch.query.get(bid)
+    if not branch or branch.status != 'Active':
+        return fail('Active branch not found.', 404)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and bid != own_branch_id:
+        return fail('Employees can only create teams for their assigned branch.', 403)
     exam_type_id = d.get('exam_type_id')
     if exam_type_id and not ExamType.query.get(int(exam_type_id)):
         return fail('Exam type not found.', 404)
     t = ExamTeam(name=name, location=(d.get('location') or '').strip() or None,
                  phone=(d.get('phone') or '').strip() or None,
                  exam_type_id=int(exam_type_id) if exam_type_id else None,
+                 branch_id=bid,
                  status=d.get('status') or 'Active')
     db.session.add(t)
     db.session.commit()
@@ -477,6 +497,9 @@ def exam_team_create():
 @api_token_required
 def exam_team_update(team_id):
     t = ExamTeam.query.get_or_404(team_id)
+    own_branch_id = _employee_branch_id()
+    if own_branch_id is not None and t.branch_id != own_branch_id:
+        return fail('Employees can only manage teams in their assigned branch.', 403)
     d = body()
     if 'name' in d:
         name = (d.get('name') or '').strip()
@@ -490,6 +513,17 @@ def exam_team_update(team_id):
         if eid and not ExamType.query.get(int(eid)):
             return fail('Exam type not found.', 404)
         t.exam_type_id = int(eid) if eid else None
+    if 'branch_id' in d and d.get('branch_id'):
+        try:
+            new_bid = int(d.get('branch_id'))
+        except (TypeError, ValueError):
+            return fail('branch_id must be numeric.', 422)
+        if own_branch_id is not None and new_bid != own_branch_id:
+            return fail('Employees can only move teams within their assigned branch.', 403)
+        branch = Branch.query.get(new_bid)
+        if not branch or branch.status != 'Active':
+            return fail('Active branch not found.', 404)
+        t.branch_id = new_bid
     if 'status' in d and d.get('status'): t.status = d.get('status')
     db.session.commit()
     return ok(team_dict(t), 'Team updated.')
@@ -949,6 +983,7 @@ def expense_update(expense_id):
     return ok(expense_dict(e), 'Expense updated.')
 
 @api_bp.delete('/expenses/<int:expense_id>/')
+@api_bp.delete('/expenses/<int:expense_id>')
 @api_token_required
 def expense_delete(expense_id):
     e = Expense.query.get_or_404(expense_id)
@@ -957,9 +992,21 @@ def expense_delete(expense_id):
         return fail('Employees can only access expenses in their assigned branch.', 403)
     if not _employee_can_access_expense(e):
         return fail('Employees cannot delete salary records.', 403)
-    e.status = 'Cancelled'
+
+    # Safely unlink any voucher batch pointing to this expense record
+    VoucherBatch.query.filter_by(expense_id=e.id).update({'expense_id': None})
+
+    deleted_data = {
+        'id': e.id,
+        'category': e.category,
+        'amount': e.amount,
+        'branch_id': e.branch_id,
+        'date_incurred': e.date_incurred.isoformat() if e.date_incurred else None
+    }
+    db.session.delete(e)
     db.session.commit()
-    return ok(expense_dict(e), 'Expense cancelled successfully.')
+    return ok(deleted_data, 'Expense deleted successfully.')
+
 
 @api_bp.get('/expenses/categories/')
 @api_token_required
@@ -996,6 +1043,46 @@ def expense_category_toggle(category_id):
         c.status = 'Inactive' if c.status == 'Active' else 'Active'
     db.session.commit()
     return ok(expense_category_dict(c), f'Category status updated to {c.status}.')
+
+@api_bp.put('/expenses/categories/<int:category_id>/')
+@api_bp.patch('/expenses/categories/<int:category_id>/')
+@api_token_required
+def expense_category_update(category_id):
+    c = ExpenseCategory.query.get_or_404(category_id)
+    d = body()
+    name = (d.get('name') or '').strip()
+    if not name:
+        return fail('Category name is required.', 422)
+    existing = ExpenseCategory.query.filter(func.lower(ExpenseCategory.name) == name.lower(), ExpenseCategory.id != c.id).first()
+    if existing:
+        return fail('Category already exists.', 409)
+    c.name = name
+    db.session.commit()
+    return ok(expense_category_dict(c), 'Category updated.')
+
+@api_bp.delete('/expenses/categories/<int:category_id>/')
+@api_bp.delete('/expenses/categories/<int:category_id>')
+@api_token_required
+def expense_category_delete(category_id):
+    c = ExpenseCategory.query.get_or_404(category_id)
+    # Check if category has any linked expense records
+    linked_expense = Expense.query.filter(
+        or_(
+            Expense.category_id == c.id,
+            and_(Expense.category.isnot(None), func.lower(Expense.category) == c.name.lower())
+        )
+    ).first()
+    if linked_expense:
+        return fail('This category cannot be deleted because expenses are linked to it.', 400)
+
+    # Check if any budgets are linked
+    linked_budget = ExpenseBudget.query.filter_by(category_id=c.id).first()
+    if linked_budget:
+        return fail('This category cannot be deleted because expenses are linked to it.', 400)
+
+    db.session.delete(c)
+    db.session.commit()
+    return ok({'id': category_id, 'name': c.name}, 'Category deleted successfully.')
 
 @api_bp.get('/expenses/budgets/')
 @api_token_required
@@ -1088,35 +1175,64 @@ def employee_get(employee_id):
 def employee_update(employee_id):
     if g.api_identity.get('role') != 'Admin':
         return fail('Only administrators can update employees.', 403)
-    e=Employee.query.get_or_404(employee_id); d=body()
-    if d.get('branch_id') is not None and int(d['branch_id']) != e.branch_id: return fail('Employee branch cannot be changed.',403)
+    e = Employee.query.get_or_404(employee_id)
+    d = body()
+    if d.get('branch_id') is not None:
+        try:
+            bid = int(d['branch_id'])
+            if bid != e.branch_id:
+                branch = Branch.query.get(bid)
+                if not branch or branch.status != 'Active':
+                    return fail('Selected active branch not found.', 404)
+                e.branch_id = bid
+        except (TypeError, ValueError):
+            return fail('Invalid branch_id.', 422)
     if 'employee_id' in d or 'employee_code' in d:
-        code=(d.get('employee_id') or d.get('employee_code') or '').strip()
-        if code and code != e.employee_id and Employee.query.filter_by(employee_id=code).first(): return fail('Employee code already exists.',409)
-        if code: e.employee_id=code
-    for key in ('full_name','designation','contact_number','email','address','status','exit_reason','exit_remarks'):
-        if key in d: setattr(e,key,d[key])
+        code = (d.get('employee_id') or d.get('employee_code') or '').strip()
+        if code and code != e.employee_id and Employee.query.filter_by(employee_id=code).first():
+            return fail('Employee code already exists.', 409)
+        if code:
+            e.employee_id = code
+    if 'full_name' in d:
+        val = (d.get('full_name') or '').strip()
+        if not val:
+            return fail('Full name is required.', 422)
+        e.full_name = val
+    if 'designation' in d:
+        val = (d.get('designation') or '').strip()
+        if not val:
+            return fail('Designation is required.', 422)
+        e.designation = val
+    for key in ('contact_number', 'email', 'address', 'status', 'exit_reason', 'exit_remarks'):
+        if key in d:
+            setattr(e, key, d[key])
     if 'joining_date' in d and d['joining_date']:
-        try:e.joining_date=datetime.strptime(str(d['joining_date'])[:10],'%Y-%m-%d').date()
-        except Exception:return fail('joining_date must be YYYY-MM-DD.',422)
+        try:
+            e.joining_date = datetime.strptime(str(d['joining_date'])[:10], '%Y-%m-%d').date()
+        except Exception:
+            return fail('joining_date must be YYYY-MM-DD.', 422)
     if 'exit_date' in d and d['exit_date']:
-        try:e.exit_date=datetime.strptime(str(d['exit_date'])[:10],'%Y-%m-%d').date()
-        except Exception:return fail('exit_date must be YYYY-MM-DD.',422)
+        try:
+            e.exit_date = datetime.strptime(str(d['exit_date'])[:10], '%Y-%m-%d').date()
+        except Exception:
+            return fail('exit_date must be YYYY-MM-DD.', 422)
     if 'basic_salary' in d:
-        try:e.basic_salary=float(d['basic_salary'])
-        except (TypeError,ValueError):return fail('basic_salary must be numeric.',422)
-    username = (d.get('username') or '').strip() if 'username' in d else None
-    password = str(d.get('password') or '') if 'password' in d else None
+        try:
+            e.basic_salary = float(d['basic_salary'])
+        except (TypeError, ValueError):
+            return fail('basic_salary must be numeric.', 422)
+    username = (d.get('username') or '').strip() if 'username' in d and str(d.get('username') or '').strip() else None
+    password = str(d.get('password')).strip() if d.get('password') and str(d.get('password')).strip() else None
     if username is not None or password is not None:
         from werkzeug.security import generate_password_hash
         credential = EmployeeCredential.query.filter_by(employee_id=e.id).first()
         if username:
             existing = EmployeeCredential.query.filter_by(username=username).first()
             if existing and (credential is None or existing.id != credential.id):
-                return fail('Username already exists.',409)
+                return fail('Username already exists.', 409)
         if credential is None:
             if not username or not password:
-                return fail('Username and password are required to create employee login.',422)
+                return fail('Both username and password are required to create employee login.', 422)
             credential = EmployeeCredential(employee_id=e.id, username=username, password_hash=generate_password_hash(password))
             db.session.add(credential)
         else:
@@ -1124,7 +1240,8 @@ def employee_update(employee_id):
                 credential.username = username
             if password:
                 credential.password_hash = generate_password_hash(password)
-    db.session.commit(); return ok(employee_dict(e),'Employee updated.')
+    db.session.commit()
+    return ok(employee_dict(e), 'Employee updated.')
 
 @api_bp.delete('/employees/<int:employee_id>/')
 @api_token_required
@@ -1455,6 +1572,8 @@ def _voucher_history_json(h):
         'voucher_code': h.voucher.voucher_code if h.voucher else None,
         'exam_type_id': h.voucher.exam_type_id if h.voucher else None,
         'exam_type_name': h.voucher.exam_type.name if h.voucher and h.voucher.exam_type else None,
+        'branch_id': h.voucher.branch_id if h.voucher else None,
+        'branch_name': h.voucher.branch.branch_name if h.voucher and h.voucher.branch else '',
         'student_id': h.voucher_student_id,
         'student_name': h.student_name,
         'mobile': h.mobile,
@@ -1715,7 +1834,7 @@ def voucher_sell_api():
 def voucher_payment_update_api(voucher_id):
     v = Voucher.query.get_or_404(voucher_id)
     latest = (VoucherSaleHistory.query.filter_by(voucher_id=v.id)
-              .order_by(VoucherSaleHistory.sold_at.desc(), VoucherSaleHistory.id.desc()).first())
+            .order_by(VoucherSaleHistory.sold_at.desc(), VoucherSaleHistory.id.desc()).first())
     if not latest:
         return fail('This voucher has no sale record to update.', 409)
 
@@ -1762,25 +1881,71 @@ def voucher_payment_update_api(voucher_id):
     return ok({'voucher': _voucher_json(v), 'sale': _voucher_history_json(latest)}, 'Payment updated.')
 
 
-@api_bp.post('/vouchers/<int:voucher_id>/assign/')
+@api_bp.post('/notifications/device-token/')
 @api_token_required
-def voucher_assign_api(voucher_id):
-    # Backward-compatible endpoint for older clients. New UI uses /sell/ and
-    # never reads/writes Exam Management Candidate records.
-    d = body()
-    if d.get('student_name'):
-        d['voucher_id'] = voucher_id
-        return voucher_sell_api()
-    return fail('Voucher sales now require voucher student details. Use the Sell Voucher form.', 422)
+def register_device_token():
+    data = body()
+    token = (data.get('token') or '').strip()
+    platform = (data.get('platform') or 'android').strip().lower()
 
+    if not token:
+        return fail('FCM device token is required.', 400)
 
-@api_bp.post('/vouchers/<int:voucher_id>/use/')
-@api_token_required
-def voucher_use_api(voucher_id):
-    v = Voucher.query.get_or_404(voucher_id)
-    if v.status not in ('Sold', 'Assigned'):
-        return fail('Only sold vouchers can be marked as used.', 409)
-    v.status = 'Used'
-    v.used_at = datetime.utcnow()
+    identity = g.api_identity
+    user_type = identity.get('role', 'Admin')
+
+    try:
+        user_id = int(identity.get('sub'))
+    except (TypeError, ValueError):
+        # Handles the hardcoded default admin login (id='admin', non-numeric)
+        user_id = 0
+
+    device = DeviceToken.query.filter_by(token=token).first()
+
+    if device:
+        device.user_type = user_type
+        device.user_id = user_id
+        device.platform = platform
+        device.is_active = True
+        device.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return ok(
+            message='FCM device token updated successfully.'
+        )
+
+    device = DeviceToken(
+        user_type=user_type,
+        user_id=user_id,
+        token=token,
+        platform=platform,
+        is_active=True
+    )
+
+    db.session.add(device)
     db.session.commit()
-    return ok(_voucher_json(v), 'Voucher marked as used.')
+
+    return ok(
+        message='FCM device token registered successfully.',
+        status=201
+    )
+
+
+@api_bp.get('/notifications/test/')
+@api_token_required
+def test_notification():
+    from firebase.notification_sender import send_to_all_active_devices
+    count = send_to_all_active_devices(
+        title="Test Notification",
+        body="Backend இருந்து அனுப்பிய test message"
+    )
+    return ok({'sent_to': count}, f'Notification sent to {count} device(s).')
+
+
+@api_bp.get('/notifications/test-daily/')
+@api_token_required
+def test_daily_notification():
+    from firebase.payment_notification_service import send_daily_payment_notifications
+    slot = request.args.get('slot', 'morning')
+    result = send_daily_payment_notifications(slot=slot)
+    return ok(result, f'Daily notification job ({slot}) triggered.')

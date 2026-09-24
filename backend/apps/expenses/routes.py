@@ -7,7 +7,7 @@ from flask import (
     make_response, current_app
 )
 
-from apps.models import db, Expense, Branch, ExpenseCategory, ExpenseBudget
+from apps.models import db, Expense, Branch, ExpenseCategory, ExpenseBudget, VoucherBatch
 from apps.expenses.helpers import (
     PAYMENT_MODES, parse_date, save_receipt, new_submission_token,
     consume_submission_token, active_expenses_query, compute_summary_stats,
@@ -92,6 +92,17 @@ def expense_cancel(expense_id):
     return redirect(url_for('expense_detail', expense_id=expense.id))
 
 
+@expenses_bp.route('/expense/<int:expense_id>/delete', methods=['POST', 'DELETE'])
+def expense_delete(expense_id):
+    expense = Expense.query.get_or_404(expense_id)
+    VoucherBatch.query.filter_by(expense_id=expense.id).update({'expense_id': None})
+    db.session.delete(expense)
+    db.session.commit()
+    flash('Expense deleted permanently.', 'success')
+    return redirect(url_for('expense_management'))
+
+
+
 # --- Categories ------------------------------------------------------------
 
 @expenses_bp.route('/expense/categories', methods=['GET', 'POST'])
@@ -118,6 +129,31 @@ def expense_category_toggle(category_id):
     category.status = 'Inactive' if category.status == 'Active' else 'Active'
     db.session.commit()
     return redirect(url_for('expenses.expense_categories'))
+
+
+@expenses_bp.route('/expense/categories/<int:category_id>/delete', methods=['POST', 'DELETE'])
+def expense_category_delete(category_id):
+    c = ExpenseCategory.query.get_or_404(category_id)
+    linked_expense = Expense.query.filter(
+        db.or_(
+            Expense.category_id == c.id,
+            db.and_(Expense.category.isnot(None), db.func.lower(Expense.category) == c.name.lower())
+        )
+    ).first()
+    if linked_expense:
+        flash('This category cannot be deleted because expenses are linked to it.', 'error')
+        return redirect(url_for('expenses.expense_categories'))
+
+    linked_budget = ExpenseBudget.query.filter_by(category_id=c.id).first()
+    if linked_budget:
+        flash('This category cannot be deleted because expenses are linked to it.', 'error')
+        return redirect(url_for('expenses.expense_categories'))
+
+    db.session.delete(c)
+    db.session.commit()
+    flash(f'Category "{c.name}" deleted successfully.', 'success')
+    return redirect(url_for('expenses.expense_categories'))
+
 
 
 # --- Budgets & Alerts --------------------------------------------------------

@@ -159,6 +159,7 @@ class BranchesScreenState extends State<BranchesScreen> {
     final address = TextEditingController();
     final contact = TextEditingController();
     final region = TextEditingController();
+    bool created = false;
 
     await showModalBottomSheet(
       context: context,
@@ -262,21 +263,8 @@ class BranchesScreenState extends State<BranchesScreen> {
                       'region': region.text.trim(),
                     });
 
-                    if (ctx.mounted) {
-                      Navigator.pop(ctx);
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Branch created successfully!'),
-                            backgroundColor: AppColors.green,
-                          ),
-                        );
-
-                        await context.read<BranchContext>().refreshBranches();
-                        reload();
-                      }
-                    }
+                    created = true;
+                    if (ctx.mounted) Navigator.pop(ctx);
                   } catch (e) {
                     if (ctx.mounted) {
                       ScaffoldMessenger.of(
@@ -292,10 +280,34 @@ class BranchesScreenState extends State<BranchesScreen> {
       ),
     );
 
-    name.dispose();
-    address.dispose();
-    contact.dispose();
-    region.dispose();
+    // The controllers must NOT be disposed here. showModalBottomSheet's
+    // Future resolves the instant Navigator.pop() is called — BEFORE the
+    // sheet's ~300ms closing transition actually finishes. The TextFields
+    // (and their controllers) are still live and on screen during that
+    // transition, so disposing immediately was throwing "A
+    // TextEditingController was used after being disposed", which is what
+    // was cascading into the '_dependents.isEmpty' framework assertion.
+    // Wait out the transition before disposing.
+    Future.delayed(const Duration(milliseconds: 300), () {
+      name.dispose();
+      address.dispose();
+      contact.dispose();
+      region.dispose();
+    });
+
+    if (created && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Branch created successfully!'),
+          backgroundColor: AppColors.green,
+        ),
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await context.read<BranchContext>().refreshBranches();
+        if (mounted) reload();
+      });
+    }
   }
 
   // ================================================================
@@ -311,6 +323,7 @@ class BranchesScreenState extends State<BranchesScreen> {
     String status = b.status.toLowerCase() == 'inactive'
         ? 'Inactive'
         : 'Active';
+    bool updated = false;
 
     await showModalBottomSheet(
       context: context,
@@ -482,22 +495,8 @@ class BranchesScreenState extends State<BranchesScreen> {
                               'status': status,
                             });
 
-                            if (ctx.mounted) {
-                              Navigator.pop(ctx);
-
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Branch updated successfully!',
-                                    ),
-                                    backgroundColor: AppColors.green,
-                                  ),
-                                );
-
-                                reload();
-                              }
-                            }
+                            updated = true;
+                            if (ctx.mounted) Navigator.pop(ctx);
                           } catch (e) {
                             if (ctx.mounted) {
                               ScaffoldMessenger.of(ctx).showSnackBar(
@@ -517,10 +516,29 @@ class BranchesScreenState extends State<BranchesScreen> {
       ),
     );
 
-    name.dispose();
-    address.dispose();
-    contact.dispose();
-    region.dispose();
+    // Same reason as addBranch(): don't dispose while the sheet is still
+    // animating closed — the still-visible TextFields would be reading
+    // from a disposed controller.
+    Future.delayed(const Duration(milliseconds: 300), () {
+      name.dispose();
+      address.dispose();
+      contact.dispose();
+      region.dispose();
+    });
+
+    if (updated && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Branch updated successfully!'),
+          backgroundColor: AppColors.green,
+        ),
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await context.read<BranchContext>().refreshBranches();
+        if (mounted) reload();
+      });
+    }
   }
 
   // ================================================================
@@ -545,8 +563,11 @@ class BranchesScreenState extends State<BranchesScreen> {
           ),
         );
 
-        await context.read<BranchContext>().refreshBranches();
-        reload();
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          await context.read<BranchContext>().refreshBranches();
+          if (mounted) reload();
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -562,6 +583,9 @@ class BranchesScreenState extends State<BranchesScreen> {
   // ================================================================
 
   Future<void> confirmDeleteBranch(Branch b) async {
+    bool deleted = false;
+    String? errorMessage;
+
     await showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(.45),
@@ -693,36 +717,11 @@ class BranchesScreenState extends State<BranchesScreen> {
                       onPressed: () async {
                         try {
                           await api.deleteBranch(b.id);
-
-                          if (dialogCtx.mounted) {
-                            Navigator.pop(dialogCtx);
-
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Branch deleted successfully!'),
-                                  backgroundColor: Color(0xFFE11D48),
-                                ),
-                              );
-
-                              await context
-                                  .read<BranchContext>()
-                                  .refreshBranches();
-                              reload();
-                            }
-                          }
+                          deleted = true;
+                          if (dialogCtx.mounted) Navigator.pop(dialogCtx);
                         } catch (e) {
-                          if (dialogCtx.mounted) {
-                            Navigator.pop(dialogCtx);
-
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Failed to delete branch: $e'),
-                                ),
-                              );
-                            }
-                          }
+                          errorMessage = '$e';
+                          if (dialogCtx.mounted) Navigator.pop(dialogCtx);
                         }
                       },
                       child: const Text(
@@ -738,6 +737,27 @@ class BranchesScreenState extends State<BranchesScreen> {
         ),
       ),
     );
+
+    // Only touch BranchContext / reload after the dialog route has
+    // fully finished popping — doing it inside the same synchronous
+    // callback as Navigator.pop(dialogCtx) is what was crashing Delete.
+    if (deleted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Branch deleted successfully!'),
+          backgroundColor: Color(0xFFE11D48),
+        ),
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await context.read<BranchContext>().refreshBranches();
+        if (mounted) reload();
+      });
+    } else if (errorMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete branch: $errorMessage')),
+      );
+    }
   }
 
   // ================================================================
@@ -992,6 +1012,7 @@ class BranchesScreenState extends State<BranchesScreen> {
           // ==========================================================
           // BACKGROUND GLOW
           // ==========================================================
+
           Positioned(
             top: -80,
             right: -70,
@@ -1039,6 +1060,7 @@ class BranchesScreenState extends State<BranchesScreen> {
           // ==========================================================
           // MAIN CONTENT
           // ==========================================================
+
           Column(
             children: [
               // Search
@@ -1419,6 +1441,7 @@ class BranchesScreenState extends State<BranchesScreen> {
             ),
           ),
         ),
+
     );
   }
 

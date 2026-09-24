@@ -523,7 +523,9 @@ class _VoucherPurchaseInvoicesTabState
             ),
           ),
           const SizedBox(height: 9),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 4,
             children: [
               Text(
                 'Paid ${_money(invoice.paidAmount)}',
@@ -533,7 +535,6 @@ class _VoucherPurchaseInvoicesTabState
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(width: 10),
               Text(
                 'Balance ${_money(invoice.balanceAmount)}',
                 style: TextStyle(
@@ -542,7 +543,12 @@ class _VoucherPurchaseInvoicesTabState
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const Spacer(),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
               _cardAction(
                 Icons.visibility_outlined,
                 'View',

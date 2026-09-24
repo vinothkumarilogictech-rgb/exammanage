@@ -109,12 +109,12 @@ class _NavItem extends StatelessWidget {
 
         // Reduced vertical margin/padding to prevent overflow.
         margin: const EdgeInsets.symmetric(
-          horizontal: 4,
+          horizontal: 1,
           vertical: 4,
         ),
 
         padding: const EdgeInsets.symmetric(
-          horizontal: 8,
+          horizontal: 2,
           vertical: 3,
         ),
 
@@ -140,20 +140,22 @@ class _NavItem extends StatelessWidget {
             const SizedBox(height: 1),
 
             Flexible(
-              child: Text(
-                destination.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  height: 1.0,
-                  fontWeight: selected
-                      ? FontWeight.w800
-                      : FontWeight.w600,
-                  color: selected
-                      ? Colors.white
-                      : Colors.white.withOpacity(.65),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  destination.label,
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    height: 1.0,
+                    fontWeight: selected
+                        ? FontWeight.w800
+                        : FontWeight.w600,
+                    color: selected
+                        ? Colors.white
+                        : Colors.white.withOpacity(.65),
+                  ),
                 ),
               ),
             ),
