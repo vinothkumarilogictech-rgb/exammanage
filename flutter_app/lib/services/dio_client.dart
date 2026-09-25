@@ -303,6 +303,32 @@ class DioClient {
   Future<Response> createCandidate(Map<String, dynamic> data) =>
       dio.post(ApiConfig.candidatesPath, data: data);
 
+  Future<Response> scanPassport({
+    required List<int> frontBytes,
+    String frontFilename = 'front_page.jpg',
+    required List<int> lastBytes,
+    String lastFilename = 'last_page.jpg',
+  }) async {
+    final formData = FormData.fromMap({
+      'front_page': MultipartFile.fromBytes(
+        frontBytes,
+        filename: frontFilename,
+      ),
+      'last_page': MultipartFile.fromBytes(
+        lastBytes,
+        filename: lastFilename,
+      ),
+    });
+    return dio.post(
+      ApiConfig.scanPassportPath,
+      data: formData,
+      options: Options(
+        sendTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    );
+  }
+
   Future<Response> updateCandidateStatus(int id, String status) =>
       dio.patch('${ApiConfig.candidatesPath}$id/', data: {'status': status});
 

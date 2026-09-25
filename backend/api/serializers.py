@@ -38,13 +38,41 @@ def team_dict(t):
             'created_at': iso(t.created_at), 'updated_at': iso(t.updated_at)}
 
 def candidate_dict(c):
-    return {'id': c.id, 'name': c.name, 'email': c.email, 'phone': c.phone, 'register_number': c.register_number,
-            'test_type': c.test_type, 'exam_date': c.exam_date, 'status': ('Not Completed' if (c.status or '').strip().lower() == 'absent' else c.status), 'branch_id': c.branch_id,
-            'branch_name': c.branch.branch_name if c.branch else None, 'exam_type_id': c.exam_type_id,
-            'exam_type_name': c.exam_type.name if c.exam_type else None, 'team_id': c.team_id,
-            'team_name': c.team.name if c.team else None, 'team_location': c.team.location if c.team else None,
-            'remarks': c.reason_note or '',
-            'created_at': iso(c.created_at)}
+    return {
+        'id': c.id,
+        'name': c.name,
+        'email': c.email,
+        'phone': c.phone,
+        'register_number': c.register_number,
+        'test_type': c.test_type,
+        'exam_date': c.exam_date,
+        'status': ('Not Completed' if (c.status or '').strip().lower() == 'absent' else c.status),
+        'branch_id': c.branch_id,
+        'branch_name': c.branch.branch_name if c.branch else None,
+        'exam_type_id': c.exam_type_id,
+        'exam_type_name': c.exam_type.name if c.exam_type else None,
+        'team_id': c.team_id,
+        'team_name': c.team.name if c.team else None,
+        'team_location': c.team.location if c.team else None,
+        'remarks': c.reason_note or '',
+        'created_at': iso(c.created_at),
+        'passport_number': getattr(c, 'passport_number', None),
+        'passport_full_name': getattr(c, 'passport_full_name', None),
+        'passport_dob': getattr(c, 'passport_dob', None) or getattr(c, 'dob', None),
+        'passport_gender': getattr(c, 'passport_gender', None),
+        'passport_nationality': getattr(c, 'passport_nationality', None) or getattr(c, 'nationality', None),
+        'passport_issue_date': getattr(c, 'passport_issue_date', None),
+        'passport_expiry_date': getattr(c, 'passport_expiry_date', None),
+        'address_line_1': getattr(c, 'address_line_1', None),
+        'address_line_2': getattr(c, 'address_line_2', None),
+        'city': getattr(c, 'city', None),
+        'state': getattr(c, 'state', None),
+        'postal_code': getattr(c, 'postal_code', None),
+        'country': getattr(c, 'country', None),
+        'passport_scan_date': getattr(c, 'passport_scan_date', None),
+        'passport_front_image': getattr(c, 'passport_front_image', None),
+        'passport_last_image': getattr(c, 'passport_last_image', None),
+    }
 
 def attempt_dict(a):
     return {'id': a.id, 'candidate_id': a.candidate_id, 'candidate_name': a.candidate.name if a.candidate else None,

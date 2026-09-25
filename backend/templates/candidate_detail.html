@@ -48,7 +48,68 @@
             <tr><td style="padding:6px 0;color:#6b7280;">Current Status</td><td style="padding:6px 0;"><span class="status-badge status-{{ latest.status|lower|replace(' ', '') }}">{{ latest.status }}</span></td></tr>
             <tr><td style="padding:6px 0;color:#6b7280;">Current Result</td><td style="padding:6px 0;"><span class="result-pill result-{{ latest.result|lower }}">{{ latest.result }}</span></td></tr>
             {% endif %}
+            {% if candidate.team %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Team</td><td style="padding:6px 0;font-weight:700;"><span style="background:#ede9fe;color:#5b21b6;padding:2px 8px;border-radius:12px;font-size:0.8rem;">{{ candidate.team.name }}</span></td></tr>
+            {% endif %}
+            {% if candidate.passport_number %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Passport Number</td><td style="padding:6px 0;font-weight:700;color:#2563eb;">{{ candidate.passport_number }}</td></tr>
+            {% endif %}
+            {% if candidate.passport_full_name %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Passport Name</td><td style="padding:6px 0;font-weight:700;">{{ candidate.passport_full_name }}</td></tr>
+            {% endif %}
+            {% if candidate.effective_dob %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Date of Birth</td><td style="padding:6px 0;font-weight:700;">{{ candidate.effective_dob }}</td></tr>
+            {% endif %}
+            {% if candidate.passport_gender %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Gender</td><td style="padding:6px 0;font-weight:700;">{{ candidate.passport_gender }}</td></tr>
+            {% endif %}
+            {% if candidate.effective_nationality %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Nationality</td><td style="padding:6px 0;font-weight:700;">{{ candidate.effective_nationality }}</td></tr>
+            {% endif %}
+            {% if candidate.passport_issue_date %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Date of Issue</td><td style="padding:6px 0;font-weight:700;">{{ candidate.passport_issue_date }}</td></tr>
+            {% endif %}
+            {% if candidate.passport_expiry_date %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Date of Expiry</td><td style="padding:6px 0;font-weight:700;">{{ candidate.passport_expiry_date }}</td></tr>
+            {% endif %}
+            {% if candidate.passport_scan_date %}
+            <tr><td style="padding:6px 0;color:#6b7280;">Scan Date (IST)</td><td style="padding:6px 0;font-weight:700;color:#059669;"><i class="fas fa-clock"></i> {{ candidate.passport_scan_date }}</td></tr>
+            {% endif %}
+            {% if candidate.address_line_1 or candidate.city %}
+            <tr>
+                <td style="padding:6px 0;color:#6b7280;vertical-align:top;">Address</td>
+                <td style="padding:6px 0;font-size:0.85rem;line-height:1.4;">
+                    {{ candidate.address_line_1 or '' }}{% if candidate.address_line_2 %}, {{ candidate.address_line_2 }}{% endif %}<br>
+                    {{ candidate.city or '' }}{% if candidate.state %}, {{ candidate.state }}{% endif %}{% if candidate.postal_code %} - {{ candidate.postal_code }}{% endif %}<br>
+                    {{ candidate.country or '' }}
+                </td>
+            </tr>
+            {% endif %}
         </table>
+
+        {% if candidate.passport_front_image or candidate.passport_last_image %}
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9;">
+            <h4 style="margin:0 0 10px;font-size:0.85rem;color:#475569;font-weight:700;"><i class="fas fa-images"></i> Scanned Passport Images</h4>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                {% if candidate.passport_front_image %}
+                <div style="text-align:center;">
+                    <a href="{{ candidate.passport_front_image }}" target="_blank">
+                        <img src="{{ candidate.passport_front_image }}" alt="Front Page" style="width:110px;height:75px;object-fit:cover;border-radius:8px;border:1px solid #cbd5e1;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                    </a>
+                    <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Front Page</div>
+                </div>
+                {% endif %}
+                {% if candidate.passport_last_image %}
+                <div style="text-align:center;">
+                    <a href="{{ candidate.passport_last_image }}" target="_blank">
+                        <img src="{{ candidate.passport_last_image }}" alt="Last Page" style="width:110px;height:75px;object-fit:cover;border-radius:8px;border:1px solid #cbd5e1;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                    </a>
+                    <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Last Page</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         <div class="button-row" style="margin-top:16px;">
             <button type="button" class="btn-primary" onclick="toggleBox('retestBox')"><i class="fas fa-redo"></i> New Attempt (Retest)</button>

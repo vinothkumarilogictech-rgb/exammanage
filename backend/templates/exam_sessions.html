@@ -5,42 +5,46 @@
         <h2>Exam Sessions / Batches</h2>
         <a href="{{ url_for('exams_dashboard.dashboard') }}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Dashboard</a>
     </div>
-    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:24px;border-radius:16px;">
-        <form method="GET" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-            <select name="branch_id" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+    <div style="background:#ffffff;padding:22px;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.02);margin-bottom:24px;">
+        <form method="GET" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+            <select name="branch_id" style="padding:9px 14px;border-radius:20px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;color:#334155;">
                 <option value="">All Branches</option>
                 {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id|string %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
             </select>
-            <select name="exam_type_id" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+            <select name="exam_type_id" style="padding:9px 14px;border-radius:20px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;color:#334155;">
                 <option value="">All Exams</option>
                 {% for e in exam_types %}<option value="{{ e.id }}" {% if exam_type_id == e.id|string %}selected{% endif %}>{{ e.name }}</option>{% endfor %}
             </select>
-            <select name="language" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+            <select name="language" style="padding:9px 14px;border-radius:20px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;color:#334155;">
                 <option value="">All Languages</option>
                 {% for lang in languages %}<option value="{{ lang }}" {% if lang == language %}selected{% endif %}>{{ lang }}</option>{% endfor %}
             </select>
-            <input type="date" name="exam_date" value="{{ exam_date }}" style="padding:9px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
-            <select name="status" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;">
+            <input type="date" name="exam_date" value="{{ exam_date }}" style="padding:8px 14px;border-radius:20px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;color:#334155;">
+            <select name="status" style="padding:9px 14px;border-radius:20px;border:1.5px solid #cbd5e1;background:#fff;font-size:0.85rem;color:#334155;">
                 <option value="">All Status</option>
                 {% for st in ['Scheduled','Completed','Rescheduled','Cancelled'] %}
                 <option value="{{ st }}" {% if status == st %}selected{% endif %}>{{ st }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" style="padding:10px 22px;border-radius:30px;background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;">Filter</button>
-            <button type="button" onclick="showForm()" style="padding:10px 24px;border-radius:30px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.85rem;box-shadow:0 4px 10px rgba(124,58,237,0.25);"><i class="fas fa-plus"></i> New Session</button>
+            <button type="submit" style="padding:9px 20px;border-radius:20px;background:#f1f5f9;color:#334155;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+            <button type="button" onclick="showForm()" style="padding:9px 22px;border-radius:20px;background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.85rem;box-shadow:0 2px 8px rgba(79,70,229,0.3);">
+                <i class="fas fa-plus"></i> New Session
+            </button>
         </form>
-        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
             <table style="width:100%;border-collapse:collapse;">
                 <thead>
-                    <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Exam</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Date</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Time</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Fee</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Seats</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Status</th>
-                        <th style="padding:14px 16px;text-align:center;color:#7c3aed;font-weight:700;">Actions</th>
+                    <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Exam</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Branch</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Date</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Time</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Fee</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Seats</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Status</th>
+                        <th style="padding:12px 16px;text-align:center;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>

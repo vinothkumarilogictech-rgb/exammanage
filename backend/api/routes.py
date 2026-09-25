@@ -555,11 +555,23 @@ def candidates():
     q=Candidate.query; term=(request.args.get('q') or '').strip(); bid=_employee_branch_required(request.args.get('branch_id',type=int))
     if g.api_identity.get('role') == 'Employee' and bid is None:
         return fail('Employees can only access their assigned branch.', 403)
-    if term: q=q.filter(or_(Candidate.name.ilike(f'%{term}%'),Candidate.email.ilike(f'%{term}%'),Candidate.register_number.ilike(f'%{term}%')))
+    if term: q=q.filter(or_(Candidate.name.ilike(f'%{term}%'),Candidate.email.ilike(f'%{term}%'),Candidate.register_number.ilike(f'%{term}%'),Candidate.passport_number.ilike(f'%{term}%'),Candidate.passport_full_name.ilike(f'%{term}%')))
     if bid: q=q.filter(Candidate.branch_id==bid)
     team_id=request.args.get('team_id',type=int)
     if team_id: q=q.filter(Candidate.team_id==team_id)
     return ok([candidate_dict(x) for x in q.order_by(Candidate.created_at.desc()).all()])
+
+@api_bp.post('/exams/candidates/scan-passport/')
+@api_token_required
+def candidate_scan_passport():
+    from apps.exams.passport_service import extract_passport_data_with_groq
+    front_file = request.files.get('front_page') or request.files.get('front_image')
+    last_file = request.files.get('last_page') or request.files.get('last_image')
+    if not front_file and not last_file:
+        return fail('Please provide at least one passport image (front_page or last_page).', 400)
+    upload_folder = os.path.join(current_app.root_path, '..', 'static', 'uploads', 'passports')
+    result = extract_passport_data_with_groq(front_file, last_file, upload_folder=upload_folder)
+    return jsonify(result), (200 if result.get('success') or result.get('error_code') == 'GROQ_KEY_NOT_CONFIGURED' else 422)
 
 @api_bp.post('/exams/candidates/')
 @api_token_required
@@ -574,6 +586,10 @@ def candidate_create():
         if requested_branch_id in (None, '') or int(requested_branch_id) != int(own_branch_id):
             return fail('Employees can only add candidates to their assigned branch.', 403)
         d['branch_id'] = own_branch_id
+
+    passport_dob = (d.get('passport_dob') or d.get('dob') or '').strip() or None
+    passport_nationality = (d.get('passport_nationality') or d.get('nationality') or '').strip() or None
+
     c = Candidate(
         name=name,
         email=(d.get('email') or '').strip() or None,
@@ -585,6 +601,25 @@ def candidate_create():
         exam_date=d.get('exam_date'),
         status=d.get('status') or 'Registered',
         reason_note=(d.get('remarks') or d.get('reason_note') or '').strip() or None,
+        # Passport & Address fields
+        dob=passport_dob,
+        passport_number=(d.get('passport_number') or '').strip() or None,
+        nationality=passport_nationality,
+        passport_full_name=(d.get('passport_full_name') or '').strip() or None,
+        passport_dob=passport_dob,
+        passport_gender=(d.get('passport_gender') or '').strip() or None,
+        passport_nationality=passport_nationality,
+        passport_issue_date=(d.get('passport_issue_date') or '').strip() or None,
+        passport_expiry_date=(d.get('passport_expiry_date') or '').strip() or None,
+        address_line_1=(d.get('address_line_1') or '').strip() or None,
+        address_line_2=(d.get('address_line_2') or '').strip() or None,
+        city=(d.get('city') or '').strip() or None,
+        state=(d.get('state') or '').strip() or None,
+        postal_code=(d.get('postal_code') or '').strip() or None,
+        country=(d.get('country') or '').strip() or None,
+        passport_scan_date=(d.get('passport_scan_date') or '').strip() or None,
+        passport_front_image=(d.get('passport_front_image') or '').strip() or None,
+        passport_last_image=(d.get('passport_last_image') or '').strip() or None,
     )
     if c.team_id:
         team = ExamTeam.query.get(int(c.team_id))
@@ -650,13 +685,24 @@ def candidate_update(candidate_id):
     if status and status not in allowed:
         return fail('Status must be Registered, Not Completed, Rescheduled, or Completed.', 422)
 
-    # Profile fields.
-    for field in ('name', 'email', 'phone', 'register_number'):
+    # Profile & Passport fields.
+    for field in (
+        'name', 'email', 'phone', 'register_number',
+        'passport_number', 'passport_full_name', 'passport_dob',
+        'passport_gender', 'passport_nationality', 'passport_issue_date',
+        'passport_expiry_date', 'address_line_1', 'address_line_2',
+        'city', 'state', 'postal_code', 'country', 'passport_scan_date',
+        'passport_front_image', 'passport_last_image'
+    ):
         if field in d:
             value = (d.get(field) or '').strip()
             if field == 'name' and not value:
                 return fail('Candidate name is required.', 422)
             setattr(c, field, value or None)
+            if field == 'passport_dob':
+                c.dob = value or None
+            elif field == 'passport_nationality':
+                c.nationality = value or None
 
     if 'remarks' in d or 'reason_note' in d:
         value = d.get('remarks') if 'remarks' in d else d.get('reason_note')

@@ -131,6 +131,9 @@ class Candidate {
   final int id;
   final String name, email, phone, registerNumber, status, branch, examType, date, teamName, remarks;
   final int? branchId, examTypeId, teamId;
+  final String passportNumber, passportFullName, passportDob, passportGender, passportNationality;
+  final String passportIssueDate, passportExpiryDate, addressLine1, addressLine2, city, state, postalCode, country;
+  final String passportScanDate, passportFrontImage, passportLastImage;
 
   Candidate({
     required this.id,
@@ -147,6 +150,22 @@ class Candidate {
     this.branchId,
     this.examTypeId,
     this.teamId,
+    this.passportNumber = '',
+    this.passportFullName = '',
+    this.passportDob = '',
+    this.passportGender = '',
+    this.passportNationality = '',
+    this.passportIssueDate = '',
+    this.passportExpiryDate = '',
+    this.addressLine1 = '',
+    this.addressLine2 = '',
+    this.city = '',
+    this.state = '',
+    this.postalCode = '',
+    this.country = '',
+    this.passportScanDate = '',
+    this.passportFrontImage = '',
+    this.passportLastImage = '',
   });
 
   factory Candidate.fromMap(Map<String, dynamic> m) => Candidate(
@@ -164,8 +183,25 @@ class Candidate {
     branchId: int.tryParse('${m['branch_id'] ?? ''}'),
     examTypeId: int.tryParse('${m['exam_type_id'] ?? ''}'),
     teamId: int.tryParse('${m['team_id'] ?? ''}'),
+    passportNumber: '${m['passport_number'] ?? ''}',
+    passportFullName: '${m['passport_full_name'] ?? ''}',
+    passportDob: '${m['passport_dob'] ?? m['dob'] ?? ''}',
+    passportGender: '${m['passport_gender'] ?? ''}',
+    passportNationality: '${m['passport_nationality'] ?? m['nationality'] ?? ''}',
+    passportIssueDate: '${m['passport_issue_date'] ?? ''}',
+    passportExpiryDate: '${m['passport_expiry_date'] ?? ''}',
+    addressLine1: '${m['address_line_1'] ?? ''}',
+    addressLine2: '${m['address_line_2'] ?? ''}',
+    city: '${m['city'] ?? ''}',
+    state: '${m['state'] ?? ''}',
+    postalCode: '${m['postal_code'] ?? ''}',
+    country: '${m['country'] ?? ''}',
+    passportScanDate: '${m['passport_scan_date'] ?? ''}',
+    passportFrontImage: '${m['passport_front_image'] ?? ''}',
+    passportLastImage: '${m['passport_last_image'] ?? ''}',
   );
 }
+
 
 class Expense {
   final int id;

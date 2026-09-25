@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../models.dart';
@@ -25,6 +28,42 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
   final phoneCtrl = TextEditingController();
   final remarksCtrl = TextEditingController();
   final dateCtrl = TextEditingController();
+
+  // Passport & Address Form Controllers
+  final passportNumberCtrl = TextEditingController();
+  final passportFullNameCtrl = TextEditingController();
+  final passportDobCtrl = TextEditingController();
+  final passportGenderCtrl = TextEditingController();
+  final passportNationalityCtrl = TextEditingController();
+  final passportIssueDateCtrl = TextEditingController();
+  final passportExpiryDateCtrl = TextEditingController();
+  final addressLine1Ctrl = TextEditingController();
+  final addressLine2Ctrl = TextEditingController();
+  final cityCtrl = TextEditingController();
+  final stateCtrl = TextEditingController();
+  final postalCodeCtrl = TextEditingController();
+  final countryCtrl = TextEditingController();
+  final scanDateCtrl = TextEditingController();
+
+  // Passport Camera Workflow State (12-step flow)
+  final ImagePicker _picker = ImagePicker();
+  String? _tempFrontPath;
+  XFile? _tempFrontXFile;
+  String? _frontImagePath;
+  XFile? _frontXFile;
+  bool _frontImageConfirmed = false;
+
+  String? _tempLastPath;
+  XFile? _tempLastXFile;
+  String? _lastImagePath;
+  XFile? _lastXFile;
+  bool _lastImageConfirmed = false;
+
+  bool isScanningPassport = false;
+  String? frontImageUrl;
+  String? lastImageUrl;
+  String? passportScanStatusMessage;
+  bool passportExtractionSuccess = false;
 
   // Dropdown Selections
   int? selectedBranchId;
@@ -63,6 +102,20 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
     phoneCtrl.dispose();
     remarksCtrl.dispose();
     dateCtrl.dispose();
+    passportNumberCtrl.dispose();
+    passportFullNameCtrl.dispose();
+    passportDobCtrl.dispose();
+    passportGenderCtrl.dispose();
+    passportNationalityCtrl.dispose();
+    passportIssueDateCtrl.dispose();
+    passportExpiryDateCtrl.dispose();
+    addressLine1Ctrl.dispose();
+    addressLine2Ctrl.dispose();
+    cityCtrl.dispose();
+    stateCtrl.dispose();
+    postalCodeCtrl.dispose();
+    countryCtrl.dispose();
+    scanDateCtrl.dispose();
     super.dispose();
   }
 
@@ -187,14 +240,238 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
     }).toList();
   }
 
-  Future<void> _submitCandidate() async {
-    if (nameCtrl.text.trim().isEmpty) {
+  // ============================================================
+  // PASSPORT CAMERA CAPTURE WORKFLOW (STEPS 1-7)
+  // ============================================================
+  Future<void> _captureFrontPage() async {
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (photo != null) {
+        setState(() {
+          _tempFrontPath = photo.path;
+          _tempFrontXFile = photo;
+          _frontImageConfirmed = false;
+        });
+      }
+    } catch (e) {
+      _showError('Camera error: Unable to capture front page ($e)');
+    }
+  }
+
+  void _confirmFrontPage() {
+    if (_tempFrontPath != null) {
+      setState(() {
+        _frontImagePath = _tempFrontPath;
+        _frontXFile = _tempFrontXFile;
+        _frontImageConfirmed = true;
+      });
+    }
+  }
+
+  void _retakeFrontPage() {
+    setState(() {
+      _tempFrontPath = null;
+      _tempFrontXFile = null;
+      _frontImagePath = null;
+      _frontXFile = null;
+      _frontImageConfirmed = false;
+      passportExtractionSuccess = false;
+    });
+    _captureFrontPage();
+  }
+
+  Future<void> _captureLastPage() async {
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (photo != null) {
+        setState(() {
+          _tempLastPath = photo.path;
+          _tempLastXFile = photo;
+          _lastImageConfirmed = false;
+        });
+      }
+    } catch (e) {
+      _showError('Camera error: Unable to capture last page ($e)');
+    }
+  }
+
+  void _confirmLastPage() {
+    if (_tempLastPath != null) {
+      setState(() {
+        _lastImagePath = _tempLastPath;
+        _lastXFile = _tempLastXFile;
+        _lastImageConfirmed = true;
+      });
+    }
+  }
+
+  void _retakeLastPage() {
+    setState(() {
+      _tempLastPath = null;
+      _tempLastXFile = null;
+      _lastImagePath = null;
+      _lastXFile = null;
+      _lastImageConfirmed = false;
+      passportExtractionSuccess = false;
+    });
+    _captureLastPage();
+  }
+
+  // ============================================================
+  // GROQ AI EXTRACTION (STEPS 8-10)
+  // ============================================================
+  Future<void> _scanPassportWithGroq() async {
+    if (_frontImagePath == null || _lastImagePath == null) {
+      _showError('Please capture and confirm both passport front and last pages.');
+      return;
+    }
+
+    setState(() {
+      isScanningPassport = true;
+      passportScanStatusMessage = 'Uploading passport pages & extracting information via Groq AI...';
+    });
+
+    try {
+      final frontBytes = _frontXFile != null
+          ? await _frontXFile!.readAsBytes()
+          : (kIsWeb ? <int>[] : await File(_frontImagePath!).readAsBytes());
+      final lastBytes = _lastXFile != null
+          ? await _lastXFile!.readAsBytes()
+          : (kIsWeb ? <int>[] : await File(_lastImagePath!).readAsBytes());
+
+      final res = await api.scanPassport(
+        frontBytes: frontBytes,
+        frontFilename: _frontXFile?.name.isNotEmpty == true ? _frontXFile!.name : 'front_page.jpg',
+        lastBytes: lastBytes,
+        lastFilename: _lastXFile?.name.isNotEmpty == true ? _lastXFile!.name : 'last_page.jpg',
+      );
+
+      final data = res.data;
+      final bool success = data['success'] == true;
+      final payload = Map<String, dynamic>.from(data['data'] ?? {});
+
+      if (!mounted) return;
+
+      if (success) {
+        setState(() {
+          // Auto-populate extracted passport details without overwriting manual selections
+          if ((payload['passport_full_name'] ?? '').toString().trim().isNotEmpty) {
+            final extractedName = payload['passport_full_name'].toString().trim();
+            passportFullNameCtrl.text = extractedName;
+            if (nameCtrl.text.trim().isEmpty) {
+              nameCtrl.text = extractedName;
+            }
+          }
+          if ((payload['passport_number'] ?? '').toString().trim().isNotEmpty) {
+            passportNumberCtrl.text = payload['passport_number'].toString().trim();
+          }
+          if ((payload['passport_dob'] ?? '').toString().trim().isNotEmpty) {
+            passportDobCtrl.text = payload['passport_dob'].toString().trim();
+          }
+          if ((payload['passport_gender'] ?? '').toString().trim().isNotEmpty) {
+            passportGenderCtrl.text = payload['passport_gender'].toString().trim();
+          }
+          if ((payload['passport_nationality'] ?? '').toString().trim().isNotEmpty) {
+            passportNationalityCtrl.text = payload['passport_nationality'].toString().trim();
+          }
+          if ((payload['passport_issue_date'] ?? '').toString().trim().isNotEmpty) {
+            passportIssueDateCtrl.text = payload['passport_issue_date'].toString().trim();
+          }
+          if ((payload['passport_expiry_date'] ?? '').toString().trim().isNotEmpty) {
+            passportExpiryDateCtrl.text = payload['passport_expiry_date'].toString().trim();
+          }
+
+          // Address details
+          if ((payload['address_line_1'] ?? '').toString().trim().isNotEmpty) {
+            addressLine1Ctrl.text = payload['address_line_1'].toString().trim();
+          }
+          if ((payload['address_line_2'] ?? '').toString().trim().isNotEmpty) {
+            addressLine2Ctrl.text = payload['address_line_2'].toString().trim();
+          }
+          if ((payload['city'] ?? '').toString().trim().isNotEmpty) {
+            cityCtrl.text = payload['city'].toString().trim();
+          }
+          if ((payload['state'] ?? '').toString().trim().isNotEmpty) {
+            stateCtrl.text = payload['state'].toString().trim();
+          }
+          if ((payload['postal_code'] ?? '').toString().trim().isNotEmpty) {
+            postalCodeCtrl.text = payload['postal_code'].toString().trim();
+          }
+          if ((payload['country'] ?? '').toString().trim().isNotEmpty) {
+            countryCtrl.text = payload['country'].toString().trim();
+          }
+          if ((payload['passport_scan_date'] ?? '').toString().trim().isNotEmpty) {
+            scanDateCtrl.text = payload['passport_scan_date'].toString().trim();
+          }
+
+          frontImageUrl = payload['passport_front_image'] as String?;
+          lastImageUrl = payload['passport_last_image'] as String?;
+          passportExtractionSuccess = true;
+          passportScanStatusMessage = 'Passport information extracted successfully! Review fields below.';
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Passport extracted! Please review and verify details.'),
+            backgroundColor: AppColors.green,
+          ),
+        );
+      } else {
+        final msg = data['message'] ?? 'Could not extract all details. You can enter them manually.';
+        setState(() {
+          passportExtractionSuccess = false;
+          passportScanStatusMessage = msg;
+          if ((payload['passport_scan_date'] ?? '').toString().trim().isNotEmpty) {
+            scanDateCtrl.text = payload['passport_scan_date'].toString().trim();
+          }
+          frontImageUrl = payload['passport_front_image'] as String?;
+          lastImageUrl = payload['passport_last_image'] as String?;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Colors.orange.shade800,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        passportScanStatusMessage = 'Extraction error: $e';
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Candidate name is required'),
+        SnackBar(
+          content: Text('Scanning failed: $e. You can continue manually.'),
           backgroundColor: AppColors.red,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => isScanningPassport = false);
+      }
+    }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: AppColors.red),
+    );
+  }
+
+  Future<void> _submitCandidate() async {
+    if (nameCtrl.text.trim().isEmpty) {
+      _showError('Candidate name is required');
       return;
     }
 
@@ -211,6 +488,23 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
         'status': selectedStatus,
         'exam_date': dateCtrl.text.trim(),
         'remarks': remarksCtrl.text.trim(),
+        // Passport and address fields
+        'passport_number': passportNumberCtrl.text.trim(),
+        'passport_full_name': passportFullNameCtrl.text.trim(),
+        'passport_dob': passportDobCtrl.text.trim(),
+        'passport_gender': passportGenderCtrl.text.trim(),
+        'passport_nationality': passportNationalityCtrl.text.trim(),
+        'passport_issue_date': passportIssueDateCtrl.text.trim(),
+        'passport_expiry_date': passportExpiryDateCtrl.text.trim(),
+        'address_line_1': addressLine1Ctrl.text.trim(),
+        'address_line_2': addressLine2Ctrl.text.trim(),
+        'city': cityCtrl.text.trim(),
+        'state': stateCtrl.text.trim(),
+        'postal_code': postalCodeCtrl.text.trim(),
+        'country': countryCtrl.text.trim(),
+        'passport_scan_date': scanDateCtrl.text.trim(),
+        'passport_front_image': frontImageUrl ?? '',
+        'passport_last_image': lastImageUrl ?? '',
       });
 
       if (!mounted) return;
@@ -225,12 +519,7 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to add candidate: $e'),
-          backgroundColor: AppColors.red,
-        ),
-      );
+      _showError('Failed to add candidate: $e');
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -287,6 +576,20 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                 children: [
+                  // ============================================================
+                  // SECTION 0: AI PASSPORT SCANNER (GROQ AI VISION)
+                  // ============================================================
+                  _buildPassportScannerSection(),
+                  const SizedBox(height: 16),
+
+                  // ============================================================
+                  // SECTION 0.5: EXTRACTED PASSPORT & ADDRESS DETAILS
+                  // ============================================================
+                  _buildPassportDetailsSection(),
+                  const SizedBox(height: 16),
+                  _buildAddressDetailsSection(),
+                  const SizedBox(height: 16),
+
                   // ============================================================
                   // SECTION 1: CANDIDATE INFORMATION
                   // ============================================================
@@ -918,4 +1221,627 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
       ),
     );
   }
+
+  // ============================================================
+  // PASSPORT SCANNER UI (WORKFLOW STEPS 1-7)
+  // ============================================================
+  Widget _buildPassportScannerSection() {
+    return _buildCard(
+      title: 'AI PASSPORT SCANNER (GROQ VISION)',
+      icon: Icons.document_scanner_rounded,
+      accentColor: const Color(0xFF6366F1),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFC7D2FE)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: Color(0xFF4F46E5), size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  !_frontImageConfirmed
+                      ? 'Step 1 of 3: Capture Passport Front (Biodata Page)'
+                      : !_lastImageConfirmed
+                          ? 'Step 2 of 3: Capture Passport Last (Address Page)'
+                          : 'Step 3 of 3: Verify previews and scan with Groq AI',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF3730A3),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // STEP 1-3: FRONT PAGE
+        if (!_frontImageConfirmed) ...[
+          if (_tempFrontPath == null) ...[
+            _buildCaptureButton(
+              title: 'Capture Passport Front Page',
+              subtitle: 'Biodata page with photo, name, and passport number',
+              icon: Icons.camera_alt_rounded,
+              color: const Color(0xFF4F46E5),
+              onPressed: _captureFrontPage,
+            ),
+          ] else ...[
+            _buildImagePreviewBox(
+              label: 'Front Page Preview',
+              filePath: _tempFrontPath!,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _retakeFrontPage,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Retake'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _confirmFrontPage,
+                    icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                    label: const Text('Confirm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ]
+        // STEP 4-6: LAST PAGE
+        else if (!_lastImageConfirmed) ...[
+          // Show confirmed front page snippet
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 18),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Front page confirmed',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF15803D)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _retakeFrontPage,
+                  child: const Text('Retake', style: TextStyle(fontSize: 12, color: Color(0xFFDC2626))),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          if (_tempLastPath == null) ...[
+            _buildCaptureButton(
+              title: 'Capture Passport Last Page',
+              subtitle: 'Address page with father/mother name and residential address',
+              icon: Icons.camera_alt_rounded,
+              color: const Color(0xFF0D9488),
+              onPressed: _captureLastPage,
+            ),
+          ] else ...[
+            _buildImagePreviewBox(
+              label: 'Last Page (Address) Preview',
+              filePath: _tempLastPath!,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _retakeLastPage,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Retake'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _confirmLastPage,
+                    icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                    label: const Text('Confirm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ]
+        // STEP 7: BOTH CONFIRMED -> READY TO EXTRACT
+        else ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildImagePreviewBox(
+                      label: 'Front Page',
+                      filePath: _frontImagePath!,
+                    ),
+                    const SizedBox(height: 6),
+                    TextButton.icon(
+                      onPressed: isScanningPassport ? null : _retakeFrontPage,
+                      icon: const Icon(Icons.refresh, size: 15),
+                      label: const Text('Retake Front', style: TextStyle(fontSize: 11)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildImagePreviewBox(
+                      label: 'Last Page',
+                      filePath: _lastImagePath!,
+                    ),
+                    const SizedBox(height: 6),
+                    TextButton.icon(
+                      onPressed: isScanningPassport ? null : _retakeLastPage,
+                      icon: const Icon(Icons.refresh, size: 15),
+                      label: const Text('Retake Last', style: TextStyle(fontSize: 11)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Main Groq AI Scan CTA Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: isScanningPassport ? null : _scanPassportWithGroq,
+              icon: isScanningPassport
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+              label: Text(
+                isScanningPassport ? 'Processing with Groq AI...' : 'Scan Passport & Extract Details',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4F46E5),
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 2,
+              ),
+            ),
+          ),
+        ],
+
+        // Status / feedback message
+        if (passportScanStatusMessage != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: passportExtractionSuccess ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: passportExtractionSuccess ? const Color(0xFF86EFAC) : const Color(0xFFFECACA),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  passportExtractionSuccess ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                  color: passportExtractionSuccess ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    passportScanStatusMessage!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: passportExtractionSuccess ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCaptureButton({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: color.withOpacity(.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(.3), width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePreviewBox({
+    required String label,
+    required String filePath,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              color: const Color(0xFF374151),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            SizedBox(
+              height: 160,
+              child: kIsWeb
+                  ? Image.network(filePath, fit: BoxFit.cover)
+                  : Image.file(File(filePath), fit: BoxFit.cover),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // PASSPORT DETAILS SECTION (STEP 10 & 11)
+  // ============================================================
+  Widget _buildPassportDetailsSection() {
+    return _buildCard(
+      title: 'PASSPORT INFORMATION',
+      icon: Icons.badge_rounded,
+      accentColor: const Color(0xFF2563EB),
+      children: [
+        _buildLabel('Full Name on Passport'),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: passportFullNameCtrl,
+          decoration: const InputDecoration(
+            hintText: 'e.g. JOHN DOE',
+            prefixIcon: Icon(Icons.person_pin_rounded, size: 20),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Passport Number'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: passportNumberCtrl,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. Z1234567',
+                      prefixIcon: Icon(Icons.numbers_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Date of Birth'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: passportDobCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'YYYY-MM-DD',
+                      prefixIcon: Icon(Icons.cake_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Gender'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: passportGenderCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Male / Female',
+                      prefixIcon: Icon(Icons.transgender_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Nationality'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: passportNationalityCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. Indian',
+                      prefixIcon: Icon(Icons.flag_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Date of Issue'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: passportIssueDateCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'YYYY-MM-DD',
+                      prefixIcon: Icon(Icons.calendar_today_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Date of Expiry'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: passportExpiryDateCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'YYYY-MM-DD',
+                      prefixIcon: Icon(Icons.event_busy_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (scanDateCtrl.text.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _buildLabel('Passport Scan Date & Time (IST)'),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: scanDateCtrl,
+            readOnly: true,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.access_time_rounded, size: 20),
+              filled: true,
+              fillColor: Color(0xFFF3F4F6),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ============================================================
+  // ADDRESS DETAILS SECTION (FROM LAST PAGE)
+  // ============================================================
+  Widget _buildAddressDetailsSection() {
+    return _buildCard(
+      title: 'RESIDENTIAL ADDRESS (FROM LAST PAGE)',
+      icon: Icons.home_rounded,
+      accentColor: const Color(0xFF059669),
+      children: [
+        _buildLabel('Address Line 1'),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: addressLine1Ctrl,
+          decoration: const InputDecoration(
+            hintText: 'House / Door No., Street, Area',
+            prefixIcon: Icon(Icons.place_rounded, size: 20),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        _buildLabel('Address Line 2'),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: addressLine2Ctrl,
+          decoration: const InputDecoration(
+            hintText: 'Locality, Landmark',
+            prefixIcon: Icon(Icons.add_location_alt_rounded, size: 20),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('City / District'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: cityCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'City name',
+                      prefixIcon: Icon(Icons.location_city_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('State'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: stateCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'State',
+                      prefixIcon: Icon(Icons.map_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('PIN / Postal Code'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: postalCodeCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. 600001',
+                      prefixIcon: Icon(Icons.pin_drop_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Country'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: countryCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. India',
+                      prefixIcon: Icon(Icons.public_rounded, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
+

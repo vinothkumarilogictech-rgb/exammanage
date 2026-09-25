@@ -381,10 +381,43 @@ class Candidate(db.Model):
     exam_type_id = db.Column(db.Integer, db.ForeignKey('exam_type.id'), nullable=True)
     team_id = db.Column(db.Integer, db.ForeignKey('exam_team.id'), nullable=True)
 
+    # Passport & Identity details
+    dob = db.Column(db.String(30), nullable=True)
+    passport_number = db.Column(db.String(50), nullable=True)
+    nationality = db.Column(db.String(100), nullable=True)
+    place_of_birth = db.Column(db.String(200), nullable=True)
+    passport_full_name = db.Column(db.String(200), nullable=True)
+    passport_dob = db.Column(db.String(30), nullable=True)
+    passport_gender = db.Column(db.String(20), nullable=True)
+    passport_nationality = db.Column(db.String(100), nullable=True)
+    passport_issue_date = db.Column(db.String(30), nullable=True)
+    passport_expiry_date = db.Column(db.String(30), nullable=True)
+
+    # Passport Address details (Last Page)
+    address_line_1 = db.Column(db.String(300), nullable=True)
+    address_line_2 = db.Column(db.String(300), nullable=True)
+    city = db.Column(db.String(100), nullable=True)
+    state = db.Column(db.String(100), nullable=True)
+    postal_code = db.Column(db.String(30), nullable=True)
+    country = db.Column(db.String(100), nullable=True)
+
+    # Passport Scan Metadata & Images
+    passport_scan_date = db.Column(db.String(50), nullable=True)
+    passport_front_image = db.Column(db.String(500), nullable=True)
+    passport_last_image = db.Column(db.String(500), nullable=True)
+
     branch = db.relationship('Branch')
     exam_type = db.relationship('ExamType')
 
     session_links = db.relationship('SessionCandidate', backref='candidate', lazy=True)
+
+    @property
+    def effective_dob(self):
+        return self.passport_dob or self.dob
+
+    @property
+    def effective_nationality(self):
+        return self.passport_nationality or self.nationality
 
 
 class ExamAttempt(db.Model):

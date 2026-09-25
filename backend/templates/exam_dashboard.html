@@ -16,32 +16,32 @@
         margin-bottom: 26px;
     }
     .exam-link-btn {
-        padding: 9px 18px;
-        border-radius: 30px;
-        background: #fff;
-        color: #4a154b;
+        padding: 8px 18px;
+        border-radius: 20px;
+        background: #ffffff;
+        color: #334155;
         text-decoration: none;
-        font-weight: 700;
-        font-size: 0.86rem;
-        border: 1.5px solid #e9d5ff;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: 1.5px solid #cbd5e1;
         display: inline-flex;
         align-items: center;
         gap: 8px;
         transition: all 0.2s ease;
-        box-shadow: 0 2px 6px rgba(124, 58, 237, 0.06);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     }
     .exam-link-btn:hover {
-        background: linear-gradient(135deg, #7c3aed, #9333ea);
-        color: #fff;
-        border-color: transparent;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(124, 58, 237, 0.25);
+        background: #f8fafc;
+        color: #0f172a;
+        border-color: #94a3b8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
     }
     .exam-link-btn.active-link {
-        background: linear-gradient(135deg, #7c3aed, #a855f7);
-        color: #fff;
-        border-color: transparent;
-        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        background: #4f46e5;
+        color: #ffffff;
+        border-color: #4f46e5;
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
     }
 
     /* Luxury Stats Grid */
@@ -280,6 +280,9 @@
     <a class="exam-link-btn" href="{{ url_for('branch_exams.list_branch_exams') }}"><i class="fas fa-code-branch"></i> Branch ↔ Exam Mapping</a>
     <a class="exam-link-btn" href="{{ url_for('sessions.list_sessions') }}"><i class="fas fa-calendar-alt"></i> Exam Sessions</a>
     <a class="exam-link-btn" href="{{ url_for('candidates.list_candidates') }}"><i class="fas fa-user-graduate"></i> Candidates</a>
+    <a class="exam-link-btn" href="{{ url_for('teams.list_teams') }}"><i class="fas fa-users-cog"></i> Exam Teams</a>
+    <a class="exam-link-btn" href="{{ url_for('candidates.list_candidates', exam_date=today_str) }}"><i class="fas fa-calendar-day"></i> Today Exams</a>
+    <a class="exam-link-btn" href="{{ url_for('sessions.list_sessions') }}"><i class="fas fa-calendar-check"></i> Upcoming Exams</a>
     <a class="exam-link-btn" href="{{ url_for('exams_dashboard.reports') }}"><i class="fas fa-chart-pie"></i> Reports</a>
     <a class="exam-link-btn" href="{{ url_for('audit_logs.list_audit_logs') }}"><i class="fas fa-clipboard-check"></i> Audit Logs</a>
 </div>

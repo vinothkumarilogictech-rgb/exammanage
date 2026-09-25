@@ -13,7 +13,7 @@ class ApiConfig {
   /// flutter run --dart-define=API_SERVER_URL=http://YOUR-PC-LAN-IP:5000
   static const String _dartDefineUrl = String.fromEnvironment('API_SERVER_URL');
 
-  static String get baseUrl => 'http://10.246.141.206:5001';
+  static String get baseUrl => 'http://192.168.1.40:5001';
   
     
 
@@ -31,6 +31,7 @@ class ApiConfig {
   static const String branchMappingsPath = '/exams/branch-mappings/';
   static const String sessionsPath = '/exams/sessions/';
   static const String candidatesPath = '/exams/candidates/';
+  static const String scanPassportPath = '/exams/candidates/scan-passport/';
   static const String teamsPath = '/exams/teams/';
   static const String examDashboardPath = '/exams/dashboard/';
   static const String expensesPath = '/expenses/';

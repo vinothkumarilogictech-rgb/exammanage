@@ -130,6 +130,7 @@ def dashboard():
         stats=stats,
         upcoming=upcoming,
         calendar_attempts=calendar_attempts,
+        today_str=date.today().strftime('%Y-%m-%d'),
     )
 
 

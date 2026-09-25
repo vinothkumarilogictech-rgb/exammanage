@@ -159,6 +159,25 @@ def ensure_candidate_columns(app):
             "branch_id": "INTEGER",
             "exam_type_id": "INTEGER",
             "team_id": "INTEGER",
+            "dob": "VARCHAR(30)",
+            "passport_number": "VARCHAR(50)",
+            "nationality": "VARCHAR(100)",
+            "place_of_birth": "VARCHAR(200)",
+            "passport_full_name": "VARCHAR(200)",
+            "passport_dob": "VARCHAR(30)",
+            "passport_gender": "VARCHAR(20)",
+            "passport_nationality": "VARCHAR(100)",
+            "passport_issue_date": "VARCHAR(30)",
+            "passport_expiry_date": "VARCHAR(30)",
+            "address_line_1": "VARCHAR(300)",
+            "address_line_2": "VARCHAR(300)",
+            "city": "VARCHAR(100)",
+            "state": "VARCHAR(100)",
+            "postal_code": "VARCHAR(30)",
+            "country": "VARCHAR(100)",
+            "passport_scan_date": "VARCHAR(50)",
+            "passport_front_image": "VARCHAR(500)",
+            "passport_last_image": "VARCHAR(500)",
         }
 
         for column_name, column_type in migrations.items():
@@ -321,9 +340,9 @@ def create_app():
                 static_folder=os.path.join(root_dir, 'static'))
     
     app.config['SECRET_KEY'] = 'dev_secret_key_for_boss_erp'
-    sql_server = os.environ.get('DB_SERVER', r"vinothkumar\SQLEXPRESS")
-    sql_database = os.environ.get('DB_DATABASE', "exam")
-    sql_driver = os.environ.get('DB_DRIVER', "ODBC Driver 17 for SQL Server")
+    sql_server = os.environ.get('DB_SERVER', r"vinothkumar\SQLEXPRESS").strip()
+    sql_database = os.environ.get('DB_DATABASE', "exam").strip()
+    sql_driver = os.environ.get('DB_DRIVER', "ODBC Driver 17 for SQL Server").strip()
 
     odbc_connection_string = (
         f"DRIVER={{{sql_driver}}};"
@@ -378,6 +397,14 @@ def create_app():
         return response
 
     login_manager.init_app(app)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        from apps.models import User
+        try:
+            return User.query.get(int(user_id))
+        except Exception:
+            return None
 
     ensure_bank_columns(app)
     ensure_invoice_columns(app)
@@ -450,6 +477,34 @@ def create_app():
                 db.session.execute(text(
                     "UPDATE expense SET paid_amount = amount WHERE paid_amount IS NULL"
                 ))
+                db.session.commit()
+            if 'candidate' in insp.get_table_names():
+                cols = {c['name'] for c in insp.get_columns('candidate')}
+                candidate_migrations = {
+                    'dob': "ALTER TABLE candidate ADD dob NVARCHAR(30) NULL",
+                    'passport_number': "ALTER TABLE candidate ADD passport_number NVARCHAR(50) NULL",
+                    'nationality': "ALTER TABLE candidate ADD nationality NVARCHAR(100) NULL",
+                    'place_of_birth': "ALTER TABLE candidate ADD place_of_birth NVARCHAR(200) NULL",
+                    'passport_full_name': "ALTER TABLE candidate ADD passport_full_name NVARCHAR(200) NULL",
+                    'passport_dob': "ALTER TABLE candidate ADD passport_dob NVARCHAR(30) NULL",
+                    'passport_gender': "ALTER TABLE candidate ADD passport_gender NVARCHAR(20) NULL",
+                    'passport_nationality': "ALTER TABLE candidate ADD passport_nationality NVARCHAR(100) NULL",
+                    'passport_issue_date': "ALTER TABLE candidate ADD passport_issue_date NVARCHAR(30) NULL",
+                    'passport_expiry_date': "ALTER TABLE candidate ADD passport_expiry_date NVARCHAR(30) NULL",
+                    'address_line_1': "ALTER TABLE candidate ADD address_line_1 NVARCHAR(300) NULL",
+                    'address_line_2': "ALTER TABLE candidate ADD address_line_2 NVARCHAR(300) NULL",
+                    'city': "ALTER TABLE candidate ADD city NVARCHAR(100) NULL",
+                    'state': "ALTER TABLE candidate ADD state NVARCHAR(100) NULL",
+                    'postal_code': "ALTER TABLE candidate ADD postal_code NVARCHAR(30) NULL",
+                    'country': "ALTER TABLE candidate ADD country NVARCHAR(100) NULL",
+                    'passport_scan_date': "ALTER TABLE candidate ADD passport_scan_date NVARCHAR(50) NULL",
+                    'passport_front_image': "ALTER TABLE candidate ADD passport_front_image NVARCHAR(500) NULL",
+                    'passport_last_image': "ALTER TABLE candidate ADD passport_last_image NVARCHAR(500) NULL",
+                }
+                for col_name, sql_stmt in candidate_migrations.items():
+                    if col_name not in cols:
+                        db.session.execute(text(sql_stmt))
+                db.session.commit()
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -470,14 +525,20 @@ def create_app():
     from apps.exams.branch_exams import branch_exams_bp
     from apps.exams.sessions import sessions_bp
     from apps.exams.candidates import candidates_bp
+    from apps.exams.teams import teams_bp
     from apps.exams.audit_logs import audit_logs_bp
+
+    # --- Employees module ---
+    from apps.employees.routes import employees_bp
 
     app.register_blueprint(exams_dashboard_bp)
     app.register_blueprint(exam_types_bp)
     app.register_blueprint(branch_exams_bp)
     app.register_blueprint(sessions_bp)
     app.register_blueprint(candidates_bp)
+    app.register_blueprint(teams_bp)
     app.register_blueprint(audit_logs_bp)
+    app.register_blueprint(employees_bp)
 
     # Mobile/API layer, modelled after the WorkLog API architecture.
     from api import api_bp

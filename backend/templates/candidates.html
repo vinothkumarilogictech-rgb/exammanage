@@ -38,56 +38,60 @@
         <h2>Candidates &amp; Exam Attempts</h2>
         <a href="{{ url_for('exams_dashboard.dashboard') }}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Dashboard</a>
     </div>
-    <div style="background:linear-gradient(135deg,#f5e8ff 0%,#fce4ec 50%,#f3e8ff 100%);padding:24px;border-radius:16px;">
-        <form method="GET" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-            <input type="text" name="q" value="{{ search }}" placeholder="Search name / register no." style="padding:10px 18px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;width:200px;outline:none;background:#fff;color:#374151;">
-            <select name="status" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+    <div style="background:#ffffff;padding:20px;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.02);margin-bottom:24px;">
+        <form method="GET" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <input type="text" name="q" value="{{ search }}" placeholder="Search name / register no." style="padding:9px 16px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:0.85rem;min-width:200px;outline:none;background:#fff;color:#0f172a;">
+            <select name="status" style="padding:9px 14px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#334155;">
                 <option value="">All Statuses</option>
                 {% for s in statuses %}
                 <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
-            <select name="result" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+            <select name="result" style="padding:9px 14px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#334155;">
                 <option value="">All Results</option>
                 {% for r in results %}
                 <option value="{{ r }}" {% if result_filter == r %}selected{% endif %}>{{ r }}</option>
                 {% endfor %}
             </select>
-            <select name="test_type" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+            <select name="test_type" style="padding:9px 14px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#334155;">
                 <option value="">All Exam Types</option>
                 {% for t in test_types %}
                 <option value="{{ t }}" {% if test_type_filter == t %}selected{% endif %}>{{ t }}</option>
                 {% endfor %}
             </select>
-            <select name="branch_id" style="padding:10px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
+            <select name="branch_id" style="padding:9px 14px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#334155;">
                 <option value="">All Branches</option>
                 {% for b in branches %}
                 <option value="{{ b.id }}" {% if branch_filter == b.id|string %}selected{% endif %}>{{ b.name }}</option>
                 {% endfor %}
             </select>
-            <input type="date" name="exam_date" value="{{ exam_date_filter }}" style="padding:9px 14px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
-            <input type="number" min="1" name="attempt" value="{{ attempt_filter }}" placeholder="Attempt #" style="padding:9px 14px;width:100px;border-radius:30px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#374151;">
-            <button type="submit" style="padding:10px 22px;border-radius:30px;background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;">Filter</button>
+            <input type="date" name="exam_date" value="{{ exam_date_filter }}" style="padding:8px 14px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#334155;">
+            <input type="number" min="1" name="attempt" value="{{ attempt_filter }}" placeholder="Attempt #" style="padding:8px 14px;width:95px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:0.85rem;outline:none;background:#fff;color:#334155;">
+            <button type="submit" style="padding:9px 20px;border-radius:20px;background:#f1f5f9;color:#334155;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;">
+                <i class="fas fa-filter"></i> Filter
+            </button>
             {% if search or status_filter or result_filter or test_type_filter or branch_filter or exam_date_filter or attempt_filter %}
-            <a href="{{ url_for('candidates.list_candidates') }}" style="padding:10px 22px;border-radius:30px;background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1;font-weight:700;cursor:pointer;font-size:0.85rem;text-decoration:none;">Clear</a>
+            <a href="{{ url_for('candidates.list_candidates') }}" style="padding:9px 18px;border-radius:20px;background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0;font-weight:700;cursor:pointer;font-size:0.85rem;text-decoration:none;">Clear</a>
             {% endif %}
-            <button type="button" onclick="showForm()" style="padding:10px 24px;border-radius:30px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.85rem;box-shadow:0 4px 10px rgba(124,58,237,0.25);"><i class="fas fa-plus"></i> Add Candidate</button>
+            <button type="button" onclick="showForm()" style="padding:9px 22px;border-radius:20px;background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.85rem;box-shadow:0 2px 8px rgba(79,70,229,0.3);">
+                <i class="fas fa-plus"></i> Add Candidate
+            </button>
         </form>
-        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;">
+        <div class="table-responsive" style="background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
             <table style="width:100%;border-collapse:collapse;">
                 <thead>
-                    <tr style="background:linear-gradient(135deg,#f3e8ff,#fde8f0);">
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Name</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Register No.</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Branch</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Exam Type</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Session</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Attempt</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Scheduled</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Actual</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Status</th>
-                        <th style="padding:14px 16px;text-align:left;color:#7c3aed;font-weight:700;">Result</th>
-                        <th style="padding:14px 16px;text-align:center;color:#7c3aed;font-weight:700;">Action</th>
+                    <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Name</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Register No.</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Branch</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Exam Type</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Session</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Attempt</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Scheduled</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Actual</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Status</th>
+                        <th style="padding:12px 16px;text-align:left;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Result</th>
+                        <th style="padding:12px 16px;text-align:center;color:#475569;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -139,47 +143,253 @@
     </div>
 </div>
 
-<div id="candidateForm" class="panel hidden-view">
-    <div class="module-header"><h2>Add Candidate</h2></div>
-    <form action="{{ url_for('candidates.save_candidate') }}" method="POST" class="form-grid">
+</div>
+
+<div id="candidateForm" class="panel hidden-view" style="max-width:960px;margin:0 auto;background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,0.06);padding:24px;">
+    <div class="module-header" style="border-bottom:1px solid #f1f5f9;padding-bottom:16px;margin-bottom:20px;">
+        <h2 style="margin:0;color:#1e1b4b;font-size:1.4rem;"><i class="fas fa-user-plus" style="color:#7c3aed;"></i> Add New Candidate</h2>
+        <button type="button" class="btn-secondary" onclick="showList()"><i class="fas fa-times"></i> Close</button>
+    </div>
+
+    <!-- AI PASSPORT SCANNER SECTION -->
+    <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:24px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:38px;height:38px;background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;box-shadow:0 2px 8px rgba(79,70,229,0.3);">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:1.05rem;color:#0f172a;font-weight:800;">AI Passport Scanner (Groq Vision)</h3>
+                    <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">Capture or upload Front (Biodata) &amp; Last (Address) pages to auto-fill details</p>
+                </div>
+            </div>
+            <span style="background:#eef2ff;color:#4338ca;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;border:1px solid #c7d2fe;">
+                <i class="fas fa-wand-magic-sparkles"></i> Groq Multimodal Vision (Qwen 3.8 27B)
+            </span>
+        </div>
+
+        <!-- 2 Capture Boxes: Front Page & Last Page -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px;">
+            <!-- Front Page Box -->
+            <div style="background:#fff;border:2px dashed #c4b5fd;border-radius:14px;padding:16px;text-align:center;position:relative;" id="frontDropZone">
+                <div style="font-weight:700;font-size:0.88rem;color:#374151;margin-bottom:8px;">
+                    <i class="fas fa-id-card" style="color:#7c3aed;"></i> Passport Front Page (Biodata)
+                </div>
+                <div id="frontPreviewContainer" style="display:none;margin-bottom:10px;">
+                    <img id="frontPreviewImg" src="" alt="Front Preview" style="max-height:160px;max-width:100%;border-radius:8px;object-fit:contain;border:1px solid #e2e8f0;">
+                    <div style="margin-top:6px;">
+                        <button type="button" onclick="retakeScannerImage('front')" style="padding:4px 12px;font-size:0.75rem;border-radius:6px;background:#fee2e2;color:#991b1b;border:none;cursor:pointer;font-weight:700;">
+                            <i class="fas fa-redo"></i> Retake / Change
+                        </button>
+                    </div>
+                </div>
+                <div id="frontPrompt">
+                    <p style="font-size:0.78rem;color:#64748b;margin:6px 0 12px;">Photo, Name, Passport No, DOB, Issue &amp; Expiry Dates</p>
+                    <input type="file" id="scanner_front_file" accept="image/*" capture="environment" style="display:none;" onchange="handleScannerFileSelect('front')">
+                    <button type="button" onclick="document.getElementById('scanner_front_file').click()" style="padding:8px 18px;border-radius:20px;background:#7c3aed;color:#fff;border:none;font-weight:700;font-size:0.82rem;cursor:pointer;">
+                        <i class="fas fa-camera"></i> Capture / Upload Front
+                    </button>
+                </div>
+            </div>
+
+            <!-- Last Page Box -->
+            <div style="background:#fff;border:2px dashed #c4b5fd;border-radius:14px;padding:16px;text-align:center;position:relative;" id="lastDropZone">
+                <div style="font-weight:700;font-size:0.88rem;color:#374151;margin-bottom:8px;">
+                    <i class="fas fa-home" style="color:#059669;"></i> Passport Last Page (Address)
+                </div>
+                <div id="lastPreviewContainer" style="display:none;margin-bottom:10px;">
+                    <img id="lastPreviewImg" src="" alt="Last Preview" style="max-height:160px;max-width:100%;border-radius:8px;object-fit:contain;border:1px solid #e2e8f0;">
+                    <div style="margin-top:6px;">
+                        <button type="button" onclick="retakeScannerImage('last')" style="padding:4px 12px;font-size:0.75rem;border-radius:6px;background:#fee2e2;color:#991b1b;border:none;cursor:pointer;font-weight:700;">
+                            <i class="fas fa-redo"></i> Retake / Change
+                        </button>
+                    </div>
+                </div>
+                <div id="lastPrompt">
+                    <p style="font-size:0.78rem;color:#64748b;margin:6px 0 12px;">Parents name, Full residential address, PIN / Postal code</p>
+                    <input type="file" id="scanner_last_file" accept="image/*" capture="environment" style="display:none;" onchange="handleScannerFileSelect('last')">
+                    <button type="button" onclick="document.getElementById('scanner_last_file').click()" style="padding:8px 18px;border-radius:20px;background:#059669;color:#fff;border:none;font-weight:700;font-size:0.82rem;cursor:pointer;">
+                        <i class="fas fa-camera"></i> Capture / Upload Last
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan CTA & Status message -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <button type="button" id="btnScanGroq" onclick="scanPassportWithGroq()" style="padding:10px 24px;border-radius:25px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;font-weight:800;font-size:0.88rem;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,0.25);display:inline-flex;align-items:center;gap:8px;">
+                <i class="fas fa-wand-magic-sparkles"></i> <span>Scan Passport &amp; Extract Details</span>
+            </button>
+            <div id="scanStatusBox" style="display:none;font-size:0.82rem;font-weight:600;padding:8px 16px;border-radius:20px;"></div>
+        </div>
+    </div>
+
+    <!-- REGISTRATION FORM -->
+    <form action="{{ url_for('candidates.save_candidate') }}" method="POST" id="mainCandidateForm">
         <input type="hidden" name="id" id="c_id">
         <input type="hidden" name="next" value="{{ url_for('candidates.list_candidates') }}">
-        <div class="form-row"><label>Name</label><input type="text" name="name" id="c_name" required></div>
-        <div class="form-row"><label>Register Number</label><input type="text" name="register_number" id="c_register_number" required></div>
-        <div class="form-row">
-            <label>Branch / Exam Center</label>
-            <select name="branch_id" id="c_branch_id" onchange="refreshExamTypeOptions(); refreshSessionOptions();" required>
-                <option value="">Select Branch</option>
-                {% for b in branches %}
-                <option value="{{ b.id }}">{{ b.name }}</option>
-                {% endfor %}
-            </select>
+        <input type="hidden" name="passport_front_image" id="c_passport_front_image">
+        <input type="hidden" name="passport_last_image" id="c_passport_last_image">
+
+        <!-- SECTION 1: PASSPORT DETAILS -->
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:20px;">
+            <h4 style="margin:0 0 14px;color:#1e293b;font-size:0.95rem;font-weight:800;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-passport" style="color:#2563eb;"></i> Passport Information (Auto-extracted or Manual)
+            </h4>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Full Name on Passport</label>
+                    <input type="text" name="passport_full_name" id="c_passport_full_name" placeholder="e.g. JOHN DOE" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Passport Number</label>
+                    <input type="text" name="passport_number" id="c_passport_number" placeholder="e.g. R3467069" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;text-transform:uppercase;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Date of Birth</label>
+                    <input type="date" name="passport_dob" id="c_passport_dob" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Gender</label>
+                    <select name="passport_gender" id="c_passport_gender" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Nationality</label>
+                    <input type="text" name="passport_nationality" id="c_passport_nationality" placeholder="e.g. Indian" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Date of Issue</label>
+                    <input type="date" name="passport_issue_date" id="c_passport_issue_date" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Date of Expiry</label>
+                    <input type="date" name="passport_expiry_date" id="c_passport_expiry_date" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Passport Scan Timestamp (IST)</label>
+                    <input type="text" name="passport_scan_date" id="c_passport_scan_date" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;background:#f1f5f9;border-radius:8px;font-size:0.85rem;color:#64748b;box-sizing:border-box;">
+                </div>
+            </div>
         </div>
-        <div class="form-row">
-            <label>Exam Type</label>
-            <select name="exam_type_id" id="c_exam_type_id" onchange="refreshSessionOptions()" required>
-                <option value="">Select Branch first</option>
-            </select>
+
+        <!-- SECTION 2: RESIDENTIAL ADDRESS -->
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:20px;">
+            <h4 style="margin:0 0 14px;color:#1e293b;font-size:0.95rem;font-weight:800;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-map-marker-alt" style="color:#059669;"></i> Residential Address (From Last Page)
+            </h4>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+                <div style="grid-column:1/-1;">
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Address Line 1</label>
+                    <input type="text" name="address_line_1" id="c_address_line_1" placeholder="Door No., Street, Area" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Address Line 2</label>
+                    <input type="text" name="address_line_2" id="c_address_line_2" placeholder="Locality, Landmark" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">City / District</label>
+                    <input type="text" name="city" id="c_city" placeholder="City" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">State</label>
+                    <input type="text" name="state" id="c_state" placeholder="State" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">PIN / Postal Code</label>
+                    <input type="text" name="postal_code" id="c_postal_code" placeholder="PIN Code" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Country</label>
+                    <input type="text" name="country" id="c_country" placeholder="Country" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+            </div>
         </div>
-        <div class="form-row">
-            <label>Session</label>
-            <select name="session_id" id="c_session_id" onchange="toggleExamDateField()">
-                <option value="">Select Branch and Exam Type first</option>
-            </select>
+
+        <!-- SECTION 3: CANDIDATE & EXAM REGISTRATION (MANUAL FIELDS PRESERVED) -->
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:20px;">
+            <h4 style="margin:0 0 14px;color:#1e293b;font-size:0.95rem;font-weight:800;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-user-check" style="color:#7c3aed;"></i> Candidate &amp; Exam Schedule Details (Manual Fields)
+            </h4>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Candidate Name *</label>
+                    <input type="text" name="name" id="c_name" required placeholder="Enter candidate name" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;font-weight:700;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Register Number *</label>
+                    <input type="text" name="register_number" id="c_register_number" required placeholder="e.g. 910022105036" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Email</label>
+                    <input type="email" name="email" id="c_email" placeholder="candidate@example.com" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Phone</label>
+                    <input type="text" name="phone" id="c_phone" placeholder="+91 9876543210" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Branch / Exam Center *</label>
+                    <select name="branch_id" id="c_branch_id" onchange="refreshExamTypeOptions(); refreshSessionOptions();" required style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                        <option value="">Select Branch</option>
+                        {% for b in branches %}
+                        <option value="{{ b.id }}">{{ b.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Exam Type *</label>
+                    <select name="exam_type_id" id="c_exam_type_id" onchange="refreshSessionOptions()" required style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                        <option value="">Select Branch first</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Select Team (Optional)</label>
+                    <select name="team_id" id="c_team_id" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                        <option value="">No Team Assigned</option>
+                        {% for tm in teams %}
+                        <option value="{{ tm.id }}">{{ tm.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Session</label>
+                    <select name="session_id" id="c_session_id" onchange="toggleExamDateField()" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                        <option value="">Select Branch and Exam Type first</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Exam Date *</label>
+                    <input type="date" name="exam_date" id="c_exam_date" required style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Remarks / Reason Note (Optional)</label>
+                    <textarea name="remarks" id="c_remarks" rows="2" placeholder="Optional candidate notes or remarks" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;"></textarea>
+                </div>
+            </div>
         </div>
-        <div class="form-row"><label>Exam Date</label><input type="date" name="exam_date" id="c_exam_date" required></div>
-        <div class="button-row">
-            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Candidate</button>
-            <button type="button" class="btn-secondary" onclick="showList()">Cancel</button>
+
+        <div class="button-row" style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px;">
+            <button type="button" class="btn-secondary" onclick="showList()" style="padding:10px 24px;border-radius:25px;font-size:0.9rem;">Cancel</button>
+            <button type="submit" class="btn-primary" style="padding:10px 28px;border-radius:25px;font-size:0.9rem;background:linear-gradient(135deg,#7c3aed,#9333ea);box-shadow:0 4px 12px rgba(124,58,237,0.3);">
+                <i class="fas fa-save"></i> Save Candidate
+            </button>
         </div>
     </form>
 </div>
 
-<div id="statusForm" class="panel hidden-view">
-    <div class="module-header"><h2>Update Exam Attempt Status</h2></div>
+<div id="statusForm" class="panel hidden-view" style="max-width:600px;margin:0 auto;background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,0.06);padding:24px;">
+    <div class="module-header" style="border-bottom:1px solid #f1f5f9;padding-bottom:14px;margin-bottom:18px;">
+        <h2 style="margin:0;color:#1e1b4b;font-size:1.3rem;">Update Exam Attempt Status</h2>
+        <button type="button" class="btn-secondary" onclick="showList()"><i class="fas fa-times"></i> Close</button>
+    </div>
     <form action="" method="POST" class="form-grid" id="statusFormEl">
         <input type="hidden" name="next" value="{{ url_for('candidates.list_candidates') }}">
-        <div class="form-row"><label>Candidate</label><input type="text" id="st_name" disabled></div>
+        <div class="form-row"><label>Candidate</label><input type="text" id="st_name" disabled style="background:#f1f5f9;font-weight:700;"></div>
         <div class="form-row">
             <label>Status</label>
             <select name="status" id="st_status" onchange="toggleStatusFields()" required>
@@ -208,8 +418,8 @@
             <label id="st_reason_label">Reason / Note (optional)</label>
             <textarea name="reason_note" id="st_note" rows="3"></textarea>
         </div>
-        <div class="button-row">
-            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Status</button>
+        <div class="button-row" style="margin-top:16px;">
+            <button type="submit" class="btn-primary" style="background:#7c3aed;"><i class="fas fa-save"></i> Save Status</button>
             <button type="button" class="btn-secondary" onclick="showList()">Cancel</button>
         </div>
     </form>
@@ -220,9 +430,9 @@
 <script id="sessionsData" type="application/json">{{ session_options|tojson }}</script>
 <script>
 var ATTEMPT_STATUS_URL_BASE = "{{ url_for('candidates.update_attempt_status', attempt_id=0) }}".replace(/0$/, '');
-var EXAM_TYPES = JSON.parse(document.getElementById('examTypesData').textContent || '[]'); // [{id, name}, ...]
-var BRANCH_EXAM_MAP = JSON.parse(document.getElementById('branchExamMapData').textContent || '[]'); // [{branch_id, exam_type_id}, ...]
-var SESSIONS = JSON.parse(document.getElementById('sessionsData').textContent || '[]'); // [{id, branch_id, exam_type_id, exam_date, label}, ...]
+var EXAM_TYPES = JSON.parse(document.getElementById('examTypesData').textContent || '[]');
+var BRANCH_EXAM_MAP = JSON.parse(document.getElementById('branchExamMapData').textContent || '[]');
+var SESSIONS = JSON.parse(document.getElementById('sessionsData').textContent || '[]');
 
 function hideAllPanels(){
     document.getElementById('listView').style.display = 'none';
@@ -230,8 +440,6 @@ function hideAllPanels(){
     document.getElementById('statusForm').style.display = 'none';
 }
 
-// Rebuilds the Exam Type dropdown to only the exam types mapped (Branch <->
-// Exam Mapping) to whichever branch is currently selected.
 function refreshExamTypeOptions(selectedExamTypeId){
     var branchId = document.getElementById('c_branch_id').value;
     var select = document.getElementById('c_exam_type_id');
@@ -263,10 +471,6 @@ function refreshExamTypeOptions(selectedExamTypeId){
     });
 }
 
-// Rebuilds the Session dropdown to only sessions matching the currently
-// selected Branch + Exam Type. Picking "No specific session" leaves the
-// Exam Date field free for manual entry (previous behaviour); picking an
-// actual session locks Exam Date to that session's date.
 function refreshSessionOptions(selectedSessionId){
     var branchId = document.getElementById('c_branch_id').value;
     var examTypeId = document.getElementById('c_exam_type_id').value;
@@ -294,8 +498,6 @@ function refreshSessionOptions(selectedSessionId){
     toggleExamDateField();
 }
 
-// Keeps Exam Date in sync with whichever session is picked (locked/read-only
-// while a real session is selected), or frees it up for manual entry.
 function toggleExamDateField(){
     var sessionId = document.getElementById('c_session_id').value;
     var dateInput = document.getElementById('c_exam_date');
@@ -309,17 +511,26 @@ function toggleExamDateField(){
 }
 
 function showForm(){
+    document.getElementById('mainCandidateForm').reset();
     document.getElementById('c_id').value = '';
-    document.getElementById('c_name').value = '';
-    document.getElementById('c_register_number').value = '';
-    document.getElementById('c_branch_id').value = '';
-    document.getElementById('c_exam_date').value = '';
     document.getElementById('c_exam_date').readOnly = false;
+    // Set default exam date to today
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('c_exam_date').value = today;
+    
+    // Reset scanner UI
+    retakeScannerImage('front');
+    retakeScannerImage('last');
+    var statusBox = document.getElementById('scanStatusBox');
+    statusBox.style.display = 'none';
+
     refreshExamTypeOptions();
     refreshSessionOptions();
     hideAllPanels();
     document.getElementById('candidateForm').style.display = 'block';
+    window.scrollTo({top: 0, behavior: 'smooth'});
 }
+
 function showList(){
     hideAllPanels();
     document.getElementById('listView').style.display = 'block';
@@ -347,6 +558,142 @@ function showStatusForm(data){
     toggleStatusFields();
     hideAllPanels();
     document.getElementById('statusForm').style.display = 'block';
+}
+
+// ============================================================
+// AI PASSPORT SCANNER FRONTEND LOGIC (GROQ VISION)
+// ============================================================
+function handleScannerFileSelect(type) {
+    var fileInput = document.getElementById(type === 'front' ? 'scanner_front_file' : 'scanner_last_file');
+    if (!fileInput.files || !fileInput.files[0]) return;
+    var file = fileInput.files[0];
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var previewImg = document.getElementById(type === 'front' ? 'frontPreviewImg' : 'lastPreviewImg');
+        var previewContainer = document.getElementById(type === 'front' ? 'frontPreviewContainer' : 'lastPreviewContainer');
+        var prompt = document.getElementById(type === 'front' ? 'frontPrompt' : 'lastPrompt');
+
+        previewImg.src = e.target.result;
+        previewContainer.style.display = 'block';
+        prompt.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+}
+
+function retakeScannerImage(type) {
+    var fileInput = document.getElementById(type === 'front' ? 'scanner_front_file' : 'scanner_last_file');
+    var previewContainer = document.getElementById(type === 'front' ? 'frontPreviewContainer' : 'lastPreviewContainer');
+    var prompt = document.getElementById(type === 'front' ? 'frontPrompt' : 'lastPrompt');
+    var previewImg = document.getElementById(type === 'front' ? 'frontPreviewImg' : 'lastPreviewImg');
+
+    fileInput.value = '';
+    previewImg.src = '';
+    previewContainer.style.display = 'none';
+    prompt.style.display = 'block';
+}
+
+function scanPassportWithGroq() {
+    var frontFile = document.getElementById('scanner_front_file').files[0];
+    var lastFile = document.getElementById('scanner_last_file').files[0];
+
+    if (!frontFile && !lastFile) {
+        alert('Please capture or upload at least the Front Page or Last Page of the passport.');
+        return;
+    }
+
+    var btn = document.getElementById('btnScanGroq');
+    var statusBox = document.getElementById('scanStatusBox');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Extracting details via Groq AI...</span>';
+    statusBox.style.display = 'block';
+    statusBox.style.background = '#eef2ff';
+    statusBox.style.color = '#3730a3';
+    statusBox.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Uploading passport pages and analyzing with Groq Vision model...';
+
+    var formData = new FormData();
+    if (frontFile) formData.append('front_page', frontFile);
+    if (lastFile) formData.append('last_page', lastFile);
+
+    fetch("{{ url_for('candidates.scan_passport') }}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(res) {
+        return res.json().then(function(data) {
+            return { status: res.status, body: data };
+        });
+    })
+    .then(function(response) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> <span>Scan Passport &amp; Extract Details</span>';
+
+        var resData = response.body;
+        if (resData.success) {
+            var p = resData.data || {};
+            // Populate Passport Details
+            if (p.passport_full_name) {
+                document.getElementById('c_passport_full_name').value = p.passport_full_name;
+                var currentName = document.getElementById('c_name').value.trim();
+                if (!currentName) {
+                    document.getElementById('c_name').value = p.passport_full_name;
+                }
+            }
+            if (p.passport_number) document.getElementById('c_passport_number').value = p.passport_number;
+            if (p.passport_dob) document.getElementById('c_passport_dob').value = p.passport_dob;
+            if (p.passport_gender) {
+                var g = p.passport_gender.toLowerCase();
+                if (g.startsWith('m')) document.getElementById('c_passport_gender').value = 'Male';
+                else if (g.startsWith('f')) document.getElementById('c_passport_gender').value = 'Female';
+                else document.getElementById('c_passport_gender').value = 'Other';
+            }
+            if (p.passport_nationality) document.getElementById('c_passport_nationality').value = p.passport_nationality;
+            if (p.passport_issue_date) document.getElementById('c_passport_issue_date').value = p.passport_issue_date;
+            if (p.passport_expiry_date) document.getElementById('c_passport_expiry_date').value = p.passport_expiry_date;
+            if (p.passport_scan_date) document.getElementById('c_passport_scan_date').value = p.passport_scan_date;
+
+            // Populate Address Details
+            if (p.address_line_1) document.getElementById('c_address_line_1').value = p.address_line_1;
+            if (p.address_line_2) document.getElementById('c_address_line_2').value = p.address_line_2;
+            if (p.city) document.getElementById('c_city').value = p.city;
+            if (p.state) document.getElementById('c_state').value = p.state;
+            if (p.postal_code) document.getElementById('c_postal_code').value = p.postal_code;
+            if (p.country) document.getElementById('c_country').value = p.country;
+
+            // Save image path references
+            if (p.passport_front_image) document.getElementById('c_passport_front_image').value = p.passport_front_image;
+            if (p.passport_last_image) document.getElementById('c_passport_last_image').value = p.passport_last_image;
+
+            statusBox.style.background = '#f0fdf4';
+            statusBox.style.color = '#15803d';
+            statusBox.style.border = '1px solid #86efac';
+            statusBox.innerHTML = '<i class="fas fa-check-circle"></i> Passport data extracted successfully! Please review fields below.';
+        } else if (resData.error_code === 'GROQ_KEY_NOT_CONFIGURED') {
+            // Safe fallback if Groq API key is not yet set
+            var p = resData.data || {};
+            if (p.passport_scan_date) document.getElementById('c_passport_scan_date').value = p.passport_scan_date;
+            if (p.passport_front_image) document.getElementById('c_passport_front_image').value = p.passport_front_image;
+            if (p.passport_last_image) document.getElementById('c_passport_last_image').value = p.passport_last_image;
+
+            statusBox.style.background = '#fffbeb';
+            statusBox.style.color = '#b45309';
+            statusBox.style.border = '1px solid #fde68a';
+            statusBox.innerHTML = '<i class="fas fa-info-circle"></i> Passport images saved securely. Groq API key is not configured in .env. You can enter details manually below.';
+        } else {
+            statusBox.style.background = '#fef2f2';
+            statusBox.style.color = '#b91c1c';
+            statusBox.style.border = '1px solid #fecaca';
+            statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + (resData.message || 'Failed to scan passport. You can enter details manually.');
+        }
+    })
+    .catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> <span>Scan Passport &amp; Extract Details</span>';
+        statusBox.style.background = '#fef2f2';
+        statusBox.style.color = '#b91c1c';
+        statusBox.style.border = '1px solid #fecaca';
+        statusBox.innerHTML = '<i class="fas fa-times-circle"></i> Network error: ' + err.message;
+    });
 }
 </script>
 {% endblock %}

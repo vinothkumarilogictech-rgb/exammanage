@@ -1,7 +1,8 @@
+import os
 from datetime import date
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from apps.models import (
-    db, Candidate, ExamAttempt, ExamSession, SessionCandidate, Branch, ExamType, BranchExam
+    db, Candidate, ExamAttempt, ExamSession, SessionCandidate, Branch, ExamType, BranchExam, ExamTeam
 )
 from apps.exams.audit import log_action
 
@@ -84,7 +85,12 @@ def list_candidates():
 
     if search:
         like = f'%{search}%'
-        query = query.filter(db.or_(Candidate.name.ilike(like), Candidate.register_number.ilike(like)))
+        query = query.filter(db.or_(
+            Candidate.name.ilike(like),
+            Candidate.register_number.ilike(like),
+            Candidate.passport_number.ilike(like),
+            Candidate.passport_full_name.ilike(like)
+        ))
     if status_filter == 'Rescheduled':
         query = query.filter(ExamAttempt.original_scheduled_date != ExamAttempt.scheduled_date)
     elif status_filter:
@@ -115,6 +121,7 @@ def list_candidates():
 
     branches, exam_type_options, branch_exam_map = _branches_and_exam_types()
     session_options = _exam_session_options()
+    teams = ExamTeam.query.filter_by(status='Active').order_by(ExamTeam.name.asc()).all()
 
     return render_template(
         'candidates.html',
@@ -133,6 +140,7 @@ def list_candidates():
         exam_type_options=exam_type_options,
         branch_exam_map=branch_exam_map,
         session_options=session_options,
+        teams=teams,
     )
 
 
@@ -147,6 +155,19 @@ def _validate_branch_exam(branch_id, exam_type_id):
     return branch, exam_type, None
 
 
+@candidates_bp.route('/scan-passport', methods=['POST'])
+def scan_passport():
+    from apps.exams.passport_service import extract_passport_data_with_groq
+    front_file = request.files.get('front_page') or request.files.get('front_image')
+    last_file = request.files.get('last_page') or request.files.get('last_image')
+    if not front_file and not last_file:
+        return jsonify({'success': False, 'message': 'Please upload at least one passport page (front or last).'}), 400
+
+    upload_folder = os.path.join(current_app.root_path, '..', 'static', 'uploads', 'passports')
+    result = extract_passport_data_with_groq(front_file, last_file, upload_folder=upload_folder)
+    return jsonify(result), (200 if result.get('success') or result.get('error_code') == 'GROQ_KEY_NOT_CONFIGURED' else 422)
+
+
 @candidates_bp.route('/save', methods=['POST'])
 def save_candidate():
     """Add Candidate (creates the Candidate master + its first Attempt) or
@@ -158,6 +179,30 @@ def save_candidate():
     candidate_id = request.form.get('id')
     name = (request.form.get('name') or '').strip()
     register_number = (request.form.get('register_number') or '').strip()
+    email = (request.form.get('email') or '').strip() or None
+    phone = (request.form.get('phone') or '').strip() or None
+    team_id_raw = (request.form.get('team_id') or '').strip()
+    team_id = int(team_id_raw) if team_id_raw.isdigit() else None
+    reason_note = (request.form.get('remarks') or request.form.get('reason_note') or '').strip() or None
+
+    # Passport & Address fields
+    passport_number = (request.form.get('passport_number') or '').strip() or None
+    passport_full_name = (request.form.get('passport_full_name') or '').strip() or None
+    passport_dob = (request.form.get('passport_dob') or request.form.get('dob') or '').strip() or None
+    passport_gender = (request.form.get('passport_gender') or '').strip() or None
+    passport_nationality = (request.form.get('passport_nationality') or request.form.get('nationality') or '').strip() or None
+    passport_issue_date = (request.form.get('passport_issue_date') or '').strip() or None
+    passport_expiry_date = (request.form.get('passport_expiry_date') or '').strip() or None
+    address_line_1 = (request.form.get('address_line_1') or '').strip() or None
+    address_line_2 = (request.form.get('address_line_2') or '').strip() or None
+    city = (request.form.get('city') or '').strip() or None
+    state = (request.form.get('state') or '').strip() or None
+    postal_code = (request.form.get('postal_code') or '').strip() or None
+    country = (request.form.get('country') or '').strip() or None
+    passport_scan_date = (request.form.get('passport_scan_date') or '').strip() or None
+    passport_front_image = (request.form.get('passport_front_image') or '').strip() or None
+    passport_last_image = (request.form.get('passport_last_image') or '').strip() or None
+
     branch_id = (request.form.get('branch_id') or '').strip()
     exam_type_id = (request.form.get('exam_type_id') or '').strip()
     exam_date = (request.form.get('exam_date') or '').strip()
@@ -175,6 +220,33 @@ def save_candidate():
         candidate = Candidate.query.get_or_404(int(candidate_id))
         candidate.name = name
         candidate.register_number = register_number
+        candidate.email = email
+        candidate.phone = phone
+        candidate.team_id = team_id
+        if reason_note:
+            candidate.reason_note = reason_note
+        candidate.passport_number = passport_number
+        candidate.passport_full_name = passport_full_name
+        candidate.passport_dob = passport_dob
+        candidate.dob = passport_dob
+        candidate.passport_gender = passport_gender
+        candidate.passport_nationality = passport_nationality
+        candidate.nationality = passport_nationality
+        candidate.passport_issue_date = passport_issue_date
+        candidate.passport_expiry_date = passport_expiry_date
+        candidate.address_line_1 = address_line_1
+        candidate.address_line_2 = address_line_2
+        candidate.city = city
+        candidate.state = state
+        candidate.postal_code = postal_code
+        candidate.country = country
+        if passport_scan_date:
+            candidate.passport_scan_date = passport_scan_date
+        if passport_front_image:
+            candidate.passport_front_image = passport_front_image
+        if passport_last_image:
+            candidate.passport_last_image = passport_last_image
+
         db.session.commit()
         flash('Candidate profile updated.', 'success')
         return redirect(next_url)
@@ -192,10 +264,6 @@ def save_candidate():
         flash(error, 'error')
         return redirect(next_url)
 
-    # Optional: candidate booked directly into a specific Exam Session. If
-    # chosen, the session's own date is the source of truth for exam_date
-    # (keeps the attempt and the session in sync) and a SessionCandidate
-    # link is created so the session's seat count reflects this booking.
     selected_session = None
     if session_id:
         selected_session = ExamSession.query.get(int(session_id))
@@ -218,13 +286,36 @@ def save_candidate():
 
     candidate = Candidate(
         name=name,
+        email=email,
+        phone=phone,
         register_number=register_number,
         branch_id=branch.id,
         exam_type_id=exam_type.id,
+        team_id=team_id,
         test_type=exam_type.name,
         exam_date=exam_date,
         status='Scheduled',
         original_exam_date=exam_date,
+        reason_note=reason_note,
+        # Passport details
+        dob=passport_dob,
+        passport_number=passport_number,
+        nationality=passport_nationality,
+        passport_full_name=passport_full_name,
+        passport_dob=passport_dob,
+        passport_gender=passport_gender,
+        passport_nationality=passport_nationality,
+        passport_issue_date=passport_issue_date,
+        passport_expiry_date=passport_expiry_date,
+        address_line_1=address_line_1,
+        address_line_2=address_line_2,
+        city=city,
+        state=state,
+        postal_code=postal_code,
+        country=country,
+        passport_scan_date=passport_scan_date,
+        passport_front_image=passport_front_image,
+        passport_last_image=passport_last_image,
     )
     db.session.add(candidate)
     db.session.flush()
