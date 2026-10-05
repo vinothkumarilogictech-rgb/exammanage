@@ -1,277 +1,12 @@
 import os
-import sqlite3
-from flask import Flask, request
+from flask import Flask, request, make_response
 from apps.models import db
+from apps.migrations import run_additive_migrations
 from flask_login import LoginManager
 from urllib.parse import quote_plus
 
 login_manager = LoginManager()
 
-
-def ensure_bank_columns(app):
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.execute("PRAGMA table_info(bank)")
-        columns = {row[1] for row in cursor.fetchall()}
-
-        migrations = {
-            "address": "VARCHAR(300)",
-            "date": "TEXT",
-            "customer_name": "VARCHAR(150)",
-            "invoice_number": "VARCHAR(100)",
-            "amount": "FLOAT",
-            "payment_mode": "VARCHAR(50)",
-            "payment_reference": "VARCHAR(150)",
-            "transaction_type": "VARCHAR(20)",
-        }
-
-        for column_name, column_type in migrations.items():
-            if column_name not in columns:
-                conn.execute(f"ALTER TABLE bank ADD COLUMN {column_name} {column_type}")
-    finally:
-        conn.commit()
-        conn.close()
-
-
-def ensure_invoice_columns(app):
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.execute("PRAGMA table_info(invoice)")
-        columns = {row[1] for row in cursor.fetchall()}
-
-        if "invoice_type" not in columns:
-            conn.execute("ALTER TABLE invoice ADD COLUMN invoice_type VARCHAR(50) DEFAULT 'not_paid'")
-    finally:
-        conn.commit()
-        conn.close()
-
-
-def ensure_vendor_columns(app):
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.execute("PRAGMA table_info(vendor)")
-        columns = {row[1] for row in cursor.fetchall()}
-
-        if "address" not in columns:
-            conn.execute("ALTER TABLE vendor ADD COLUMN address VARCHAR(300)")
-    finally:
-        conn.commit()
-        conn.close()
-
-
-def ensure_customer_columns(app):
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.execute("PRAGMA table_info(customer)")
-        columns = {row[1] for row in cursor.fetchall()}
-
-        migrations = {
-            "address": "VARCHAR(300)",
-            "credit_limit": "FLOAT DEFAULT 0.0",
-            "outstanding_amount": "FLOAT DEFAULT 0.0",
-        }
-
-        for column_name, column_type in migrations.items():
-            if column_name not in columns:
-                conn.execute(f"ALTER TABLE customer ADD COLUMN {column_name} {column_type}")
-    finally:
-        conn.commit()
-        conn.close()
-
-
-def ensure_expense_columns(app):
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.execute("PRAGMA table_info(expense)")
-        columns = {row[1] for row in cursor.fetchall()}
-
-        migrations = {
-            "branch_id": "INTEGER",
-            "category_id": "INTEGER",
-            "payment_mode": "VARCHAR(50)",
-            "receipt_file": "VARCHAR(400)",
-            "status": "VARCHAR(20) DEFAULT 'Active'",
-            "created_at": "DATETIME",
-            "updated_at": "DATETIME",
-            "payment_status": "VARCHAR(20) DEFAULT 'Paid'",
-            "paid_amount": "FLOAT",
-            "payment_reference": "VARCHAR(100)",
-        }
-
-        for column_name, column_type in migrations.items():
-            if column_name not in columns:
-                conn.execute(f"ALTER TABLE expense ADD COLUMN {column_name} {column_type}")
-    finally:
-        conn.commit()
-        conn.close()
-
-
-def ensure_candidate_columns(app):
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.execute("PRAGMA table_info(candidate)")
-        columns = {row[1] for row in cursor.fetchall()}
-
-        migrations = {
-            "register_number": "VARCHAR(100)",
-            "test_type": "VARCHAR(100)",
-            "exam_date": "VARCHAR(20)",
-            "status": "VARCHAR(30) DEFAULT 'Registered'",
-            "original_exam_date": "VARCHAR(20)",
-            "rescheduled_date": "VARCHAR(20)",
-            "reason_note": "TEXT",
-            "branch_id": "INTEGER",
-            "exam_type_id": "INTEGER",
-            "team_id": "INTEGER",
-            "dob": "VARCHAR(30)",
-            "passport_number": "VARCHAR(50)",
-            "nationality": "VARCHAR(100)",
-            "place_of_birth": "VARCHAR(200)",
-            "passport_full_name": "VARCHAR(200)",
-            "passport_dob": "VARCHAR(30)",
-            "passport_gender": "VARCHAR(20)",
-            "passport_nationality": "VARCHAR(100)",
-            "passport_issue_date": "VARCHAR(30)",
-            "passport_expiry_date": "VARCHAR(30)",
-            "address_line_1": "VARCHAR(300)",
-            "address_line_2": "VARCHAR(300)",
-            "city": "VARCHAR(100)",
-            "state": "VARCHAR(100)",
-            "postal_code": "VARCHAR(30)",
-            "country": "VARCHAR(100)",
-            "passport_scan_date": "VARCHAR(50)",
-            "passport_front_image": "VARCHAR(500)",
-            "passport_last_image": "VARCHAR(500)",
-        }
-
-        for column_name, column_type in migrations.items():
-            if column_name not in columns:
-                conn.execute(f"ALTER TABLE candidate ADD COLUMN {column_name} {column_type}")
-    finally:
-        conn.commit()
-        conn.close()
-
-
-def ensure_exam_team_columns(app):
-    # Older databases were created before ExamTeam had branch_id /
-    # exam_type_id columns (teams used to be global, not per-branch).
-    # Without this, every /exams/teams/ and /exams/candidates/ query that
-    # touches the exam_team table 500s with "no such column".
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    try:
-        table_exists = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='exam_team'"
-        ).fetchone()
-        if not table_exists:
-            # Table doesn't exist yet at all — db.create_all() (which runs
-            # right after these migrations) will create it fresh with every
-            # current column, so there's nothing to alter here.
-            return
-
-        cursor = conn.execute("PRAGMA table_info(exam_team)")
-        columns = {row[1] for row in cursor.fetchall()}
-
-        migrations = {
-            "exam_type_id": "INTEGER",
-            "branch_id": "INTEGER",
-            "status": "VARCHAR(20) DEFAULT 'Active'",
-        }
-
-        for column_name, column_type in migrations.items():
-            if column_name not in columns:
-                conn.execute(f"ALTER TABLE exam_team ADD COLUMN {column_name} {column_type}")
-    finally:
-        conn.commit()
-        conn.close()
-
-
-
-def ensure_employee_columns(app):
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-    if not os.path.exists(db_path):
-        return
-    conn = sqlite3.connect(db_path)
-    try:
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(employee)").fetchall()}
-        if 'basic_salary' not in columns:
-            conn.execute("ALTER TABLE employee ADD COLUMN basic_salary FLOAT DEFAULT 0.0")
-        if 'photo_url' not in columns:
-            conn.execute("ALTER TABLE employee ADD COLUMN photo_url VARCHAR(300)")
-        ecols = {row[1] for row in conn.execute("PRAGMA table_info(expense)").fetchall()}
-        if 'employee_id' not in ecols:
-            conn.execute("ALTER TABLE expense ADD COLUMN employee_id INTEGER")
-        scols = {row[1] for row in conn.execute("PRAGMA table_info(setting)").fetchall()}
-        if 'admin_photo_url' not in scols:
-            conn.execute("ALTER TABLE setting ADD COLUMN admin_photo_url VARCHAR(300)")
-        conn.commit()
-    finally:
-        conn.close()
-
-def ensure_exam_attempt_columns(app):
-    db_path = os.path.join(app.root_path, '..', 'flask_erp.db')
-    db_path = os.path.abspath(db_path)
-
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.execute("PRAGMA table_info(exam_attempt)")
-        columns = {row[1] for row in cursor.fetchall()}
-
-        migrations = {
-            "session_id": "INTEGER",
-        }
-
-        for column_name, column_type in migrations.items():
-            if column_name not in columns:
-                conn.execute(f"ALTER TABLE exam_attempt ADD COLUMN {column_name} {column_type}")
-    finally:
-        conn.commit()
-        conn.close()
 
 
 def backfill_exam_attempts():
@@ -372,27 +107,53 @@ def create_app():
     # ------------------------------------------------------------------
     @app.before_request
     def handle_api_preflight():
-        if request.method == 'OPTIONS' and request.path.startswith('/api/'):
-            return ('', 204)
+        if request.method == 'OPTIONS':
+            resp = make_response('', 204)
+            origin = request.headers.get('Origin')
+            if origin:
+                resp.headers['Access-Control-Allow-Origin'] = origin
+                resp.headers['Access-Control-Allow-Credentials'] = 'true'
+                resp.headers['Vary'] = 'Origin'
+            else:
+                resp.headers['Access-Control-Allow-Origin'] = '*'
+
+            req_headers = request.headers.get('Access-Control-Request-Headers')
+            if req_headers:
+                resp.headers['Access-Control-Allow-Headers'] = req_headers
+            else:
+                resp.headers['Access-Control-Allow-Headers'] = (
+                    'Content-Type, Authorization, Accept, X-Requested-With, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
+                )
+
+            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+            resp.headers['Access-Control-Max-Age'] = '86400'
+            resp.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+            resp.headers['Access-Control-Allow-Private-Network'] = 'true'
+            return resp
 
     @app.after_request
     def add_api_headers(response):
         origin = request.headers.get('Origin')
         if origin:
             response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
             response.headers['Vary'] = 'Origin'
         else:
             response.headers.setdefault('Access-Control-Allow-Origin', '*')
-        response.headers['Access-Control-Allow-Headers'] = (
-            'Content-Type, Authorization, Accept, X-Requested-With'
-        )
+
+        req_headers = request.headers.get('Access-Control-Request-Headers')
+        if req_headers:
+            response.headers['Access-Control-Allow-Headers'] = req_headers
+        else:
+            response.headers.setdefault(
+                'Access-Control-Allow-Headers',
+                'Content-Type, Authorization, Accept, X-Requested-With, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
+            )
         response.headers['Access-Control-Allow-Methods'] = (
             'GET, POST, PUT, PATCH, DELETE, OPTIONS'
         )
         response.headers['Access-Control-Max-Age'] = '86400'
-        response.headers['Access-Control-Expose-Headers'] = 'Content-Type'
-        # Chrome may send this for requests from a local web app to a
-        # different local/LAN address. It is harmless for normal CORS.
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
         response.headers['Access-Control-Allow-Private-Network'] = 'true'
         return response
 
@@ -406,109 +167,15 @@ def create_app():
         except Exception:
             return None
 
-    ensure_bank_columns(app)
-    ensure_invoice_columns(app)
-    ensure_vendor_columns(app)
-    ensure_customer_columns(app)
-    ensure_expense_columns(app)
-    ensure_employee_columns(app)
-    ensure_candidate_columns(app)
-    ensure_exam_team_columns(app)
-    ensure_exam_attempt_columns(app)
-
-    # SQL Server deployments need explicit additive migrations because create_all
-    # does not alter existing tables.
+    # ------------------------------------------------------------------
+    # Safe additive database migrations:
+    # Automatically synchronizes database schema with current SQLAlchemy models.
+    # Runs against the actual configured db.engine (SQL Server, SQLite, etc.)
+    # BEFORE any application query, blueprint, or API request can execute.
+    # ------------------------------------------------------------------
     with app.app_context():
-        try:
-            from sqlalchemy import inspect, text
-            insp = inspect(db.engine)
-            if 'employee' in insp.get_table_names():
-                cols = {c['name'] for c in insp.get_columns('employee')}
-                if 'basic_salary' not in cols:
-                    db.session.execute(text("ALTER TABLE employee ADD basic_salary FLOAT NOT NULL CONSTRAINT DF_employee_basic_salary DEFAULT 0"))
-                if 'photo_url' not in cols:
-                    db.session.execute(text("ALTER TABLE employee ADD photo_url NVARCHAR(300) NULL"))
-            if 'setting' in insp.get_table_names():
-                cols = {c['name'] for c in insp.get_columns('setting')}
-                if 'admin_photo_url' not in cols:
-                    db.session.execute(text("ALTER TABLE setting ADD admin_photo_url NVARCHAR(300) NULL"))
-            if 'exam_team' in insp.get_table_names():
-                cols = {c['name'] for c in insp.get_columns('exam_team')}
-                if 'exam_type_id' not in cols:
-                    db.session.execute(text("ALTER TABLE exam_team ADD exam_type_id INT NULL"))
-                if 'branch_id' not in cols:
-                    db.session.execute(text("ALTER TABLE exam_team ADD branch_id INT NULL"))
-                if 'status' not in cols:
-                    db.session.execute(text("ALTER TABLE exam_team ADD status VARCHAR(20) NOT NULL CONSTRAINT DF_exam_team_status DEFAULT 'Active'"))
-                db.session.commit()
-            if 'expense' in insp.get_table_names():
-                cols = {c['name'] for c in insp.get_columns('expense')}
-                if 'employee_id' not in cols:
-                    db.session.execute(text("ALTER TABLE expense ADD employee_id INT NULL"))
-            if 'voucher_sale_history' in insp.get_table_names():
-                cols = {c['name'] for c in insp.get_columns('voucher_sale_history')}
-                if 'paid_amount' not in cols:
-                    db.session.execute(text(
-                        "ALTER TABLE voucher_sale_history ADD paid_amount FLOAT NOT NULL "
-                        "CONSTRAINT DF_voucher_sale_history_paid_amount DEFAULT 0"
-                    ))
-                    db.session.commit()
-                    # Backfill: fully-paid sales -> paid_amount = final_amount. Existing
-                    # 'Partial' rows are left at 0 since the amount actually paid so far
-                    # was never recorded before this column existed; review those manually.
-                    db.session.execute(text(
-                        "UPDATE voucher_sale_history SET paid_amount = final_amount "
-                        "WHERE payment_status = 'Paid'"
-                    ))
-            if 'expense' in insp.get_table_names():
-                cols = {c['name'] for c in insp.get_columns('expense')}
-                if 'payment_status' not in cols:
-                    db.session.execute(text(
-                        "ALTER TABLE expense ADD payment_status VARCHAR(20) NOT NULL "
-                        "CONSTRAINT DF_expense_payment_status DEFAULT 'Paid'"
-                    ))
-                if 'paid_amount' not in cols:
-                    db.session.execute(text("ALTER TABLE expense ADD paid_amount FLOAT NULL"))
-                if 'payment_reference' not in cols:
-                    db.session.execute(text("ALTER TABLE expense ADD payment_reference VARCHAR(100) NULL"))
-                db.session.commit()
-                # Backfill: every invoice/expense created before this column existed was
-                # always treated as fully paid, so mirror that for old rows only.
-                db.session.execute(text(
-                    "UPDATE expense SET paid_amount = amount WHERE paid_amount IS NULL"
-                ))
-                db.session.commit()
-            if 'candidate' in insp.get_table_names():
-                cols = {c['name'] for c in insp.get_columns('candidate')}
-                candidate_migrations = {
-                    'dob': "ALTER TABLE candidate ADD dob NVARCHAR(30) NULL",
-                    'passport_number': "ALTER TABLE candidate ADD passport_number NVARCHAR(50) NULL",
-                    'nationality': "ALTER TABLE candidate ADD nationality NVARCHAR(100) NULL",
-                    'place_of_birth': "ALTER TABLE candidate ADD place_of_birth NVARCHAR(200) NULL",
-                    'passport_full_name': "ALTER TABLE candidate ADD passport_full_name NVARCHAR(200) NULL",
-                    'passport_dob': "ALTER TABLE candidate ADD passport_dob NVARCHAR(30) NULL",
-                    'passport_gender': "ALTER TABLE candidate ADD passport_gender NVARCHAR(20) NULL",
-                    'passport_nationality': "ALTER TABLE candidate ADD passport_nationality NVARCHAR(100) NULL",
-                    'passport_issue_date': "ALTER TABLE candidate ADD passport_issue_date NVARCHAR(30) NULL",
-                    'passport_expiry_date': "ALTER TABLE candidate ADD passport_expiry_date NVARCHAR(30) NULL",
-                    'address_line_1': "ALTER TABLE candidate ADD address_line_1 NVARCHAR(300) NULL",
-                    'address_line_2': "ALTER TABLE candidate ADD address_line_2 NVARCHAR(300) NULL",
-                    'city': "ALTER TABLE candidate ADD city NVARCHAR(100) NULL",
-                    'state': "ALTER TABLE candidate ADD state NVARCHAR(100) NULL",
-                    'postal_code': "ALTER TABLE candidate ADD postal_code NVARCHAR(30) NULL",
-                    'country': "ALTER TABLE candidate ADD country NVARCHAR(100) NULL",
-                    'passport_scan_date': "ALTER TABLE candidate ADD passport_scan_date NVARCHAR(50) NULL",
-                    'passport_front_image': "ALTER TABLE candidate ADD passport_front_image NVARCHAR(500) NULL",
-                    'passport_last_image': "ALTER TABLE candidate ADD passport_last_image NVARCHAR(500) NULL",
-                }
-                for col_name, sql_stmt in candidate_migrations.items():
-                    if col_name not in cols:
-                        db.session.execute(text(sql_stmt))
-                db.session.commit()
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            app.logger.exception("Additive SQL Server migration failed — some columns may be missing.")
+        run_additive_migrations(app)
+
 
     # Register only the four enabled workspace modules.
     from apps.branches.routes import branches_bp

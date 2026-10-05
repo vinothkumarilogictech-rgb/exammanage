@@ -132,7 +132,7 @@ class Candidate {
   final String name, email, phone, registerNumber, status, branch, examType, date, teamName, remarks;
   final int? branchId, examTypeId, teamId;
   final String passportNumber, passportFullName, passportDob, passportGender, passportNationality;
-  final String passportIssueDate, passportExpiryDate, addressLine1, addressLine2, city, state, postalCode, country;
+  final String passportIssueDate, passportExpiryDate, placeOfBirth, addressLine1, addressLine2, city, state, postalCode, country;
   final String passportScanDate, passportFrontImage, passportLastImage;
 
   Candidate({
@@ -157,6 +157,7 @@ class Candidate {
     this.passportNationality = '',
     this.passportIssueDate = '',
     this.passportExpiryDate = '',
+    this.placeOfBirth = '',
     this.addressLine1 = '',
     this.addressLine2 = '',
     this.city = '',
@@ -190,6 +191,7 @@ class Candidate {
     passportNationality: '${m['passport_nationality'] ?? m['nationality'] ?? ''}',
     passportIssueDate: '${m['passport_issue_date'] ?? ''}',
     passportExpiryDate: '${m['passport_expiry_date'] ?? ''}',
+    placeOfBirth: '${m['place_of_birth'] ?? ''}',
     addressLine1: '${m['address_line_1'] ?? ''}',
     addressLine2: '${m['address_line_2'] ?? ''}',
     city: '${m['city'] ?? ''}',

@@ -58,6 +58,7 @@ a = Analysis(
         'apps.exams.audit_logs',
         'apps.exams.audit',
         'apps.models',
+        'apps.migrations',
         'api',
         'api.auth',
         'api.routes',
@@ -100,7 +101,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,   # set to False once you've confirmed it works, to hide the console window
+    console=True,   # console window enabled for server and migration visibility
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

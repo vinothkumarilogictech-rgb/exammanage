@@ -258,6 +258,16 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
       counts[key] = (counts[key] ?? 0) + 1;
     }
 
+    final rescheduledCount = rows.where((r) {
+      final s = r.result.trim().toLowerCase().replaceAll('_', ' ');
+      return s == 'rescheduled';
+    }).length;
+
+    final notCompletedCount = rows.where((r) {
+      final s = r.result.trim().toLowerCase().replaceAll('_', ' ');
+      return s == 'not completed' || s == 'absent' || s == 'no show';
+    }).length;
+
     pw.Widget countRow(String label, int count, {bool isTotal = false}) {
       return pw.Container(
         width: double.infinity,
@@ -315,6 +325,8 @@ class _AttendedCandidatesScreenState extends State<AttendedCandidatesScreen> {
           ),
           for (final entry in counts.entries) countRow(entry.key, entry.value),
           countRow('Total', rows.length, isTotal: true),
+          countRow('Rescheduled Candidates', rescheduledCount, isTotal: true),
+          countRow('Not Completed Candidates', notCompletedCount, isTotal: true),
         ],
       ),
     );

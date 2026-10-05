@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../config/api_config.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../widgets/common.dart';
@@ -455,6 +456,22 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
     super.initState();
     candidate = widget.candidate;
     remarksCtrl = TextEditingController(text: candidate.remarks);
+    _loadCandidateDetails();
+  }
+
+  Future<void> _loadCandidateDetails() async {
+    try {
+      final res = await api.candidateDetails(candidate.id);
+      final data = Map<String, dynamic>.from(res.data['data'] ?? {});
+      if (data.isNotEmpty && mounted) {
+        setState(() {
+          candidate = Candidate.fromMap(data);
+          if (remarksCtrl.text.isEmpty && candidate.remarks.isNotEmpty) {
+            remarksCtrl.text = candidate.remarks;
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -481,6 +498,210 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
       default:
         return AppColors.orange;
     }
+  }
+
+  String _buildFullImageUrl(String path) {
+    if (path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    final base = ApiConfig.baseUrl.endsWith('/')
+        ? ApiConfig.baseUrl.substring(0, ApiConfig.baseUrl.length - 1)
+        : ApiConfig.baseUrl;
+    final relative = path.startsWith('/') ? path : '/$path';
+    return '$base$relative';
+  }
+
+  void _showFullImageDialog(BuildContext context, String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 20,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0E3FA),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(
+                          Icons.image_rounded,
+                          size: 16,
+                          color: Color(0xFF6C1FB0),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 32),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (ctx, err, st) => Container(
+                        height: 180,
+                        color: const Color(0xFFF3F4F6),
+                        alignment: Alignment.center,
+                        child: const Text('Failed to load image'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Color(0x22000000),
+                  child: Icon(Icons.close_rounded, color: Colors.black87, size: 18),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPassportImageCard(String title, String imagePath) {
+    final fullUrl = _buildFullImageUrl(imagePath);
+    final hasImage = fullUrl.isNotEmpty;
+
+    return Expanded(
+      child: InkWell(
+        onTap: hasImage
+            ? () => _showFullImageDialog(context, fullUrl, title)
+            : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    hasImage ? Icons.image_rounded : Icons.broken_image_rounded,
+                    size: 16,
+                    color: hasImage ? const Color(0xFF6C1FB0) : const Color(0xFF9CA3AF),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF374151),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasImage)
+                    const Icon(
+                      Icons.zoom_in_rounded,
+                      size: 16,
+                      color: Color(0xFF6C1FB0),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: hasImage
+                    ? AspectRatio(
+                        aspectRatio: 16 / 10,
+                        child: Image.network(
+                          fullUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              color: const Color(0xFFF3F4F6),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (ctx, err, stack) => Container(
+                            color: const Color(0xFFF3F4F6),
+                            alignment: Alignment.center,
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline_rounded, color: Colors.grey, size: 20),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Image unavailable',
+                                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        height: 90,
+                        color: const Color(0xFFF3F4F6),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'No image uploaded',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _infoRow(IconData icon, String label, String value) {
@@ -610,6 +831,8 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
   Widget build(BuildContext context) {
     final status = candidate.status.isEmpty ? 'Registered' : candidate.status;
     final statusColor = _statusColor(status);
+    final hasImages = candidate.passportFrontImage.isNotEmpty || candidate.passportLastImage.isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
@@ -632,6 +855,7 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
+          // Header Card
           Container(
             padding: const EdgeInsets.all(18),
             margin: const EdgeInsets.only(bottom: 14),
@@ -723,52 +947,183 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
               ],
             ),
           ),
-          _section('PERSONAL DETAILS', Icons.person_rounded, [
+
+          // 1. Personal Information Section
+          _section('PERSONAL INFORMATION', Icons.person_rounded, [
             _infoRow(
               Icons.badge_rounded,
-              'Register Number / ID',
-              candidate.registerNumber.isNotEmpty
-                  ? candidate.registerNumber
-                  : '#${candidate.id}',
+              'Register Number / Roll No',
+              candidate.registerNumber,
             ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.email_outlined, 'Email', candidate.email),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.phone_outlined, 'Phone', candidate.phone),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(
-              Icons.email_rounded,
-              'Email Address',
-              candidate.email.isNotEmpty ? candidate.email : 'Not provided',
+              Icons.cake_outlined,
+              'Date of Birth',
+              candidate.passportDob,
             ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(
-              Icons.phone_rounded,
-              'Phone Number',
-              candidate.phone.isNotEmpty ? candidate.phone : 'Not provided',
+              Icons.wc_rounded,
+              'Gender',
+              candidate.passportGender,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.public_rounded,
+              'Nationality',
+              candidate.passportNationality,
             ),
           ]),
-          _section('EXAM DETAILS', Icons.school_rounded, [
+
+          // 2. Exam Information Section
+          _section('EXAM INFORMATION', Icons.school_rounded, [
+            _infoRow(Icons.menu_book_rounded, 'Exam Type', candidate.examType),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(
-              Icons.domain_rounded,
-              'Branch',
-              candidate.branch.isNotEmpty ? candidate.branch : 'Main Branch',
+              Icons.account_tree_rounded,
+              'Branch / Centre',
+              candidate.branch,
             ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.groups_rounded, 'Team', candidate.teamName),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.calendar_month_rounded, 'Exam Date', candidate.date),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(Icons.flag_rounded, 'Current Status', status),
+          ]),
+
+          // 3. Passport Information Section (Entered / Groq OCR Extracted)
+          _section('PASSPORT INFORMATION', Icons.flight_takeoff_rounded, [
             _infoRow(
-              Icons.menu_book_rounded,
-              'Exam Type',
-              candidate.examType.isNotEmpty ? candidate.examType : 'Standard Exam',
+              Icons.credit_card_rounded,
+              'Passport Number',
+              candidate.passportNumber,
             ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(
-              Icons.groups_rounded,
-              'Exam Team',
-              candidate.teamName.isNotEmpty ? candidate.teamName : 'Not Assigned',
+              Icons.badge_outlined,
+              'Full Name on Passport',
+              candidate.passportFullName,
             ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(
               Icons.calendar_today_rounded,
-              'Exam Date',
-              candidate.date.isNotEmpty ? candidate.date : 'Not scheduled',
+              'Date of Birth',
+              candidate.passportDob,
             ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(
-              Icons.check_circle_outline_rounded,
-              'Status',
-              status,
+              Icons.wc_rounded,
+              'Gender',
+              candidate.passportGender,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.flag_outlined,
+              'Nationality',
+              candidate.passportNationality,
+            ),
+            if (candidate.placeOfBirth.isNotEmpty) ...[
+              const Divider(height: 1, color: Color(0xFFF3F4F6)),
+              _infoRow(
+                Icons.location_city_rounded,
+                'Place of Birth',
+                candidate.placeOfBirth,
+              ),
+            ],
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.event_available_rounded,
+              'Date of Issue',
+              candidate.passportIssueDate,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.event_busy_rounded,
+              'Date of Expiry',
+              candidate.passportExpiryDate,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.document_scanner_rounded,
+              'Passport Scan Date (IST)',
+              candidate.passportScanDate,
             ),
           ]),
+
+          // 4. Address Details Section
+          _section('ADDRESS INFORMATION', Icons.home_rounded, [
+            _infoRow(
+              Icons.signpost_rounded,
+              'Address Line 1',
+              candidate.addressLine1,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.apartment_rounded,
+              'Address Line 2',
+              candidate.addressLine2,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.location_city_rounded,
+              'City',
+              candidate.city,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.map_rounded,
+              'State / Province',
+              candidate.state,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.pin_drop_rounded,
+              'Postal Code / PIN',
+              candidate.postalCode,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.public_rounded,
+              'Country',
+              candidate.country,
+            ),
+          ]),
+
+          // 5. Scanned Passport Images Section
+          _section('SCANNED PASSPORT IMAGES', Icons.photo_library_rounded, [
+            if (hasImages) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  _buildPassportImageCard('Front Page', candidate.passportFrontImage),
+                  const SizedBox(width: 12),
+                  _buildPassportImageCard('Last / Address Page', candidate.passportLastImage),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ] else ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
+                    SizedBox(width: 8),
+                    Text(
+                      'No scanned passport images attached.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ]),
+
+          // 6. Remarks Section
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -787,20 +1142,25 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    const Icon(
+                      Icons.sticky_note_2_rounded,
+                      size: 20,
+                      color: Color(0xFF6C1FB0),
+                    ),
+                    const SizedBox(width: 8),
                     const Text(
                       'Remarks',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF374151),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
+                    const Spacer(),
                     Text(
                       '${remarksCtrl.text.length}/500',
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         color: Color(0xFF9CA3AF),
                       ),
                     ),
@@ -809,35 +1169,41 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: remarksCtrl,
-                  maxLines: 4,
+                  maxLines: 6,
                   maxLength: 500,
+                  onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     hintText: 'Add or edit remarks about this candidate...',
                     alignLabelWithHint: true,
                     filled: true,
-                    fillColor: const Color(0xFFF9FAFB),
-                    counterText: '',
+                    fillColor: const Color(0xFFF7F5FD),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(15),
                       borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(15),
                       borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF9A22C7),
+                        width: 1.5,
+                      ),
+                    ),
                   ),
-                  onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 2),
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 50,
                   child: FilledButton.icon(
                     onPressed: saving ? null : _saveRemarks,
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: const Color(0xFF6C1FB0),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                     icon: saving
@@ -845,11 +1211,11 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
                               strokeWidth: 2,
+                              color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.check_rounded, size: 18),
+                        : const Icon(Icons.save_rounded),
                     label: Text(
                       saving ? 'Saving...' : 'Save Remarks',
                       style: const TextStyle(fontWeight: FontWeight.w800),

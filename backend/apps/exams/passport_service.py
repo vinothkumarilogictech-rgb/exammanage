@@ -176,8 +176,8 @@ def extract_passport_data_with_groq(front_file, last_file, upload_folder=None):
             }
         })
 
-    # Groq vision-capable models (primary: qwen/qwen3.8-27b)
-    vision_models = ['qwen/qwen3.8-27b', 'llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview']
+    # Groq vision-capable models (active: qwen/qwen3.8-27b)
+    vision_models = ['qwen/qwen3.8-27b']
     headers = {
         'Authorization': f"Bearer {groq_api_key}",
         'Content-Type': 'application/json'

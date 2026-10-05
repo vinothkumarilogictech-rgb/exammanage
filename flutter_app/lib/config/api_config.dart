@@ -9,13 +9,9 @@ class ApiConfig {
   /// Chrome/web:
   /// no flag needed; defaults to http://localhost:5000
   ///
-  /// Real phone:
-  /// flutter run --dart-define=API_SERVER_URL=http://YOUR-PC-LAN-IP:5000
   static const String _dartDefineUrl = String.fromEnvironment('API_SERVER_URL');
 
-  static String get baseUrl => 'http://192.168.1.40:5001';
-  
-    
+  static String get baseUrl => 'https://exam.ilogicigroup.com';
 
   static const String apiBasePath = '/api/v1';
 

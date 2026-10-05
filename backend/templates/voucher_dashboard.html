@@ -1,20 +1,1907 @@
-{% extends 'base.html' %}{% block content %}
-<div class="module-header"><h2>Exam Voucher Management</h2><div class="module-actions"><a class="btn-primary" href="{{ url_for('vouchers.purchase') }}">+ Bulk Purchase</a><a class="btn-secondary" href="{{ url_for('vouchers.assign') }}">Assign Voucher</a></div></div>
-<div class="premium-stats-grid voucher-grid">
-{% for key,label,cls,url,val,sub in [
-('available','Available Vouchers','bg-green',url_for('vouchers.stock',status='Available'),stats.available,'Current stock'),
-('issued','Issued / Sold','bg-blue',url_for('vouchers.issued'),stats.issued,'Given to students'),
-('used','Used Vouchers','bg-purple',url_for('vouchers.stock',status='Used'),stats.used,'Exam usage completed'),
-('purchased','Total Purchased','bg-rose',url_for('vouchers.stock',status='Available'),stats.purchased,'All purchase batches') ] %}
-<div class="luxury-card {{ cls }}" onclick="location.href='{{ url }}'"><span class="card-title">{{ label }}</span><div class="card-value">{{ val }}</div><span class="card-sub">{{ sub }}</span></div>
-{% endfor %}
+{% extends 'base.html' %}
+{% block content %}
+<style>
+/* ============================================================
+   VOUCHER MANAGEMENT STYLES (MATCHING FLUTTER PARITY & WEB THEME)
+   ============================================================ */
+.v-header-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+.v-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.v-header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6c1fb0, #9a22c7, #e0189e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    box-shadow: 0 4px 14px rgba(154, 34, 199, 0.35);
+}
+.v-header-title h2 {
+    margin: 0;
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.4px;
+}
+.v-header-title p {
+    margin: 2px 0 0 0;
+    font-size: 0.84rem;
+    color: #64748b;
+    font-weight: 500;
+}
+.v-action-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.btn-v-primary {
+    background: linear-gradient(135deg, #6c1fb0, #9a22c7);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(108, 31, 176, 0.28);
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.btn-v-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(108, 31, 176, 0.38);
+}
+.btn-v-blue {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.btn-v-blue:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.38);
+}
+.btn-v-outline {
+    background: #ffffff;
+    color: #475569;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 9px 18px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.btn-v-outline:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+/* Tabs Navigation */
+.v-tab-nav {
+    display: flex;
+    gap: 6px;
+    background: #ffffff;
+    padding: 6px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    margin-bottom: 22px;
+    overflow-x: auto;
+}
+.v-tab-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 12px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #64748b;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+.v-tab-item:hover {
+    color: #6c1fb0;
+    background: #f8f5ff;
+}
+.v-tab-item.active {
+    background: linear-gradient(135deg, #6c1fb0, #9a22c7);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(108, 31, 176, 0.25);
+}
+.v-tab-item .badge-pill {
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+.v-tab-item.active .badge-pill {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+.v-tab-item:not(.active) .badge-pill {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+/* Luxury KPI Cards Grid */
+.v-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 22px;
+}
+.v-kpi-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 20px 22px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.v-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+}
+.v-kpi-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.v-kpi-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+}
+.v-kpi-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+.v-kpi-value {
+    font-size: 1.85rem;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+}
+.v-kpi-sub {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+/* KPI Color Variants */
+.v-kpi-purple { border-left: 4px solid #6c1fb0; }
+.v-kpi-purple .v-kpi-icon-wrap { background: #ede9fe; color: #6c1fb0; }
+.v-kpi-blue { border-left: 4px solid #2563eb; }
+.v-kpi-blue .v-kpi-icon-wrap { background: #dbeafe; color: #2563eb; }
+.v-kpi-green { border-left: 4px solid #10b981; }
+.v-kpi-green .v-kpi-icon-wrap { background: #dcfce7; color: #10b981; }
+.v-kpi-amber { border-left: 4px solid #f59e0b; }
+.v-kpi-amber .v-kpi-icon-wrap { background: #fef3c7; color: #f59e0b; }
+
+/* Quick Action Banner Cards */
+.v-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 22px;
+}
+.v-quick-card {
+    border-radius: 18px;
+    padding: 20px 22px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+.v-quick-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+.v-quick-purple {
+    background: linear-gradient(135deg, #6c1fb0 0%, #9a22c7 100%);
+}
+.v-quick-blue {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+.v-quick-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+.v-quick-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin: 0;
+}
+.v-quick-desc {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.85);
+    margin: 2px 0 0 0;
+}
+
+/* Stock Summary Strip */
+.v-summary-panel {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    margin-bottom: 22px;
+}
+.v-summary-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.v-summary-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+.v-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+.v-summary-item {
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+}
+.v-summary-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+.v-summary-val {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+/* Exam Type Stock Group Cards */
+.v-exam-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.v-exam-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: all 0.2s ease;
+}
+.v-exam-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+.v-exam-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.v-exam-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+.v-exam-badge {
+    background: #ede9fe;
+    color: #6c1fb0;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+/* Filter Bar */
+.v-filter-bar {
+    background: #ffffff;
+    padding: 16px 20px;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.v-filter-input, .v-filter-select {
+    padding: 9px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #cbd5e1;
+    font-size: 0.85rem;
+    outline: none;
+    background: #ffffff;
+    color: #334155;
+    transition: border-color 0.15s ease;
+}
+.v-filter-input:focus, .v-filter-select:focus {
+    border-color: #6c1fb0;
+}
+.v-filter-input {
+    min-width: 220px;
+    flex: 1;
+}
+
+/* Status Chips */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.chip-paid, .chip-available, .chip-used {
+    background: #dcfce7;
+    color: #15803d;
+}
+.chip-pending {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.chip-partial {
+    background: #fef3c7;
+    color: #b45309;
+}
+.chip-sold {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+.chip-exam {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    font-weight: 700;
+    font-size: 0.72rem;
+    padding: 3px 9px;
+    border-radius: 16px;
+}
+
+/* Action Dropdown / Buttons */
+.action-btn-sm {
+    padding: 5px 11px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+.btn-act-view {
+    background: #ede9fe;
+    color: #6c1fb0;
+}
+.btn-act-view:hover { background: #ddd6fe; }
+.btn-act-pay {
+    background: #fef3c7;
+    color: #92400e;
+}
+.btn-act-pay:hover { background: #fde68a; }
+.btn-act-use {
+    background: #dcfce7;
+    color: #15803d;
+}
+.btn-act-use:hover { background: #bbf7d0; }
+.btn-act-sell {
+    background: #6c1fb0;
+    color: #ffffff !important;
+}
+.btn-act-sell:hover { background: #581c87; }
+
+/* Modals */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.modal-overlay.active {
+    display: flex;
+}
+.modal-box {
+    background: #ffffff;
+    border-radius: 24px;
+    max-width: 620px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid #e2e8f0;
+    animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalPop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+.modal-close {
+    background: #f1f5f9;
+    border: none;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 16px;
+    transition: all 0.15s ease;
+}
+.modal-close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.modal-body {
+    padding: 22px 24px;
+}
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #fafafa;
+    border-radius: 0 0 24px 24px;
+}
+
+/* Modal Form Fields */
+.m-form-group {
+    margin-bottom: 14px;
+}
+.m-form-group label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    margin-bottom: 6px;
+}
+.m-form-control {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1.5px solid #cbd5e1;
+    font-size: 0.9rem;
+    outline: none;
+    background: #ffffff;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease;
+}
+.m-form-control:focus {
+    border-color: #6c1fb0;
+}
+.m-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.m-calc-box {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Print styling */
+@media print {
+    .sidebar, header, .v-tab-nav, .v-filter-bar, .v-action-group, .btn-v-primary, .btn-v-blue, .btn-v-outline, .action-btn-sm {
+        display: none !important;
+    }
+    .content-container, .main-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+    .data-table {
+        font-size: 10px !important;
+        width: 100% !important;
+    }
+    .data-table th, .data-table td {
+        padding: 6px 8px !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+}
+</style>
+
+<!-- Module Header -->
+<div class="v-header-banner">
+    <div class="v-header-title">
+        <div class="v-header-icon">
+            <i class="fas fa-ticket-alt"></i>
+        </div>
+        <div>
+            <h2>Exam Voucher Management</h2>
+            <p>Unified enterprise inventory, direct candidate sales, payment tracking &amp; financial reports</p>
+        </div>
+    </div>
+    <div class="v-action-group">
+        <button class="btn-v-primary" onclick="openSellModal()">
+            <i class="fas fa-cart-plus"></i> Sell Voucher
+        </button>
+        <button class="btn-v-blue" onclick="openPurchaseModal()">
+            <i class="fas fa-boxes-stacked"></i> + Bulk Purchase
+        </button>
+        <a href="{{ url_for('vouchers.export_history_csv', q=search_q, exam_type_id=exam_type_filter, date=date_filter) }}" class="btn-v-outline" title="Export Sales CSV">
+            <i class="fas fa-file-csv" style="color:#10b981;"></i> Export CSV
+        </a>
+        <button class="btn-v-outline" onclick="window.print()" title="Print Current View">
+            <i class="fas fa-print" style="color:#6c1fb0;"></i> Print
+        </button>
+    </div>
 </div>
-<div class="module-grid">
-<div class="panel"><h3>Voucher Financial Summary</h3><div class="summary-list">
-<div><span>Total Purchase Cost</span><strong>₹ {{ '%.2f'|format(stats.purchase_cost) }}</strong></div>
-<div><span>Sales Revenue</span><strong>₹ {{ '%.2f'|format(stats.sales) }}</strong></div>
-<div><span>Realized Profit</span><strong>₹ {{ '%.2f'|format(stats.profit) }}</strong></div>
-<div><span>Available Stock Value</span><strong>₹ {{ '%.2f'|format(stats.stock_value) }}</strong></div>
-</div></div>
-<div class="panel"><h3>Quick Actions</h3><div class="quick-links"><a href="{{ url_for('vouchers.stock',status='Available') }}">Available Stock →</a><a href="{{ url_for('vouchers.issued') }}">Who received vouchers →</a><a href="{{ url_for('vouchers.students') }}">Student-wise history →</a><a href="{{ url_for('vouchers.purchases') }}">Purchase batches →</a></div></div></div>
+
+<!-- Tabs Navigation -->
+<div class="v-tab-nav">
+    <a href="{{ url_for('vouchers.dashboard', tab='overview') }}" class="v-tab-item {% if active_tab == 'overview' %}active{% endif %}">
+        <i class="fas fa-chart-pie"></i> Overview
+    </a>
+    <a href="{{ url_for('vouchers.dashboard', tab='sold') }}" class="v-tab-item {% if active_tab == 'sold' %}active{% endif %}">
+        <i class="fas fa-user-check"></i> Sold Vouchers
+        <span class="badge-pill">{{ total_sold_count }}</span>
+    </a>
+    <a href="{{ url_for('vouchers.dashboard', tab='history') }}" class="v-tab-item {% if active_tab == 'history' %}active{% endif %}">
+        <i class="fas fa-receipt"></i> Sales History
+        <span class="badge-pill">{{ total_history_count }}</span>
+    </a>
+    <a href="{{ url_for('vouchers.dashboard', tab='batches') }}" class="v-tab-item {% if active_tab == 'batches' %}active{% endif %}">
+        <i class="fas fa-layer-group"></i> Purchase Batches
+        <span class="badge-pill">{{ batches|length }}</span>
+    </a>
+    <a href="{{ url_for('vouchers.dashboard', tab='students') }}" class="v-tab-item {% if active_tab == 'students' %}active{% endif %}">
+        <i class="fas fa-user-graduate"></i> Student History
+        <span class="badge-pill">{{ students|length }}</span>
+    </a>
+</div>
+
+<!-- ============================================================
+     TAB 1: OVERVIEW
+     ============================================================ -->
+{% if active_tab == 'overview' %}
+
+<!-- Luxury 4 KPI Cards (Matching Flutter Parity) -->
+<div class="v-kpi-grid">
+    <div class="v-kpi-card v-kpi-purple" onclick="location.href='{{ url_for('vouchers.dashboard', tab='overview', status='Available') }}'" style="cursor:pointer;">
+        <div class="v-kpi-top">
+            <div class="v-kpi-icon-wrap"><i class="fas fa-boxes"></i></div>
+            <span class="chip chip-available">In Stock</span>
+        </div>
+        <div class="v-kpi-title">Available Vouchers</div>
+        <div class="v-kpi-value">{{ stats.available }}</div>
+        <div class="v-kpi-sub"><i class="fas fa-check-circle" style="color:#10b981;"></i> Ready for student sale</div>
+    </div>
+
+    <div class="v-kpi-card v-kpi-blue" onclick="location.href='{{ url_for('vouchers.dashboard', tab='sold') }}'" style="cursor:pointer;">
+        <div class="v-kpi-top">
+            <div class="v-kpi-icon-wrap"><i class="fas fa-user-tag"></i></div>
+            <span class="chip chip-sold">Issued / Sold</span>
+        </div>
+        <div class="v-kpi-title">Sold Vouchers</div>
+        <div class="v-kpi-value">{{ stats.sold }}</div>
+        <div class="v-kpi-sub"><i class="fas fa-user-graduate"></i> Assigned to students</div>
+    </div>
+
+    <div class="v-kpi-card v-kpi-green">
+        <div class="v-kpi-top">
+            <div class="v-kpi-icon-wrap"><i class="fas fa-hand-holding-usd"></i></div>
+            <span class="chip chip-paid">Revenue</span>
+        </div>
+        <div class="v-kpi-title">Sales Revenue</div>
+        <div class="v-kpi-value">₹ {{ '%.2f'|format(stats.sales_revenue) }}</div>
+        <div class="v-kpi-sub"><i class="fas fa-receipt"></i> Total collected &amp; invoiced</div>
+    </div>
+
+    <div class="v-kpi-card v-kpi-amber">
+        <div class="v-kpi-top">
+            <div class="v-kpi-icon-wrap"><i class="fas fa-chart-line"></i></div>
+            <span class="chip chip-partial">Realized</span>
+        </div>
+        <div class="v-kpi-title">Realized Profit</div>
+        <div class="v-kpi-value">₹ {{ '%.2f'|format(stats.realized_profit) }}</div>
+        <div class="v-kpi-sub"><i class="fas fa-coins"></i> Revenue minus voucher costs</div>
+    </div>
+</div>
+
+<!-- Quick Action Row -->
+<div class="v-quick-grid">
+    <div class="v-quick-card v-quick-purple" onclick="openSellModal()">
+        <div class="v-quick-icon"><i class="fas fa-cart-plus"></i></div>
+        <div>
+            <div class="v-quick-title">Sell Voucher</div>
+            <div class="v-quick-desc">Assign an available voucher to a candidate with custom pricing &amp; payment mode</div>
+        </div>
+    </div>
+    <div class="v-quick-card v-quick-blue" onclick="openPurchaseModal()">
+        <div class="v-quick-icon"><i class="fas fa-boxes-stacked"></i></div>
+        <div>
+            <div class="v-quick-title">Bulk Purchase</div>
+            <div class="v-quick-desc">Add new voucher inventory from suppliers and record linked expense automatically</div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Summary Panel -->
+<div class="v-summary-panel">
+    <div class="v-summary-header">
+        <i class="fas fa-chart-bar" style="color:#6c1fb0;font-size:18px;"></i>
+        <h3>Stock &amp; Financial Summary</h3>
+    </div>
+    <div class="v-summary-grid">
+        <div class="v-summary-item">
+            <div class="v-summary-label">Total Purchased</div>
+            <div class="v-summary-val">{{ stats.purchased }} <span style="font-size:0.8rem;color:#64748b;font-weight:600;">vouchers</span></div>
+        </div>
+        <div class="v-summary-item">
+            <div class="v-summary-label">Total Purchase Cost</div>
+            <div class="v-summary-val">₹ {{ '%.2f'|format(stats.purchase_cost) }}</div>
+        </div>
+        <div class="v-summary-item">
+            <div class="v-summary-label">Available Stock Value</div>
+            <div class="v-summary-val">₹ {{ '%.2f'|format(stats.stock_value) }}</div>
+        </div>
+        <div class="v-summary-item">
+            <div class="v-summary-label">Total Sales Invoiced</div>
+            <div class="v-summary-val">{{ stats.sale_count }} <span style="font-size:0.8rem;color:#64748b;font-weight:600;">sales</span></div>
+        </div>
+        <div class="v-summary-item">
+            <div class="v-summary-label">Pending Balance</div>
+            <div class="v-summary-val" style="color:{% if stats.pending_amount > 0 %}#b91c1c{% else %}#15803d{% endif %};">
+                ₹ {{ '%.2f'|format(stats.pending_amount) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Available Vouchers Grouped by Exam (Matching Flutter available_vouchers_screen.dart) -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:#0f172a;">
+        <i class="fas fa-graduation-cap" style="color:#2563eb;margin-right:6px;"></i> Available Stock by Exam Type
+    </h3>
+    <span class="chip chip-available">{{ available_vouchers|length }} Total Available</span>
+</div>
+
+{% if exam_groups %}
+<div class="v-exam-grid">
+    {% for exam_name, v_list in exam_groups.items() %}
+    <div class="v-exam-card">
+        <div class="v-exam-header">
+            <div class="v-exam-name">{{ exam_name }}</div>
+            <span class="v-exam-badge">{{ v_list|length }} in stock</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:#64748b;margin-bottom:12px;">
+            <span>Default Price: <strong>₹ {{ '%.2f'|format(v_list[0].selling_price) }}</strong></span>
+            <span>Cost: <strong>₹ {{ '%.2f'|format(v_list[0].purchase_cost) }}</strong></span>
+        </div>
+        <div style="max-height:120px;overflow-y:auto;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:6px;">
+            {% for v in v_list[:10] %}
+            <span style="font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;padding:3px 8px;border-radius:6px;font-size:0.75rem;color:#334155;">
+                {{ v.voucher_code }}
+            </span>
+            {% endfor %}
+            {% if v_list|length > 10 %}
+            <span style="font-size:0.75rem;color:#6c1fb0;font-weight:700;align-self:center;">+ {{ v_list|length - 10 }} more</span>
+            {% endif %}
+        </div>
+        <button class="action-btn-sm btn-act-sell" style="width:100%;justify-content:center;padding:8px 12px;border-radius:10px;" onclick="openSellModalWithVoucher('{{ v_list[0].id }}', '{{ v_list[0].voucher_code }}', {{ v_list[0].selling_price }})">
+            <i class="fas fa-cart-plus"></i> Sell an Available {{ exam_name }} Voucher
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div style="text-align:center;padding:40px;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;color:#64748b;">
+    <i class="fas fa-box-open" style="font-size:36px;color:#cbd5e1;margin-bottom:10px;"></i>
+    <h4>No Available Vouchers in Stock</h4>
+    <p style="font-size:0.85rem;margin:6px 0 16px;">Add a new bulk voucher purchase batch to replenish available stock.</p>
+    <button class="btn-v-blue" onclick="openPurchaseModal()">+ Bulk Purchase Vouchers</button>
+</div>
+{% endif %}
+
+<!-- Available Vouchers Table Preview -->
+<div style="background:#ffffff;border-radius:18px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.02);padding:20px;margin-top:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h4 style="margin:0;font-size:1rem;font-weight:800;color:#0f172a;">
+            <i class="fas fa-list" style="color:#6c1fb0;margin-right:6px;"></i> Available Voucher Inventory ({{ available_vouchers|length }})
+        </h4>
+        <div style="display:flex;gap:8px;">
+            <input type="text" id="availQuickSearch" onkeyup="filterAvailTable()" placeholder="Quick filter codes / exams..." class="v-filter-input" style="min-width:180px;padding:6px 12px;font-size:0.8rem;">
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table" id="availTable">
+            <thead>
+                <tr>
+                    <th>Voucher Code</th>
+                    <th>Exam Type</th>
+                    <th>Purchase Cost</th>
+                    <th>Default Selling Price</th>
+                    <th>Batch</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Quick Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in available_vouchers[:50] %}
+                <tr>
+                    <td style="font-weight:800;font-family:monospace;color:#0f172a;">{{ v.voucher_code }}</td>
+                    <td><span class="chip-exam">{{ v.exam_type_name }}</span></td>
+                    <td>₹ {{ '%.2f'|format(v.purchase_cost) }}</td>
+                    <td style="font-weight:700;">₹ {{ '%.2f'|format(v.selling_price) }}</td>
+                    <td style="color:#64748b;font-size:0.82rem;">{{ v.batch_number }}</td>
+                    <td><span class="chip chip-available">Available</span></td>
+                    <td style="text-align:right;">
+                        <button class="action-btn-sm btn-act-sell" onclick="openSellModalWithVoucher('{{ v.id }}', '{{ v.voucher_code }}', {{ v.selling_price }})">
+                            <i class="fas fa-cart-plus"></i> Sell
+                        </button>
+                        <button class="action-btn-sm btn-act-view" onclick="viewVoucherDetails({{ v.id }})">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:24px;color:#94a3b8;">No available vouchers found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if available_vouchers|length > 50 %}
+    <div style="text-align:center;padding-top:14px;color:#64748b;font-size:0.84rem;">
+        Showing first 50 of {{ available_vouchers|length }} available vouchers. Use search above to locate specific codes.
+    </div>
+    {% endif %}
+</div>
+
+{% endif %}
+
+<!-- ============================================================
+     TAB 2: SOLD VOUCHERS
+     ============================================================ -->
+{% if active_tab == 'sold' %}
+
+<!-- Sold Filter Bar (Matching Flutter _soldFilterBar) -->
+<form method="GET" class="v-filter-bar">
+    <input type="hidden" name="tab" value="sold">
+    <i class="fas fa-search" style="color:#6c1fb0;margin-left:4px;"></i>
+    <input type="text" name="q" value="{{ search_q }}" placeholder="Search candidate, mobile, or voucher code..." class="v-filter-input">
+    
+    <select name="exam_type_id" class="v-filter-select">
+        <option value="">All Exam Types</option>
+        {% for et in exam_types %}
+        <option value="{{ et.id }}" {% if exam_type_filter == et.id|string %}selected{% endif %}>{{ et.name }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="status" class="v-filter-select">
+        <option value="">All Payment / Usage Statuses</option>
+        <option value="Paid" {% if status_filter == 'Paid' %}selected{% endif %}>Paid</option>
+        <option value="Partial" {% if status_filter == 'Partial' %}selected{% endif %}>Partial</option>
+        <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+        <option value="Used" {% if status_filter == 'Used' %}selected{% endif %}>Used</option>
+    </select>
+
+    <button type="submit" class="btn-v-primary" style="padding:9px 18px;border-radius:20px;">
+        <i class="fas fa-filter"></i> Apply Filter
+    </button>
+    {% if search_q or exam_type_filter or status_filter %}
+    <a href="{{ url_for('vouchers.dashboard', tab='sold') }}" class="btn-v-outline" style="padding:9px 16px;">Clear</a>
+    {% endif %}
+    
+    <div style="margin-left:auto;font-size:0.84rem;color:#64748b;font-weight:700;">
+        Showing {{ sold_vouchers|length }} of {{ total_sold_count }} sold vouchers
+    </div>
+</form>
+
+<!-- Sold Vouchers Table -->
+<div style="background:#ffffff;border-radius:18px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.02);padding:20px;">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Voucher Code</th>
+                    <th>Exam Type</th>
+                    <th>Candidate Details</th>
+                    <th>Sold Date</th>
+                    <th>Final Amount</th>
+                    <th>Paid Amount</th>
+                    <th>Pending Balance</th>
+                    <th>Payment Status</th>
+                    <th>Payment Mode</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in sold_vouchers %}
+                <tr>
+                    <td style="font-weight:800;font-family:monospace;color:#0f172a;">
+                        <a href="javascript:void(0)" onclick="viewVoucherDetails({{ v.id }})" style="color:#6c1fb0;text-decoration:none;">
+                            {{ v.voucher_code }}
+                        </a>
+                        {% if v.status == 'Used' %}
+                        <span class="chip chip-used" style="margin-left:4px;font-size:0.68rem;padding:2px 6px;">Used</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="chip-exam">{{ v.exam_type_name }}</span></td>
+                    <td>
+                        <div style="font-weight:700;color:#0f172a;">{{ v.student_name }}</div>
+                        <div style="font-size:0.78rem;color:#64748b;">
+                            {% if v.mobile != '-' %}<i class="fas fa-phone-alt" style="font-size:10px;"></i> {{ v.mobile }}{% endif %}
+                            {% if v.email != '-' %} • <i class="fas fa-envelope" style="font-size:10px;"></i> {{ v.email }}{% endif %}
+                        </div>
+                    </td>
+                    <td style="font-size:0.82rem;color:#475569;">
+                        {{ v.sold_at.strftime('%d-%b-%Y %H:%M') if v.sold_at else '-' }}
+                    </td>
+                    <td style="font-weight:800;color:#0f172a;">
+                        ₹ {{ '%.2f'|format(v.final_amount) }}
+                        {% if v.discount > 0 %}
+                        <div style="font-size:0.72rem;color:#10b981;font-weight:600;">(Disc ₹{{ '%.2f'|format(v.discount) }})</div>
+                        {% endif %}
+                    </td>
+                    <td style="font-weight:700;color:#15803d;">
+                        ₹ {{ '%.2f'|format(v.paid_amount) }}
+                    </td>
+                    <td>
+                        {% if v.balance_amount > 0 %}
+                        <span class="chip chip-pending" style="font-size:0.74rem;">
+                            Pending ₹ {{ '%.2f'|format(v.balance_amount) }}
+                        </span>
+                        {% else %}
+                        <span class="chip chip-paid" style="font-size:0.74rem;">Paid in full</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if v.payment_status == 'Paid' %}
+                        <span class="chip chip-paid">Paid</span>
+                        {% elif v.payment_status == 'Partial' %}
+                        <span class="chip chip-partial">Partial</span>
+                        {% else %}
+                        <span class="chip chip-pending">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.82rem;color:#475569;">
+                        {{ v.payment_mode }}
+                        {% if v.payment_reference != '-' %}
+                        <div style="font-size:0.72rem;color:#94a3b8;">Ref: {{ v.payment_reference }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;white-space:nowrap;">
+                        <button class="action-btn-sm btn-act-view" onclick="viewVoucherDetails({{ v.id }})" title="View Details">
+                            <i class="fas fa-eye"></i> Details
+                        </button>
+                        <button class="action-btn-sm btn-act-pay" onclick="openPaymentModal({{ v.id }}, '{{ v.voucher_code }}', {{ v.final_amount }}, {{ v.paid_amount }}, '{{ v.payment_status }}', '{{ v.payment_mode }}', '{{ v.payment_reference|replace("'", "\\'") }}', '{{ v.notes|replace("'", "\\'") }}')" title="Update Payment">
+                            <i class="fas fa-coins"></i> Payment
+                        </button>
+                        {% if v.status != 'Used' %}
+                        <form method="POST" action="{{ url_for('vouchers.use', voucher_id=v.id) }}" style="display:inline;" onsubmit="return confirm('Mark voucher {{ v.voucher_code }} as USED for candidate {{ v.student_name }}?');">
+                            <button type="submit" class="action-btn-sm btn-act-use" title="Mark as Used">
+                                <i class="fas fa-check"></i> Use
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" style="text-align:center;padding:36px;color:#94a3b8;">
+                        <i class="fas fa-user-slash" style="font-size:32px;color:#cbd5e1;margin-bottom:8px;display:block;"></i>
+                        No sold vouchers match your filter criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- ============================================================
+     TAB 3: SALES HISTORY
+     ============================================================ -->
+{% if active_tab == 'history' %}
+
+<!-- Sales History Filter Bar (Matching Flutter _historyFilterBar) -->
+<form method="GET" class="v-filter-bar">
+    <input type="hidden" name="tab" value="history">
+    
+    <div style="display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-calendar-alt" style="color:#6c1fb0;"></i>
+        <input type="date" name="date" value="{{ date_filter }}" class="v-filter-input" style="min-width:150px;flex:none;" title="Filter by Sale Date">
+    </div>
+
+    <input type="text" name="q" value="{{ search_q }}" placeholder="Candidate name, mobile, or voucher code..." class="v-filter-input">
+
+    <select name="exam_type_id" class="v-filter-select">
+        <option value="">All Exam Types</option>
+        {% for et in exam_types %}
+        <option value="{{ et.id }}" {% if exam_type_filter == et.id|string %}selected{% endif %}>{{ et.name }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit" class="btn-v-primary" style="padding:9px 18px;border-radius:20px;">
+        <i class="fas fa-filter"></i> Apply
+    </button>
+    {% if search_q or exam_type_filter or date_filter %}
+    <a href="{{ url_for('vouchers.dashboard', tab='history') }}" class="btn-v-outline" style="padding:9px 16px;">Clear</a>
+    {% endif %}
+
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <a href="{{ url_for('vouchers.export_history_csv', q=search_q, exam_type_id=exam_type_filter, date=date_filter) }}" class="btn-v-outline" style="padding:8px 16px;">
+            <i class="fas fa-file-excel" style="color:#10b981;"></i> Export CSV ({{ sales_history|length }})
+        </a>
+        <button type="button" class="btn-v-outline" onclick="window.print()" style="padding:8px 16px;">
+            <i class="fas fa-print" style="color:#6c1fb0;"></i> Print Report
+        </button>
+    </div>
+</form>
+
+<!-- Complete Sales History Ledger -->
+<div style="background:#ffffff;border-radius:18px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.02);padding:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h4 style="margin:0;font-size:1.05rem;font-weight:800;color:#0f172a;">
+            Sales Ledger &amp; Transaction History ({{ sales_history|length }} records)
+        </h4>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Date &amp; Time</th>
+                    <th>Voucher Code</th>
+                    <th>Exam Type</th>
+                    <th>Candidate</th>
+                    <th>Mobile</th>
+                    <th>Selling Price</th>
+                    <th>Discount</th>
+                    <th>Final Amount</th>
+                    <th>Paid</th>
+                    <th>Balance</th>
+                    <th>Payment Mode</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in sales_history %}
+                <tr>
+                    <td style="color:#64748b;font-weight:700;">{{ loop.index }}</td>
+                    <td style="font-size:0.82rem;color:#475569;white-space:nowrap;">
+                        {{ h.sold_at.strftime('%d-%b-%Y %H:%M') if h.sold_at else '-' }}
+                    </td>
+                    <td style="font-family:monospace;font-weight:800;color:#0f172a;">
+                        {% if h.voucher %}
+                        <a href="javascript:void(0)" onclick="viewVoucherDetails({{ h.voucher_id }})" style="color:#6c1fb0;text-decoration:none;">
+                            {{ h.voucher.voucher_code }}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td><span class="chip-exam">{{ h.voucher.exam_type.name if h.voucher and h.voucher.exam_type else '-' }}</span></td>
+                    <td style="font-weight:700;color:#0f172a;">{{ h.student_name }}</td>
+                    <td style="color:#64748b;font-size:0.82rem;">{{ h.mobile or '-' }}</td>
+                    <td>₹ {{ '%.2f'|format(h.selling_price) }}</td>
+                    <td style="color:#10b981;font-weight:600;">₹ {{ '%.2f'|format(h.discount) }}</td>
+                    <td style="font-weight:800;color:#0f172a;">₹ {{ '%.2f'|format(h.final_amount) }}</td>
+                    <td style="font-weight:700;color:#15803d;">₹ {{ '%.2f'|format(h.paid_amount) }}</td>
+                    <td>
+                        {% if h.balance_amount > 0 %}
+                        <span style="font-weight:800;color:#b91c1c;">₹ {{ '%.2f'|format(h.balance_amount) }}</span>
+                        {% else %}
+                        <span style="color:#15803d;font-weight:600;">₹ 0.00</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.82rem;color:#475569;">{{ h.payment_mode or '-' }}</td>
+                    <td>
+                        {% if h.payment_status == 'Paid' %}
+                        <span class="chip chip-paid">Paid</span>
+                        {% elif h.payment_status == 'Partial' %}
+                        <span class="chip chip-partial">Partial</span>
+                        {% else %}
+                        <span class="chip chip-pending">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8rem;color:#64748b;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ h.notes or '' }}">
+                        {{ h.notes or '-' }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="14" style="text-align:center;padding:36px;color:#94a3b8;">
+                        <i class="fas fa-receipt" style="font-size:32px;color:#cbd5e1;margin-bottom:8px;display:block;"></i>
+                        No sales history found for the selected filters.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- ============================================================
+     TAB 4: PURCHASE BATCHES
+     ============================================================ -->
+{% if active_tab == 'batches' %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <h3 style="margin:0;font-size:1.25rem;font-weight:800;color:#0f172a;">
+        <i class="fas fa-boxes-stacked" style="color:#2563eb;margin-right:8px;"></i> Voucher Purchase Batches
+    </h3>
+    <button class="btn-v-blue" onclick="openPurchaseModal()">
+        <i class="fas fa-plus"></i> New Bulk Purchase
+    </button>
+</div>
+
+<div style="background:#ffffff;border-radius:18px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.02);padding:20px;">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Batch Number</th>
+                    <th>Supplier</th>
+                    <th>Purchase Date</th>
+                    <th>Exam Type</th>
+                    <th>Quantity</th>
+                    <th>Cost / Voucher</th>
+                    <th>Selling Price</th>
+                    <th>Total Cost</th>
+                    <th>In Stock</th>
+                    <th>Sold</th>
+                    <th>Expense Ref</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in batches %}
+                <tr>
+                    <td style="font-family:monospace;font-weight:800;color:#0f172a;">{{ b.batch_number }}</td>
+                    <td style="font-weight:600;color:#334155;">{{ b.supplier }}</td>
+                    <td style="font-size:0.82rem;color:#64748b;">{{ b.purchase_date.strftime('%d-%b-%Y') if b.purchase_date else '-' }}</td>
+                    <td><span class="chip-exam">{{ b.exam_name }}</span></td>
+                    <td style="font-weight:800;">{{ b.quantity }}</td>
+                    <td>₹ {{ '%.2f'|format(b.cost_per_voucher) }}</td>
+                    <td>₹ {{ '%.2f'|format(b.default_selling_price) }}</td>
+                    <td style="font-weight:800;color:#2563eb;">₹ {{ '%.2f'|format(b.total_cost) }}</td>
+                    <td><span class="chip chip-available">{{ b.available_count }}</span></td>
+                    <td><span class="chip chip-sold">{{ b.sold_count }}</span></td>
+                    <td>
+                        {% if b.expense_id %}
+                        <a href="{{ url_for('expenses.expense_detail', expense_id=b.expense_id) }}" style="color:#6c1fb0;font-weight:700;font-size:0.82rem;text-decoration:none;">
+                            #{{ b.expense_id }}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <button class="action-btn-sm btn-act-view" onclick="viewBatchVouchers({{ b.id }})">
+                            <i class="fas fa-list-ul"></i> View Codes
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="12" style="text-align:center;padding:36px;color:#94a3b8;">
+                        <i class="fas fa-box-open" style="font-size:32px;color:#cbd5e1;margin-bottom:8px;display:block;"></i>
+                        No purchase batches recorded yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- ============================================================
+     TAB 5: STUDENT-WISE HISTORY
+     ============================================================ -->
+{% if active_tab == 'students' %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <h3 style="margin:0;font-size:1.25rem;font-weight:800;color:#0f172a;">
+        <i class="fas fa-user-graduate" style="color:#6c1fb0;margin-right:8px;"></i> Student Voucher Portfolio
+    </h3>
+    <span class="chip chip-sold">{{ students|length }} Active Voucher Students</span>
+</div>
+
+<div style="background:#ffffff;border-radius:18px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.02);padding:20px;">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Candidate / Student</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                    <th>Address</th>
+                    <th>Vouchers Purchased</th>
+                    <th>Total Spent</th>
+                    <th>Realized Profit</th>
+                    <th>Used Count</th>
+                    <th style="text-align:right;">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td style="font-weight:800;color:#0f172a;">{{ s.name }}</td>
+                    <td style="color:#475569;font-size:0.84rem;">{{ s.mobile }}</td>
+                    <td style="color:#475569;font-size:0.84rem;">{{ s.email }}</td>
+                    <td style="color:#64748b;font-size:0.82rem;">{{ s.address }}</td>
+                    <td style="font-weight:800;text-align:center;">
+                        <span class="badge-pill" style="background:#f1f5f9;color:#334155;padding:4px 10px;border-radius:14px;font-size:0.8rem;">
+                            {{ s.vouchers_count }}
+                        </span>
+                    </td>
+                    <td style="font-weight:800;color:#15803d;">₹ {{ '%.2f'|format(s.total_spent) }}</td>
+                    <td style="font-weight:800;color:#2563eb;">₹ {{ '%.2f'|format(s.total_profit) }}</td>
+                    <td style="font-weight:700;color:#6c1fb0;text-align:center;">{{ s.used_count }}</td>
+                    <td style="text-align:right;">
+                        {% if s.student_id %}
+                        <a href="{{ url_for('vouchers.student_detail', student_id=s.student_id) }}" class="action-btn-sm btn-act-view">
+                            <i class="fas fa-history"></i> History
+                        </a>
+                        {% else %}
+                        <span style="font-size:0.75rem;color:#94a3b8;">Legacy</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align:center;padding:36px;color:#94a3b8;">
+                        <i class="fas fa-user-graduate" style="font-size:32px;color:#cbd5e1;margin-bottom:8px;display:block;"></i>
+                        No student voucher purchase history recorded yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- ============================================================
+     MODALS
+     ============================================================ -->
+
+<!-- 1. SELL VOUCHER MODAL (Full Flutter Parity) -->
+<div class="modal-overlay" id="sellModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#ede9fe;display:flex;align-items:center;justify-content:center;color:#6c1fb0;font-size:16px;">
+                    <i class="fas fa-cart-plus"></i>
+                </div>
+                <h3 id="sellModalTitle">Sell Exam Voucher</h3>
+            </div>
+            <button class="modal-close" onclick="closeModal('sellModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('vouchers.sell') }}" id="sellForm">
+            <div class="modal-body">
+                <!-- Section 1: Voucher Selection -->
+                <div class="m-form-group">
+                    <label>Select Available Voucher *</label>
+                    <select name="voucher_id" id="sellVoucherSelect" class="m-form-control" required onchange="onVoucherSelectChange(this)">
+                        <option value="">-- Choose an available voucher --</option>
+                        {% for v in available_vouchers %}
+                        <option value="{{ v.id }}" data-price="{{ v.selling_price }}" data-cost="{{ v.purchase_cost }}" data-code="{{ v.voucher_code }}" data-exam="{{ v.exam_type_name }}">
+                            {{ v.voucher_code }} • {{ v.exam_type_name }} (Cost ₹{{ '%.2f'|format(v.purchase_cost) }} | Sell ₹{{ '%.2f'|format(v.selling_price) }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Section 2: Candidate Details -->
+                <div style="font-size:0.8rem;font-weight:800;color:#6c1fb0;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px;">
+                    Candidate Information
+                </div>
+                <div class="m-form-group">
+                    <label>Full Name *</label>
+                    <input type="text" name="student_name" id="sellStudentName" class="m-form-control" placeholder="Candidate full name" required>
+                </div>
+                <div class="m-grid-2">
+                    <div class="m-form-group">
+                        <label>Mobile Number</label>
+                        <input type="text" name="mobile" id="sellMobile" class="m-form-control" placeholder="e.g. 9876543210">
+                    </div>
+                    <div class="m-form-group">
+                        <label>ID / IC Number</label>
+                        <input type="text" name="id_number" id="sellIdNumber" class="m-form-control" placeholder="ID or Register No.">
+                    </div>
+                </div>
+                <div class="m-form-group">
+                    <label>Email Address</label>
+                    <input type="email" name="email" id="sellEmail" class="m-form-control" placeholder="candidate@example.com">
+                </div>
+                <div class="m-form-group">
+                    <label>Address</label>
+                    <input type="text" name="address" id="sellAddress" class="m-form-control" placeholder="Residential or branch address">
+                </div>
+
+                <!-- Section 3: Pricing & Payment -->
+                <div style="font-size:0.8rem;font-weight:800;color:#6c1fb0;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px;">
+                    Sale &amp; Payment Details
+                </div>
+                <div class="m-grid-2">
+                    <div class="m-form-group">
+                        <label>Selling Price (₹) *</label>
+                        <input type="number" step="0.01" min="0" name="selling_price" id="sellPrice" class="m-form-control" value="0.00" required oninput="calcFinalAmount()">
+                    </div>
+                    <div class="m-form-group">
+                        <label>Discount (₹)</label>
+                        <input type="number" step="0.01" min="0" name="discount" id="sellDiscount" class="m-form-control" value="0.00" oninput="calcFinalAmount()">
+                    </div>
+                </div>
+
+                <div class="m-grid-2">
+                    <div class="m-form-group">
+                        <label>Payment Mode</label>
+                        <select name="payment_mode" class="m-form-control">
+                            <option value="Cash">Cash</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Card">Card</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="m-form-group">
+                        <label>Payment Status *</label>
+                        <select name="payment_status" id="sellPaymentStatus" class="m-form-control" onchange="syncSellPaidAmount()">
+                            <option value="Paid">Paid</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Partial">Partial</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="m-grid-2">
+                    <div class="m-form-group">
+                        <label>Paid Amount (₹)</label>
+                        <input type="number" step="0.01" min="0" name="paid_amount" id="sellPaidAmount" class="m-form-control" value="0.00" oninput="calcPendingBalance()">
+                    </div>
+                    <div class="m-form-group">
+                        <label>Pending Balance (₹)</label>
+                        <div id="sellPendingDisplay" style="height:42px;display:flex;align-items:center;padding:0 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;font-weight:800;color:#10b981;font-size:1.05rem;">
+                            ₹ 0.00
+                        </div>
+                    </div>
+                </div>
+
+                <div class="m-form-group">
+                    <label>Payment Reference (Transaction ID / Cheque No)</label>
+                    <input type="text" name="payment_reference" class="m-form-control" placeholder="Optional transaction note">
+                </div>
+                <div class="m-form-group">
+                    <label>Internal Notes</label>
+                    <textarea name="notes" class="m-form-control" rows="2" placeholder="Optional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-v-outline" onclick="closeModal('sellModal')">Cancel</button>
+                <button type="submit" class="btn-v-primary">Complete Sale</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. BULK PURCHASE MODAL (Full Flutter Parity) -->
+<div class="modal-overlay" id="purchaseModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center;color:#2563eb;font-size:16px;">
+                    <i class="fas fa-boxes-stacked"></i>
+                </div>
+                <h3>Bulk Voucher Purchase</h3>
+            </div>
+            <button class="modal-close" onclick="closeModal('purchaseModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('vouchers.purchase') }}" id="purchaseForm">
+            <div class="modal-body">
+                <div class="m-form-group">
+                    <label>Exam Type *</label>
+                    <select name="exam_type_id" class="m-form-control" required>
+                        <option value="">-- Select Exam Type --</option>
+                        {% for et in exam_types %}
+                        <option value="{{ et.id }}">{{ et.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="m-grid-2">
+                    <div class="m-form-group">
+                        <label>Quantity *</label>
+                        <input type="number" min="1" name="quantity" id="purQty" class="m-form-control" placeholder="e.g. 50" required oninput="calcPurTotal()">
+                    </div>
+                    <div class="m-form-group">
+                        <label>Purchase Cost / Voucher (₹) *</label>
+                        <input type="number" step="0.01" min="0.01" name="cost_per_voucher" id="purCost" class="m-form-control" placeholder="e.g. 500.00" required oninput="calcPurTotal()">
+                    </div>
+                </div>
+
+                <div class="m-grid-2">
+                    <div class="m-form-group">
+                        <label>Default Selling Price (₹)</label>
+                        <input type="number" step="0.01" min="0" name="selling_price" class="m-form-control" placeholder="e.g. 750.00">
+                    </div>
+                    <div class="m-form-group">
+                        <label>Purchase Date *</label>
+                        <input type="date" name="purchase_date" class="m-form-control" required value="{{ date_filter or '' }}" id="purDate">
+                    </div>
+                </div>
+
+                <!-- Total Cost Display Banner -->
+                <div class="m-calc-box">
+                    <div>
+                        <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;">Total Purchase Cost</div>
+                        <div style="font-size:1.35rem;font-weight:900;color:#2563eb;" id="purTotalCost">₹ 0.00</div>
+                    </div>
+                    <div style="font-size:0.75rem;color:#10b981;font-weight:700;">
+                        <i class="fas fa-receipt"></i> Linked Expense auto-recorded
+                    </div>
+                </div>
+
+                <div class="m-grid-2">
+                    <div class="m-form-group">
+                        <label>Supplier / Vendor</label>
+                        <input type="text" name="supplier" class="m-form-control" placeholder="e.g. Pearson / Certiport">
+                    </div>
+                    <div class="m-form-group">
+                        <label>Payment Mode</label>
+                        <select name="payment_mode" class="m-form-control">
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Card">Card</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="m-form-group">
+                    <label>Branch</label>
+                    <select name="branch_id" class="m-form-control">
+                        <option value="">All Branches</option>
+                        {% for b in branches %}
+                        <option value="{{ b.id }}" {% if active_branch_id == b.id %}selected{% endif %}>{{ b.branch_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="m-form-group">
+                    <label>Custom Voucher Codes (One code per line)</label>
+                    <textarea name="voucher_codes" class="m-form-control" rows="3" placeholder="Leave blank to auto-generate unique codes (VCH-YYYYMMDD-XXXXXXXX)"></textarea>
+                </div>
+
+                <div class="m-form-group">
+                    <label>Auto Code Prefix</label>
+                    <input type="text" name="code_prefix" class="m-form-control" value="VCH" placeholder="VCH">
+                </div>
+
+                <div class="m-form-group">
+                    <label>Purchase Notes</label>
+                    <textarea name="notes" class="m-form-control" rows="2" placeholder="Optional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-v-outline" onclick="closeModal('purchaseModal')">Cancel</button>
+                <button type="submit" class="btn-v-blue">Save Purchase &amp; Record Expense</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. UPDATE PAYMENT MODAL (Matching Flutter _showUpdatePaymentSheet) -->
+<div class="modal-overlay" id="paymentModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;color:#b45309;font-size:16px;">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <h3>Update Voucher Payment</h3>
+            </div>
+            <button class="modal-close" onclick="closeModal('paymentModal')">&times;</button>
+        </div>
+        <form method="POST" id="updatePaymentForm" action="">
+            <div class="modal-body">
+                <div class="m-calc-box" style="margin-bottom:18px;">
+                    <div>
+                        <div style="font-size:0.75rem;font-weight:700;color:#64748b;" id="payModalVoucherCode">Voucher: -</div>
+                        <div style="font-size:1.25rem;font-weight:900;color:#0f172a;" id="payModalFinalAmt">Final Amount: ₹ 0.00</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem;font-weight:700;color:#64748b;">Pending Balance</div>
+                        <div style="font-size:1.25rem;font-weight:900;color:#b91c1c;" id="payModalBalance">₹ 0.00</div>
+                    </div>
+                </div>
+
+                <div class="m-form-group">
+                    <label>Payment Status *</label>
+                    <select name="payment_status" id="payModalStatus" class="m-form-control" onchange="syncUpdatePaidAmount()">
+                        <option value="Paid">Paid</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Partial">Partial</option>
+                    </select>
+                </div>
+
+                <div class="m-form-group">
+                    <label>Paid Amount (₹) *</label>
+                    <input type="number" step="0.01" min="0" name="paid_amount" id="payModalPaidInput" class="m-form-control" required oninput="calcUpdateBalance()">
+                </div>
+
+                <div class="m-form-group">
+                    <label>Payment Mode</label>
+                    <select name="payment_mode" id="payModalMode" class="m-form-control">
+                        <option value="Cash">Cash</option>
+                        <option value="UPI">UPI</option>
+                        <option value="Card">Card</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="m-form-group">
+                    <label>Payment Reference</label>
+                    <input type="text" name="payment_reference" id="payModalRef" class="m-form-control" placeholder="Transaction ref...">
+                </div>
+
+                <div class="m-form-group">
+                    <label>Notes</label>
+                    <textarea name="notes" id="payModalNotes" class="m-form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-v-outline" onclick="closeModal('paymentModal')">Cancel</button>
+                <button type="submit" class="btn-v-primary">Save Payment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 4. VOUCHER DETAILS & TIMELINE MODAL (Matching Flutter _showDetailSheet) -->
+<div class="modal-overlay" id="detailsModal">
+    <div class="modal-box" style="max-width:680px;">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#ede9fe;display:flex;align-items:center;justify-content:center;color:#6c1fb0;font-size:16px;">
+                    <i class="fas fa-ticket-alt"></i>
+                </div>
+                <div>
+                    <h3 id="detCode" style="margin:0;font-family:monospace;">-</h3>
+                    <div id="detStatusBadge" style="margin-top:2px;"></div>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeModal('detailsModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="detBody">
+            <div style="text-align:center;padding:30px;color:#94a3b8;">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i> Loading details...
+            </div>
+        </div>
+        <div class="modal-footer" id="detFooter">
+            <button type="button" class="btn-v-outline" onclick="closeModal('detailsModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- 5. BATCH VOUCHERS LIST MODAL -->
+<div class="modal-overlay" id="batchModal">
+    <div class="modal-box" style="max-width:720px;">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center;color:#2563eb;font-size:16px;">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <h3 id="batchModalTitle">Batch Vouchers</h3>
+                    <p id="batchModalSub" style="margin:2px 0 0;font-size:0.8rem;color:#64748b;"></p>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeModal('batchModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="batchModalBody">
+            <div style="text-align:center;padding:30px;color:#94a3b8;">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i> Loading batch vouchers...
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-v-outline" onclick="closeModal('batchModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT LOGIC
+     ============================================================ -->
+<script>
+// Modal control helpers
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+// Bulk Purchase calculations
+function openPurchaseModal() {
+    var today = new Date().toISOString().split('T')[0];
+    var purDate = document.getElementById('purDate');
+    if (purDate && !purDate.value) purDate.value = today;
+    calcPurTotal();
+    openModal('purchaseModal');
+}
+function calcPurTotal() {
+    var qty = parseFloat(document.getElementById('purQty').value) || 0;
+    var cost = parseFloat(document.getElementById('purCost').value) || 0;
+    var total = qty * cost;
+    document.getElementById('purTotalCost').textContent = '₹ ' + total.toFixed(2);
+}
+
+// Sell Modal functions
+function openSellModal() {
+    document.getElementById('sellForm').reset();
+    document.getElementById('sellModalTitle').textContent = 'Sell Exam Voucher';
+    calcFinalAmount();
+    openModal('sellModal');
+}
+
+function openSellModalWithVoucher(voucherId, voucherCode, defaultPrice) {
+    openSellModal();
+    var select = document.getElementById('sellVoucherSelect');
+    if (select) {
+        select.value = voucherId;
+        onVoucherSelectChange(select);
+    }
+}
+
+function onVoucherSelectChange(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    if (opt && opt.value) {
+        var price = parseFloat(opt.getAttribute('data-price')) || 0;
+        document.getElementById('sellPrice').value = price.toFixed(2);
+        calcFinalAmount();
+    }
+}
+
+function calcFinalAmount() {
+    var price = parseFloat(document.getElementById('sellPrice').value) || 0;
+    var discount = parseFloat(document.getElementById('sellDiscount').value) || 0;
+    var finalAmt = Math.max(0, price - discount);
+    syncSellPaidAmount();
+}
+
+function syncSellPaidAmount() {
+    var price = parseFloat(document.getElementById('sellPrice').value) || 0;
+    var discount = parseFloat(document.getElementById('sellDiscount').value) || 0;
+    var finalAmt = Math.max(0, price - discount);
+    var status = document.getElementById('sellPaymentStatus').value;
+    var paidInput = document.getElementById('sellPaidAmount');
+
+    if (status === 'Paid') {
+        paidInput.value = finalAmt.toFixed(2);
+        paidInput.readOnly = true;
+    } else if (status === 'Pending') {
+        paidInput.value = '0.00';
+        paidInput.readOnly = true;
+    } else {
+        // Partial
+        paidInput.readOnly = false;
+        if (parseFloat(paidInput.value) >= finalAmt || parseFloat(paidInput.value) === 0) {
+            paidInput.value = (finalAmt * 0.5).toFixed(2);
+        }
+    }
+    calcPendingBalance();
+}
+
+function calcPendingBalance() {
+    var price = parseFloat(document.getElementById('sellPrice').value) || 0;
+    var discount = parseFloat(document.getElementById('sellDiscount').value) || 0;
+    var finalAmt = Math.max(0, price - discount);
+    var paid = parseFloat(document.getElementById('sellPaidAmount').value) || 0;
+    var bal = Math.max(0, finalAmt - paid);
+
+    var display = document.getElementById('sellPendingDisplay');
+    display.textContent = '₹ ' + bal.toFixed(2);
+    if (bal > 0) {
+        display.style.color = '#b91c1c';
+    } else {
+        display.style.color = '#15803d';
+    }
+}
+
+// Payment Update Modal
+var currentUpdateFinalAmt = 0;
+function openPaymentModal(voucherId, code, finalAmt, paidAmt, status, mode, ref, notes) {
+    currentUpdateFinalAmt = parseFloat(finalAmt) || 0;
+    document.getElementById('updatePaymentForm').action = '/vouchers/' + voucherId + '/payment';
+    document.getElementById('payModalVoucherCode').textContent = 'Voucher: ' + code;
+    document.getElementById('payModalFinalAmt').textContent = 'Final Amount: ₹ ' + currentUpdateFinalAmt.toFixed(2);
+    
+    document.getElementById('payModalStatus').value = status || 'Pending';
+    document.getElementById('payModalPaidInput').value = parseFloat(paidAmt || 0).toFixed(2);
+    document.getElementById('payModalMode').value = mode || 'Cash';
+    document.getElementById('payModalRef').value = (ref && ref !== '-') ? ref : '';
+    document.getElementById('payModalNotes').value = notes || '';
+
+    syncUpdatePaidAmount();
+    openModal('paymentModal');
+}
+
+function syncUpdatePaidAmount() {
+    var status = document.getElementById('payModalStatus').value;
+    var paidInput = document.getElementById('payModalPaidInput');
+    if (status === 'Paid') {
+        paidInput.value = currentUpdateFinalAmt.toFixed(2);
+        paidInput.readOnly = true;
+    } else if (status === 'Pending') {
+        paidInput.value = '0.00';
+        paidInput.readOnly = true;
+    } else {
+        paidInput.readOnly = false;
+    }
+    calcUpdateBalance();
+}
+
+function calcUpdateBalance() {
+    var paid = parseFloat(document.getElementById('payModalPaidInput').value) || 0;
+    var bal = Math.max(0, currentUpdateFinalAmt - paid);
+    var balEl = document.getElementById('payModalBalance');
+    balEl.textContent = '₹ ' + bal.toFixed(2);
+    balEl.style.color = (bal > 0) ? '#b91c1c' : '#15803d';
+}
+
+// Voucher Details Modal (AJAX)
+function viewVoucherDetails(voucherId) {
+    document.getElementById('detCode').textContent = 'Loading...';
+    document.getElementById('detStatusBadge').innerHTML = '';
+    document.getElementById('detBody').innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i> Loading details...</div>';
+    openModal('detailsModal');
+
+    fetch('/vouchers/' + voucherId + '/json')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (!data.success) {
+                document.getElementById('detBody').innerHTML = '<div style="color:#b91c1c;padding:20px;">Failed to load voucher details.</div>';
+                return;
+            }
+            var v = data.voucher;
+            var p = data.purchase;
+            var hs = data.history || [];
+
+            document.getElementById('detCode').textContent = v.voucher_code;
+            var statusClass = (v.status === 'Available' || v.status === 'Used') ? 'chip-available' : (v.status === 'Sold' ? 'chip-sold' : 'chip-pending');
+            document.getElementById('detStatusBadge').innerHTML = '<span class="chip ' + statusClass + '">' + v.status + '</span>';
+
+            var html = '';
+            // Voucher Information
+            html += '<div style="background:#f8fafc;border-radius:14px;padding:16px;border:1px solid #e2e8f0;margin-bottom:14px;">';
+            html += '<div style="font-weight:800;font-size:0.85rem;color:#0f172a;margin-bottom:10px;text-transform:uppercase;">Voucher Inventory Details</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.85rem;">';
+            html += '<div><span style="color:#64748b;">Exam:</span> <strong>' + v.exam_type_name + '</strong></div>';
+            html += '<div><span style="color:#64748b;">Batch:</span> <strong>' + p.batch_number + '</strong></div>';
+            html += '<div><span style="color:#64748b;">Purchase Date:</span> <strong>' + p.purchase_date + '</strong></div>';
+            html += '<div><span style="color:#64748b;">Supplier:</span> <strong>' + p.supplier + '</strong></div>';
+            html += '<div><span style="color:#64748b;">Cost:</span> <strong>₹ ' + v.purchase_cost.toFixed(2) + '</strong></div>';
+            html += '<div><span style="color:#64748b;">Selling Price:</span> <strong>₹ ' + v.selling_price.toFixed(2) + '</strong></div>';
+            html += '</div></div>';
+
+            // Sale & Candidate Details
+            if (hs.length > 0) {
+                var sale = hs[0];
+                html += '<div style="background:#f8fafc;border-radius:14px;padding:16px;border:1px solid #e2e8f0;margin-bottom:14px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+                html += '<div style="font-weight:800;font-size:0.85rem;color:#0f172a;text-transform:uppercase;">Candidate &amp; Sale Details</div>';
+                html += '<button type="button" class="action-btn-sm btn-act-pay" onclick="closeModal(\'detailsModal\'); openPaymentModal(' + v.id + ', \'' + v.voucher_code + '\', ' + sale.final_amount + ', ' + sale.paid_amount + ', \'' + sale.payment_status + '\', \'' + sale.payment_mode + '\', \'' + (sale.payment_reference || '') + '\', \'' + (sale.notes || '') + '\')"><i class="fas fa-edit"></i> Edit Payment</button>';
+                html += '</div>';
+                html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.85rem;">';
+                html += '<div><span style="color:#64748b;">Candidate:</span> <strong>' + sale.student_name + '</strong></div>';
+                html += '<div><span style="color:#64748b;">Mobile:</span> <strong>' + sale.mobile + '</strong></div>';
+                html += '<div><span style="color:#64748b;">Sold Date:</span> <strong>' + sale.sold_at + '</strong></div>';
+                html += '<div><span style="color:#64748b;">Final Amount:</span> <strong style="color:#15803d;">₹ ' + sale.final_amount.toFixed(2) + '</strong></div>';
+                html += '<div><span style="color:#64748b;">Paid Amount:</span> <strong>₹ ' + sale.paid_amount.toFixed(2) + '</strong></div>';
+                html += '<div><span style="color:#64748b;">Pending:</span> <strong style="color:' + (sale.balance_amount > 0 ? '#b91c1c' : '#15803d') + ';">₹ ' + sale.balance_amount.toFixed(2) + '</strong></div>';
+                html += '<div><span style="color:#64748b;">Payment Status:</span> <strong>' + sale.payment_status + ' (' + sale.payment_mode + ')</strong></div>';
+                html += '<div><span style="color:#64748b;">Reference:</span> <strong>' + sale.payment_reference + '</strong></div>';
+                html += '</div>';
+                if (sale.notes) {
+                    html += '<div style="margin-top:8px;font-size:0.8rem;color:#64748b;"><em>Note: ' + sale.notes + '</em></div>';
+                }
+                html += '</div>';
+            }
+
+            // Timeline
+            html += '<div style="font-weight:800;font-size:0.85rem;color:#0f172a;margin-bottom:8px;text-transform:uppercase;">Activity Ledger</div>';
+            if (hs.length === 0) {
+                html += '<div style="color:#64748b;font-size:0.84rem;padding:10px;background:#f8fafc;border-radius:10px;">Available for sale. No student assignments yet.</div>';
+            } else {
+                for (var i = 0; i < hs.length; i++) {
+                    var h = hs[i];
+                    html += '<div style="padding:10px 14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;font-size:0.84rem;">';
+                    html += '<div><strong style="color:#6c1fb0;">Sale Recorded</strong> • ' + h.student_name + ' (' + h.sold_at + ')</div>';
+                    html += '<div style="font-weight:800;">₹ ' + h.final_amount.toFixed(2) + '</div>';
+                    html += '</div>';
+                }
+            }
+
+            document.getElementById('detBody').innerHTML = html;
+        })
+        .catch(function(err) {
+            document.getElementById('detBody').innerHTML = '<div style="color:#b91c1c;padding:20px;">Error loading details: ' + err + '</div>';
+        });
+}
+
+// Batch Vouchers Modal (AJAX)
+function viewBatchVouchers(batchId) {
+    document.getElementById('batchModalTitle').textContent = 'Loading Batch...';
+    document.getElementById('batchModalSub').textContent = '';
+    document.getElementById('batchModalBody').innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i> Loading batch vouchers...</div>';
+    openModal('batchModal');
+
+    fetch('/vouchers/batch/' + batchId + '/json')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (!data.success) {
+                document.getElementById('batchModalBody').innerHTML = '<div style="color:#b91c1c;padding:20px;">Failed to load batch.</div>';
+                return;
+            }
+            document.getElementById('batchModalTitle').textContent = 'Batch: ' + data.batch_number;
+            document.getElementById('batchModalSub').textContent = data.supplier + ' • ' + data.purchase_date + ' • ' + data.quantity + ' vouchers (Total: ₹ ' + data.total_cost.toFixed(2) + ')';
+
+            var vList = data.vouchers || [];
+            var html = '<div class="table-responsive" style="max-height:420px;overflow-y:auto;"><table class="data-table"><thead><tr><th>S.No</th><th>Voucher Code</th><th>Exam</th><th>Status</th><th>Purchase Cost</th><th>Selling Price</th></tr></thead><tbody>';
+            for (var i = 0; i < vList.length; i++) {
+                var v = vList[i];
+                var statusCls = (v.status === 'Available') ? 'chip-available' : (v.status === 'Sold' ? 'chip-sold' : 'chip-used');
+                html += '<tr><td>' + (i + 1) + '</td><td style="font-family:monospace;font-weight:700;">' + v.voucher_code + '</td><td><span class="chip-exam">' + v.exam_type_name + '</span></td><td><span class="chip ' + statusCls + '">' + v.status + '</span></td><td>₹ ' + v.purchase_cost.toFixed(2) + '</td><td>₹ ' + v.selling_price.toFixed(2) + '</td></tr>';
+            }
+            html += '</tbody></table></div>';
+            document.getElementById('batchModalBody').innerHTML = html;
+        })
+        .catch(function(err) {
+            document.getElementById('batchModalBody').innerHTML = '<div style="color:#b91c1c;padding:20px;">Error loading batch: ' + err + '</div>';
+        });
+}
+
+// Quick table filter on overview page
+function filterAvailTable() {
+    var input = document.getElementById("availQuickSearch");
+    var filter = input.value.toLowerCase();
+    var table = document.getElementById("availTable");
+    var tr = table.getElementsByTagName("tr");
+    for (var i = 1; i < tr.length; i++) {
+        var tdCode = tr[i].getElementsByTagName("td")[0];
+        var tdExam = tr[i].getElementsByTagName("td")[1];
+        if (tdCode || tdExam) {
+            var txtCode = tdCode ? (tdCode.textContent || tdCode.innerText) : "";
+            var txtExam = tdExam ? (tdExam.textContent || tdExam.innerText) : "";
+            if (txtCode.toLowerCase().indexOf(filter) > -1 || txtExam.toLowerCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+}
+</script>
+
 {% endblock %}

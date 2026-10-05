@@ -10,6 +10,20 @@ from apps.expenses.helpers import (
 )
 
 import os
+import sys
+
+# Ensure stdout and stderr exist even when packaged with console=False
+if sys.stdout is None:
+    try:
+        sys.stdout = open(os.devnull, 'w')
+    except Exception:
+        pass
+if sys.stderr is None:
+    try:
+        sys.stderr = open(os.devnull, 'w')
+    except Exception:
+        pass
+
 from dotenv import load_dotenv
 
 # Firebase Admin SDK
@@ -911,7 +925,8 @@ if __name__ == '__main__':
         )
     )
 
-    debug = (
+    is_frozen = getattr(sys, 'frozen', False)
+    debug = False if is_frozen else (
         os.environ.get(
             'FLASK_DEBUG',
             '1'
@@ -926,5 +941,7 @@ if __name__ == '__main__':
     app.run(
         host='0.0.0.0',
         port=port,
-        debug=debug
+        debug=debug,
+        use_reloader=not is_frozen
     )
+

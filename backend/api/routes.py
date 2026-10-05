@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from flask import request, jsonify, g
 from flask import current_app
@@ -561,9 +562,23 @@ def candidates():
     if team_id: q=q.filter(Candidate.team_id==team_id)
     return ok([candidate_dict(x) for x in q.order_by(Candidate.created_at.desc()).all()])
 
-@api_bp.post('/exams/candidates/scan-passport/')
+@api_bp.get('/exams/candidates/<int:candidate_id>/')
+@api_token_required
+def candidate_detail(candidate_id):
+    c = Candidate.query.get(candidate_id)
+    if not c:
+        return fail('Candidate not found.', 404)
+    bid = _employee_branch_required(None)
+    if g.api_identity.get('role') == 'Employee' and (bid is None or c.branch_id != bid):
+        return fail('Employees can only access candidates in their assigned branch.', 403)
+    return ok(candidate_dict(c))
+
+@api_bp.route('/exams/candidates/scan-passport/', methods=['POST', 'OPTIONS'], strict_slashes=False)
+@api_bp.route('/exams/candidates/scan-passport', methods=['POST', 'OPTIONS'], strict_slashes=False)
 @api_token_required
 def candidate_scan_passport():
+    if request.method == 'OPTIONS':
+        return ('', 204)
     from apps.exams.passport_service import extract_passport_data_with_groq
     front_file = request.files.get('front_page') or request.files.get('front_image')
     last_file = request.files.get('last_page') or request.files.get('last_image')

@@ -1,2 +1,212 @@
-{% extends 'base.html' %}{% block content %}<div class="module-header"><h2>Voucher Details</h2></div><div class="panel"><div class="detail-grid">
-<div><span>Voucher Code</span><strong>{{ voucher.voucher_code }}</strong></div><div><span>Status</span><strong>{{ voucher.status }}</strong></div><div><span>Student</span><strong>{{ voucher.student.name if voucher.student else 'Not assigned' }}</strong></div><div><span>Register Number</span><strong>{{ voucher.student.register_number if voucher.student else '-' }}</strong></div><div><span>Exam</span><strong>{{ voucher.exam_type.name if voucher.exam_type else '-' }}</strong></div><div><span>Purchase Cost</span><strong>₹{{ '%.2f'|format(voucher.purchase_cost) }}</strong></div><div><span>Selling Price</span><strong>₹{{ '%.2f'|format(voucher.selling_price) }}</strong></div><div><span>Profit</span><strong>₹{{ '%.2f'|format(voucher.profit) }}</strong></div><div><span>Payment Status</span><strong>{{ voucher.payment_status }}</strong></div><div><span>Issued</span><strong>{{ voucher.issued_at.strftime('%d-%b-%Y %H:%M') if voucher.issued_at else '-' }}</strong></div><div><span>Used</span><strong>{{ voucher.used_at.strftime('%d-%b-%Y %H:%M') if voucher.used_at else '-' }}</strong></div><div><span>Batch</span><strong>{{ voucher.batch.batch_number }}</strong></div></div><div class="button-row" style="margin-top:22px"><a class="btn-secondary" href="{{ url_for('vouchers.issued') }}">Back</a>{% if voucher.status == 'Assigned' %}<form method="POST" action="{{ url_for('vouchers.use',voucher_id=voucher.id) }}"><button class="btn-primary">Mark Used</button></form>{% endif %}{% if voucher.status not in ['Used','Cancelled'] %}<form method="POST" action="{{ url_for('vouchers.cancel',voucher_id=voucher.id) }}"><button class="btn-danger">Cancel Voucher</button></form>{% endif %}</div></div>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<div class="module-header">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg, #6c1fb0, #9a22c7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;">
+            <i class="fas fa-ticket-alt"></i>
+        </div>
+        <div>
+            <h2 style="margin:0;font-size:1.45rem;font-weight:800;color:#0f172a;font-family:monospace;">{{ voucher.voucher_code }}</h2>
+            <p style="margin:2px 0 0;font-size:0.84rem;color:#64748b;">
+                Exam: <strong>{{ voucher.exam_type.name if voucher.exam_type else '-' }}</strong> • Batch: <strong>{{ voucher.batch.batch_number if voucher.batch else '-' }}</strong>
+            </p>
+        </div>
+    </div>
+    <div class="module-actions">
+        <a class="btn-secondary" href="{{ url_for('vouchers.dashboard', tab='sold' if voucher.status in ['Sold', 'Used', 'Assigned'] else 'overview') }}" style="text-decoration:none;">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+        {% if voucher.status in ['Sold', 'Assigned'] %}
+        <form method="POST" action="{{ url_for('vouchers.use', voucher_id=voucher.id) }}" style="display:inline;" onsubmit="return confirm('Mark voucher as USED?');">
+            <button class="btn-primary" style="background:#10b981;border:none;">
+                <i class="fas fa-check-circle"></i> Mark as Used
+            </button>
+        </form>
+        {% endif %}
+        {% if voucher.status not in ['Used', 'Cancelled'] %}
+        <form method="POST" action="{{ url_for('vouchers.cancel', voucher_id=voucher.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to CANCEL this voucher?');">
+            <button class="btn-danger">
+                <i class="fas fa-ban"></i> Cancel Voucher
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="module-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+    <!-- Panel 1: Voucher & Purchase Details -->
+    <div class="panel" style="border-radius:20px;padding:24px;">
+        <h3 style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <span><i class="fas fa-boxes-stacked" style="color:#2563eb;margin-right:8px;"></i> Inventory Details</span>
+            <span class="status-pill {% if voucher.status in ['Available', 'Used'] %}status-active{% elif voucher.status in ['Sold', 'Assigned'] %}status-scheduled{% else %}status-cancelled{% endif %}">
+                {{ voucher.status }}
+            </span>
+        </h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:0.9rem;">
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Voucher Code</span>
+                <strong style="font-family:monospace;font-size:1.05rem;">{{ voucher.voucher_code }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Exam Type</span>
+                <strong>{{ voucher.exam_type.name if voucher.exam_type else '-' }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Batch Number</span>
+                <strong>{{ voucher.batch.batch_number if voucher.batch else '-' }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Purchase Date</span>
+                <strong>{{ voucher.batch.purchase_date.strftime('%d-%b-%Y') if voucher.batch and voucher.batch.purchase_date else '-' }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Purchase Cost</span>
+                <strong style="color:#2563eb;">₹ {{ '%.2f'|format(voucher.purchase_cost) }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Default Selling Price</span>
+                <strong>₹ {{ '%.2f'|format(voucher.selling_price) }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Supplier</span>
+                <strong>{{ voucher.batch.supplier if voucher.batch and voucher.batch.supplier else '-' }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Branch</span>
+                <strong>{{ voucher.branch.branch_name if voucher.branch else 'All Branches' }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Issued / Sold Date</span>
+                <strong>{{ voucher.issued_at.strftime('%d-%b-%Y %H:%M') if voucher.issued_at else '-' }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Exam Used Date</span>
+                <strong style="color:{% if voucher.used_at %}#10b981{% else %}#64748b{% endif %};">
+                    {{ voucher.used_at.strftime('%d-%b-%Y %H:%M') if voucher.used_at else 'Not used yet' }}
+                </strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel 2: Sale & Candidate Details -->
+    <div class="panel" style="border-radius:20px;padding:24px;">
+        <h3 style="margin-bottom:16px;">
+            <i class="fas fa-user-check" style="color:#6c1fb0;margin-right:8px;"></i> Candidate &amp; Sale Details
+        </h3>
+        {% if v.student_name != '-' %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:0.9rem;">
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Candidate Name</span>
+                <strong style="font-size:1.05rem;color:#0f172a;">{{ v.student_name }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Mobile Number</span>
+                <strong>{{ v.mobile }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Email Address</span>
+                <strong>{{ v.email }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">ID Number</span>
+                <strong>{{ v.id_number }}</strong>
+            </div>
+            <div style="grid-column: span 2;">
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Address</span>
+                <strong>{{ v.address }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Final Amount</span>
+                <strong style="font-size:1.15rem;color:#10b981;">₹ {{ '%.2f'|format(v.final_amount) }}</strong>
+                {% if v.discount > 0 %}
+                <span style="font-size:0.75rem;color:#64748b;">(Disc ₹{{ '%.2f'|format(v.discount) }})</span>
+                {% endif %}
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Paid Amount</span>
+                <strong style="font-size:1.15rem;color:#15803d;">₹ {{ '%.2f'|format(v.paid_amount) }}</strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Pending Balance</span>
+                <strong style="font-size:1.15rem;color:{% if v.balance_amount > 0 %}#b91c1c{% else %}#15803d{% endif %};">
+                    ₹ {{ '%.2f'|format(v.balance_amount) }}
+                </strong>
+            </div>
+            <div>
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Payment Status</span>
+                <span class="status-pill {% if v.payment_status == 'Paid' %}status-active{% elif v.payment_status == 'Partial' %}status-rescheduled{% else %}status-cancelled{% endif %}">
+                    {{ v.payment_status }} ({{ v.payment_mode }})
+                </span>
+            </div>
+            <div style="grid-column: span 2;">
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Payment Reference</span>
+                <strong>{{ v.payment_reference }}</strong>
+            </div>
+            {% if v.notes %}
+            <div style="grid-column: span 2;">
+                <span class="muted" style="display:block;font-size:0.75rem;text-transform:uppercase;font-weight:700;">Notes</span>
+                <p style="margin:2px 0 0;color:#475569;">{{ v.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:36px;color:#94a3b8;">
+            <i class="fas fa-user-plus" style="font-size:32px;color:#cbd5e1;margin-bottom:10px;display:block;"></i>
+            <p>This voucher is in stock and has not been sold or assigned to a student yet.</p>
+            <a href="{{ url_for('vouchers.sell', voucher_id=voucher.id) }}" class="btn-primary" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg, #6c1fb0, #9a22c7);">
+                <i class="fas fa-cart-plus"></i> Sell This Voucher
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Panel 3: Full Sales Ledger / Transaction History -->
+{% if history %}
+<div class="panel" style="margin-top:20px;border-radius:20px;padding:24px;">
+    <h3 style="margin-bottom:14px;"><i class="fas fa-history" style="color:#6c1fb0;margin-right:8px;"></i> Sales Ledger Timeline</h3>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date &amp; Time</th>
+                    <th>Candidate</th>
+                    <th>Mobile</th>
+                    <th>Selling Price</th>
+                    <th>Discount</th>
+                    <th>Final Amount</th>
+                    <th>Paid Amount</th>
+                    <th>Pending Balance</th>
+                    <th>Payment Mode</th>
+                    <th>Payment Status</th>
+                    <th>Reference</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in history %}
+                <tr>
+                    <td>{{ h.sold_at.strftime('%d-%b-%Y %H:%M') if h.sold_at else '-' }}</td>
+                    <td style="font-weight:700;">{{ h.student_name }}</td>
+                    <td>{{ h.mobile or '-' }}</td>
+                    <td>₹ {{ '%.2f'|format(h.selling_price) }}</td>
+                    <td style="color:#10b981;">₹ {{ '%.2f'|format(h.discount) }}</td>
+                    <td style="font-weight:800;">₹ {{ '%.2f'|format(h.final_amount) }}</td>
+                    <td style="font-weight:700;color:#15803d;">₹ {{ '%.2f'|format(h.paid_amount) }}</td>
+                    <td style="font-weight:800;color:{% if h.balance_amount > 0 %}#b91c1c{% else %}#15803d{% endif %};">
+                        ₹ {{ '%.2f'|format(h.balance_amount) }}
+                    </td>
+                    <td>{{ h.payment_mode or '-' }}</td>
+                    <td>
+                        <span class="status-pill {% if h.payment_status == 'Paid' %}status-active{% elif h.payment_status == 'Partial' %}status-rescheduled{% else %}status-cancelled{% endif %}">
+                            {{ h.payment_status }}
+                        </span>
+                    </td>
+                    <td>{{ h.payment_reference or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -14,7 +14,7 @@ candidates_bp = Blueprint('candidates', __name__, url_prefix='/exams/candidates'
 # update_status() below. The calendar/candidate history still show a
 # 'Rescheduled' marker on the *original* date via ExamAttempt.was_rescheduled,
 # so no historical information is lost.
-ATTEMPT_STATUSES = ['Scheduled', 'Completed', 'Cancelled', 'Rescheduled', 'No Show']
+ATTEMPT_STATUSES = ['Registered', 'Completed', 'Rescheduled', 'Not Completed', 'Scheduled', 'No Show', 'Cancelled']
 RESULT_OPTIONS = ['Pending', 'Pass', 'Fail']
 
 
@@ -149,14 +149,19 @@ def _validate_branch_exam(branch_id, exam_type_id):
     exam_type = ExamType.query.get(int(exam_type_id)) if exam_type_id else None
     if not branch or not exam_type:
         return None, None, 'Selected Branch or Exam Type is invalid.'
-    mapping = BranchExam.query.filter_by(branch_id=branch.id, exam_type_id=exam_type.id, status='Active').first()
-    if not mapping:
-        return None, None, f'{exam_type.name} is not available at {branch.name}. Please choose a different exam type.'
+    has_branch_mappings = BranchExam.query.filter_by(branch_id=branch.id, status='Active').count() > 0
+    if has_branch_mappings:
+        mapping = BranchExam.query.filter_by(branch_id=branch.id, exam_type_id=exam_type.id, status='Active').first()
+        if not mapping:
+            return None, None, f'{exam_type.name} is not available at {branch.name}. Please choose a different exam type.'
     return branch, exam_type, None
 
 
-@candidates_bp.route('/scan-passport', methods=['POST'])
+@candidates_bp.route('/scan-passport', methods=['POST', 'OPTIONS'], strict_slashes=False)
+@candidates_bp.route('/scan-passport/', methods=['POST', 'OPTIONS'], strict_slashes=False)
 def scan_passport():
+    if request.method == 'OPTIONS':
+        return ('', 204)
     from apps.exams.passport_service import extract_passport_data_with_groq
     front_file = request.files.get('front_page') or request.files.get('front_image')
     last_file = request.files.get('last_page') or request.files.get('last_image')
@@ -212,19 +217,34 @@ def save_candidate():
     if not name:
         flash('Candidate name is required.', 'error')
         return redirect(next_url)
-    if not register_number:
-        flash('Register Number is required.', 'error')
-        return redirect(next_url)
+
+    status_req = (request.form.get('status') or '').strip()
+    status = status_req if status_req in ('Registered', 'Not Completed', 'Rescheduled', 'Completed') else 'Registered'
 
     if candidate_id:
         candidate = Candidate.query.get_or_404(int(candidate_id))
         candidate.name = name
-        candidate.register_number = register_number
+        if register_number:
+            candidate.register_number = register_number
         candidate.email = email
         candidate.phone = phone
         candidate.team_id = team_id
+        if status_req:
+            candidate.status = status
         if reason_note:
             candidate.reason_note = reason_note
+        if branch_id and branch_id.isdigit():
+            candidate.branch_id = int(branch_id)
+        if exam_type_id and exam_type_id.isdigit():
+            candidate.exam_type_id = int(exam_type_id)
+            et = ExamType.query.get(int(exam_type_id))
+            if et:
+                candidate.test_type = et.name
+        if exam_date:
+            candidate.exam_date = exam_date
+            if status == 'Rescheduled':
+                candidate.rescheduled_date = exam_date
+
         candidate.passport_number = passport_number
         candidate.passport_full_name = passport_full_name
         candidate.passport_dob = passport_dob
@@ -247,11 +267,34 @@ def save_candidate():
         if passport_last_image:
             candidate.passport_last_image = passport_last_image
 
+        # Sync latest attempt
+        latest = ExamAttempt.query.filter_by(candidate_id=candidate.id).order_by(ExamAttempt.attempt_number.desc()).first()
+        if latest:
+            if candidate.branch_id:
+                latest.branch_id = candidate.branch_id
+            if candidate.exam_type_id:
+                latest.exam_type_id = candidate.exam_type_id
+            if candidate.exam_date:
+                latest.scheduled_date = candidate.exam_date
+            if status == 'Completed':
+                latest.status = 'Completed'
+                latest.actual_exam_date = candidate.exam_date or _today_str()
+            elif status == 'Not Completed':
+                latest.status = 'No Show'
+            elif status == 'Rescheduled':
+                if not latest.original_scheduled_date:
+                    latest.original_scheduled_date = latest.scheduled_date
+                if candidate.exam_date:
+                    latest.scheduled_date = candidate.exam_date
+                latest.status = 'Scheduled'
+            else:
+                latest.status = 'Scheduled'
+
         db.session.commit()
         flash('Candidate profile updated.', 'success')
         return redirect(next_url)
 
-    # New candidate: also requires an initial exam attempt.
+    # New candidate: requires branch, exam type, and exam date
     if not branch_id:
         flash('Branch / Exam Center is required.', 'error')
         return redirect(next_url)
@@ -264,22 +307,6 @@ def save_candidate():
         flash(error, 'error')
         return redirect(next_url)
 
-    selected_session = None
-    if session_id:
-        selected_session = ExamSession.query.get(int(session_id))
-        if not selected_session or selected_session.status == 'Cancelled':
-            flash('Selected exam session is no longer available.', 'error')
-            return redirect(next_url)
-        if (not selected_session.branch_exam
-                or selected_session.branch_exam.branch_id != branch.id
-                or selected_session.branch_exam.exam_type_id != exam_type.id):
-            flash('Selected session does not match the chosen branch/exam type.', 'error')
-            return redirect(next_url)
-        if selected_session.seats_taken >= selected_session.seat_capacity:
-            flash('Cannot add candidate: the selected session is at full seat capacity.', 'error')
-            return redirect(next_url)
-        exam_date = selected_session.exam_date.strftime('%Y-%m-%d') if selected_session.exam_date else exam_date
-
     if not exam_date:
         flash('Exam Date is required.', 'error')
         return redirect(next_url)
@@ -288,14 +315,15 @@ def save_candidate():
         name=name,
         email=email,
         phone=phone,
-        register_number=register_number,
+        register_number=register_number or None,
         branch_id=branch.id,
         exam_type_id=exam_type.id,
         team_id=team_id,
         test_type=exam_type.name,
         exam_date=exam_date,
-        status='Scheduled',
+        status=status,
         original_exam_date=exam_date,
+        rescheduled_date=exam_date if status == 'Rescheduled' else None,
         reason_note=reason_note,
         # Passport details
         dob=passport_dob,
@@ -320,22 +348,27 @@ def save_candidate():
     db.session.add(candidate)
     db.session.flush()
 
+    attempt_status = {
+        'Completed': 'Completed',
+        'Not Completed': 'No Show',
+        'Rescheduled': 'Scheduled',
+        'Registered': 'Scheduled',
+    }.get(status, 'Scheduled')
+
     attempt = ExamAttempt(
         candidate_id=candidate.id,
         exam_type_id=exam_type.id,
         branch_id=branch.id,
-        session_id=selected_session.id if selected_session else None,
+        session_id=None,
         attempt_number=1,
         original_scheduled_date=exam_date,
         scheduled_date=exam_date,
-        status='Scheduled',
+        status=attempt_status,
+        actual_exam_date=exam_date if attempt_status == 'Completed' else None,
         result='Pending',
     )
     db.session.add(attempt)
     db.session.flush()
-
-    if selected_session:
-        db.session.add(SessionCandidate(session_id=selected_session.id, candidate_id=candidate.id))
 
     log_action('Candidate Registered', record_id=candidate.id,
                 new_value=f"{candidate.name} | {exam_type.name} | {branch.name} | {exam_date} | Attempt 1")
@@ -441,6 +474,9 @@ def update_attempt_status(attempt_id):
         attempt.scheduled_date = new_exam_date
         attempt.reschedule_reason = reason_note or attempt.reschedule_reason
         attempt.status = 'Scheduled'  # now actively scheduled again, on the new date
+        candidate.status = 'Rescheduled'
+        candidate.exam_date = new_exam_date
+        candidate.rescheduled_date = new_exam_date
         log_action('Exam Attempt Rescheduled', record_id=attempt.id,
                     old_value=f"{candidate.name} Attempt {attempt.attempt_number}: {old_date}",
                     new_value=f"{candidate.name} Attempt {attempt.attempt_number}: {new_exam_date}",
@@ -450,6 +486,7 @@ def update_attempt_status(attempt_id):
         attempt.actual_exam_date = actual_exam_date or _today_str()
         attempt.result = result if result in RESULT_OPTIONS else 'Pending'
         attempt.status = 'Completed'
+        candidate.status = 'Completed'
         log_action('Exam Attempt Completed', record_id=attempt.id,
                     old_value=f"{candidate.name} Attempt {attempt.attempt_number}: {old_status}",
                     new_value=f"{candidate.name} Attempt {attempt.attempt_number}: Completed / {attempt.result}")
@@ -457,41 +494,87 @@ def update_attempt_status(attempt_id):
     elif new_status == 'Cancelled':
         attempt.cancellation_reason = reason_note or attempt.cancellation_reason
         attempt.status = 'Cancelled'
+        candidate.status = 'Not Completed'
         log_action('Exam Attempt Cancelled', record_id=attempt.id,
                     old_value=f"{candidate.name} Attempt {attempt.attempt_number}: {old_status}",
                     new_value=f"{candidate.name} Attempt {attempt.attempt_number}: Cancelled",
                     reason=reason_note or None)
 
-    elif new_status == 'No Show':
+    elif new_status in ('No Show', 'Not Completed'):
         attempt.status = 'No Show'
         if reason_note:
             attempt.remarks = reason_note
+        candidate.status = 'Not Completed'
         log_action('Exam Attempt No Show', record_id=attempt.id,
                     old_value=f"{candidate.name} Attempt {attempt.attempt_number}: {old_status}",
                     new_value=f"{candidate.name} Attempt {attempt.attempt_number}: No Show")
 
-    else:  # 'Scheduled' - manual revert / plain status set
+    else:  # 'Scheduled' / 'Registered'
         attempt.status = 'Scheduled'
         if reason_note:
             attempt.remarks = reason_note
+        candidate.status = 'Registered'
         log_action('Exam Attempt Status Updated', record_id=attempt.id,
                     old_value=f"{candidate.name} Attempt {attempt.attempt_number}: {old_status}",
                     new_value=f"{candidate.name} Attempt {attempt.attempt_number}: Scheduled")
 
-    # Keep the candidate master's legacy "current status" fields in sync
-    # with whichever attempt is numerically latest, for old code/pages that
-    # still read Candidate.status/exam_date directly.
+    # Keep candidate master reason/date in sync
     latest = ExamAttempt.query.filter_by(candidate_id=candidate.id).order_by(ExamAttempt.attempt_number.desc()).first()
     if latest and latest.id == attempt.id:
-        candidate.status = attempt.status
         candidate.exam_date = attempt.scheduled_date
-        candidate.rescheduled_date = attempt.scheduled_date if attempt.was_rescheduled else candidate.rescheduled_date
         if attempt.cancellation_reason or attempt.reschedule_reason or attempt.remarks:
             candidate.reason_note = attempt.cancellation_reason or attempt.reschedule_reason or attempt.remarks
 
     db.session.commit()
     flash('Exam attempt status updated successfully.', 'success')
     return redirect(next_url)
+
+
+@candidates_bp.route('/<int:candidate_id>/status', methods=['POST'])
+def update_candidate_status(candidate_id):
+    candidate = Candidate.query.get_or_404(candidate_id)
+    new_status = (request.form.get('status') or '').strip()
+    new_exam_date = (request.form.get('exam_date') or '').strip()
+    reason_note = (request.form.get('remarks') or request.form.get('reason_note') or '').strip()
+    next_url = request.form.get('next') or url_for('candidates.list_candidates')
+
+    allowed = {'Registered', 'Not Completed', 'Rescheduled', 'Completed'}
+    if new_status in allowed:
+        candidate.status = new_status
+        if reason_note:
+            candidate.reason_note = reason_note
+        if new_status == 'Rescheduled' and new_exam_date:
+            candidate.rescheduled_date = new_exam_date
+            candidate.exam_date = new_exam_date
+
+        latest = ExamAttempt.query.filter_by(candidate_id=candidate.id).order_by(ExamAttempt.attempt_number.desc()).first()
+        if latest:
+            if new_status == 'Completed':
+                latest.status = 'Completed'
+                latest.actual_exam_date = candidate.exam_date or _today_str()
+            elif new_status == 'Not Completed':
+                latest.status = 'No Show'
+            elif new_status == 'Rescheduled':
+                if not latest.original_scheduled_date:
+                    latest.original_scheduled_date = latest.scheduled_date
+                if new_exam_date:
+                    latest.scheduled_date = new_exam_date
+                latest.status = 'Scheduled'
+            else:  # Registered
+                latest.status = 'Scheduled'
+
+        log_action('Candidate Status Updated', record_id=candidate.id,
+                   new_value=f"{candidate.name} -> {new_status}")
+        db.session.commit()
+        flash(f'Status for {candidate.name} updated to {new_status}.', 'success')
+    else:
+        flash('Invalid status.', 'error')
+    return redirect(next_url)
+
+
+@candidates_bp.route('/report')
+def candidate_report():
+    return redirect(url_for('exams_dashboard.reports', **request.args))
 
 
 @candidates_bp.route('/associate/<int:session_id>', methods=['POST'])

@@ -4,6 +4,7 @@ import 'package:pdf/pdf.dart' as pdf;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../app_theme.dart';
+import '../config/api_config.dart';
 import '../models.dart';
 import '../services/dio_client.dart';
 import '../services/pdf_report_kit.dart';
@@ -29,6 +30,8 @@ class _ExamsScreenState extends State<ExamsScreen>
   late Future<List<ExamTeam>> teams;
   TabController? _tabController;
   late final BranchContext _branchContext;
+  final TextEditingController _candidateSearchCtrl = TextEditingController();
+  String _candidateSearchQuery = '';
 
   TabController get tabController {
     return _tabController ??=
@@ -70,6 +73,7 @@ class _ExamsScreenState extends State<ExamsScreen>
   void dispose() {
     _branchContext.removeListener(_onBranchChanged);
     _tabController?.dispose();
+    _candidateSearchCtrl.dispose();
     super.dispose();
   }
 
@@ -2012,7 +2016,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                 return ErrorView(message: '${s.error}', onRetry: reload);
               }
               final rows = s.requireData;
-              if (rows.isEmpty) {
+              if (rows.isEmpty && _candidateSearchQuery.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -2043,17 +2047,122 @@ class _ExamsScreenState extends State<ExamsScreen>
                   ),
                 );
               }
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: rows.length,
-                itemBuilder: (c, i) => _CandidateCard(
-                  candidate: rows[i],
-                  onStatusChanged: _updateCandidateStatus,
-                  onOpenDetails: _openCandidateDetails,
-                  onEditRemarks: _showCandidateRemarks,
-                  onEditCandidate: _showEditCandidateDialog,
-                  onDeleteCandidate: _deleteCandidate,
-                ),
+
+              final query = _candidateSearchQuery.trim().toLowerCase();
+              final filteredRows = query.isEmpty
+                  ? rows
+                  : rows.where((cand) => cand.name.toLowerCase().contains(query)).toList();
+
+              return Column(
+                children: [
+                  // Candidate Name Search Bar
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: TextField(
+                      controller: _candidateSearchCtrl,
+                      onChanged: (val) {
+                        setState(() {
+                          _candidateSearchQuery = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search candidate by name...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 13.5,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: Color(0xFF6C1FB0),
+                          size: 20,
+                        ),
+                        suffixIcon: _candidateSearchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () {
+                                  _candidateSearchCtrl.clear();
+                                  setState(() {
+                                    _candidateSearchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: AppColors.surfaceAlt,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF9A22C7),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: filteredRows.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.person_search_rounded,
+                                    size: 52,
+                                    color: Colors.grey[300],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'No candidates match "$_candidateSearchQuery"',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      _candidateSearchCtrl.clear();
+                                      setState(() {
+                                        _candidateSearchQuery = '';
+                                      });
+                                    },
+                                    icon: const Icon(Icons.clear_rounded, size: 16),
+                                    label: const Text('Clear search'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                            itemCount: filteredRows.length,
+                            itemBuilder: (c, i) => _CandidateCard(
+                              candidate: filteredRows[i],
+                              onStatusChanged: _updateCandidateStatus,
+                              onOpenDetails: _openCandidateDetails,
+                              onEditRemarks: _showCandidateRemarks,
+                              onEditCandidate: _showEditCandidateDialog,
+                              onDeleteCandidate: _deleteCandidate,
+                            ),
+                          ),
+                  ),
+                ],
               );
             },
           ),
@@ -3419,6 +3528,22 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
     super.initState();
     candidate = widget.candidate;
     remarksCtrl = TextEditingController(text: candidate.remarks);
+    _loadCandidateDetails();
+  }
+
+  Future<void> _loadCandidateDetails() async {
+    try {
+      final res = await api.candidateDetails(candidate.id);
+      final data = Map<String, dynamic>.from(res.data['data'] ?? {});
+      if (data.isNotEmpty && mounted) {
+        setState(() {
+          candidate = Candidate.fromMap(data);
+          if (remarksCtrl.text.isEmpty && candidate.remarks.isNotEmpty) {
+            remarksCtrl.text = candidate.remarks;
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -3445,6 +3570,210 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
       default:
         return AppColors.orange;
     }
+  }
+
+  String _buildFullImageUrl(String path) {
+    if (path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    final base = ApiConfig.baseUrl.endsWith('/')
+        ? ApiConfig.baseUrl.substring(0, ApiConfig.baseUrl.length - 1)
+        : ApiConfig.baseUrl;
+    final relative = path.startsWith('/') ? path : '/$path';
+    return '$base$relative';
+  }
+
+  void _showFullImageDialog(BuildContext context, String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 20,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0E3FA),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(
+                          Icons.image_rounded,
+                          size: 16,
+                          color: Color(0xFF6C1FB0),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 32),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (ctx, err, st) => Container(
+                        height: 180,
+                        color: const Color(0xFFF3F4F6),
+                        alignment: Alignment.center,
+                        child: const Text('Failed to load image'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Color(0x22000000),
+                  child: Icon(Icons.close_rounded, color: Colors.black87, size: 18),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPassportImageCard(String title, String imagePath) {
+    final fullUrl = _buildFullImageUrl(imagePath);
+    final hasImage = fullUrl.isNotEmpty;
+
+    return Expanded(
+      child: InkWell(
+        onTap: hasImage
+            ? () => _showFullImageDialog(context, fullUrl, title)
+            : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    hasImage ? Icons.image_rounded : Icons.broken_image_rounded,
+                    size: 16,
+                    color: hasImage ? const Color(0xFF6C1FB0) : const Color(0xFF9CA3AF),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF374151),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasImage)
+                    const Icon(
+                      Icons.zoom_in_rounded,
+                      size: 16,
+                      color: Color(0xFF6C1FB0),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: hasImage
+                    ? AspectRatio(
+                        aspectRatio: 16 / 10,
+                        child: Image.network(
+                          fullUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              color: const Color(0xFFF3F4F6),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (ctx, err, stack) => Container(
+                            color: const Color(0xFFF3F4F6),
+                            alignment: Alignment.center,
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline_rounded, color: Colors.grey, size: 20),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Image unavailable',
+                                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        height: 90,
+                        color: const Color(0xFFF3F4F6),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'No image uploaded',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _infoRow(IconData icon, String label, String value) {
@@ -3574,6 +3903,8 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
   Widget build(BuildContext context) {
     final status = candidate.status.isEmpty ? 'Registered' : candidate.status;
     final statusColor = _statusColor(status);
+    final hasImages = candidate.passportFrontImage.isNotEmpty || candidate.passportLastImage.isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5FD),
       appBar: AppBar(
@@ -3596,6 +3927,7 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
+          // Header Card
           Container(
             padding: const EdgeInsets.all(18),
             margin: const EdgeInsets.only(bottom: 14),
@@ -3672,7 +4004,7 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(.12),
+                    color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(
@@ -3687,11 +4019,39 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
               ],
             ),
           ),
+
+          // 1. Personal Information Section
           _section('PERSONAL INFORMATION', Icons.person_rounded, [
+            _infoRow(
+              Icons.badge_rounded,
+              'Register Number / Roll No',
+              candidate.registerNumber,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(Icons.email_outlined, 'Email', candidate.email),
             const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(Icons.phone_outlined, 'Phone', candidate.phone),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.cake_outlined,
+              'Date of Birth',
+              candidate.passportDob,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.wc_rounded,
+              'Gender',
+              candidate.passportGender,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.public_rounded,
+              'Nationality',
+              candidate.passportNationality,
+            ),
           ]),
+
+          // 2. Exam Information Section
           _section('EXAM INFORMATION', Icons.school_rounded, [
             _infoRow(Icons.menu_book_rounded, 'Exam Type', candidate.examType),
             const Divider(height: 1, color: Color(0xFFF3F4F6)),
@@ -3707,6 +4067,135 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
             const Divider(height: 1, color: Color(0xFFF3F4F6)),
             _infoRow(Icons.flag_rounded, 'Current Status', status),
           ]),
+
+          // 3. Passport Information Section (Entered / Groq OCR Extracted)
+          _section('PASSPORT INFORMATION', Icons.flight_takeoff_rounded, [
+            _infoRow(
+              Icons.credit_card_rounded,
+              'Passport Number',
+              candidate.passportNumber,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.badge_outlined,
+              'Full Name on Passport',
+              candidate.passportFullName,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.calendar_today_rounded,
+              'Date of Birth',
+              candidate.passportDob,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.wc_rounded,
+              'Gender',
+              candidate.passportGender,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.flag_outlined,
+              'Nationality',
+              candidate.passportNationality,
+            ),
+            if (candidate.placeOfBirth.isNotEmpty) ...[
+              const Divider(height: 1, color: Color(0xFFF3F4F6)),
+              _infoRow(
+                Icons.location_city_rounded,
+                'Place of Birth',
+                candidate.placeOfBirth,
+              ),
+            ],
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.event_available_rounded,
+              'Date of Issue',
+              candidate.passportIssueDate,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.event_busy_rounded,
+              'Date of Expiry',
+              candidate.passportExpiryDate,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.document_scanner_rounded,
+              'Passport Scan Date (IST)',
+              candidate.passportScanDate,
+            ),
+          ]),
+
+          // 4. Address Details Section
+          _section('ADDRESS INFORMATION', Icons.home_rounded, [
+            _infoRow(
+              Icons.signpost_rounded,
+              'Address Line 1',
+              candidate.addressLine1,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.apartment_rounded,
+              'Address Line 2',
+              candidate.addressLine2,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.location_city_rounded,
+              'City',
+              candidate.city,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.map_rounded,
+              'State / Province',
+              candidate.state,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.pin_drop_rounded,
+              'Postal Code / PIN',
+              candidate.postalCode,
+            ),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            _infoRow(
+              Icons.public_rounded,
+              'Country',
+              candidate.country,
+            ),
+          ]),
+
+          // 5. Scanned Passport Images Section
+          _section('SCANNED PASSPORT IMAGES', Icons.photo_library_rounded, [
+            if (hasImages) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  _buildPassportImageCard('Front Page', candidate.passportFrontImage),
+                  const SizedBox(width: 12),
+                  _buildPassportImageCard('Last / Address Page', candidate.passportLastImage),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ] else ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
+                    SizedBox(width: 8),
+                    Text(
+                      'No scanned passport images attached.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ]),
+
+          // 6. Remarks Section
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -3812,4 +4301,4 @@ class _CandidateDetailsScreenState extends State<CandidateDetailsScreen> {
       ),
     );
   }
-}
+}

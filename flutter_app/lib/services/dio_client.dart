@@ -30,6 +30,11 @@ class DioClient {
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          if (options.data is FormData) {
+            options.headers.remove('Content-Type');
+            options.headers.remove('content-type');
+            options.contentType = null;
+          }
           handler.next(options);
         },
         onError: (error, handler) async {
@@ -150,6 +155,9 @@ class DioClient {
           if (teamId != null) 'team_id': teamId,
         },
       );
+
+  Future<Response> candidateDetails(int id) =>
+      dio.get('${ApiConfig.candidatesPath}$id/');
 
   Future<Response> teams({
     String? q,
@@ -309,22 +317,27 @@ class DioClient {
     required List<int> lastBytes,
     String lastFilename = 'last_page.jpg',
   }) async {
-    final formData = FormData.fromMap({
-      'front_page': MultipartFile.fromBytes(
+    final Map<String, dynamic> filesMap = {};
+    if (frontBytes.isNotEmpty) {
+      filesMap['front_page'] = MultipartFile.fromBytes(
         frontBytes,
         filename: frontFilename,
-      ),
-      'last_page': MultipartFile.fromBytes(
+      );
+    }
+    if (lastBytes.isNotEmpty) {
+      filesMap['last_page'] = MultipartFile.fromBytes(
         lastBytes,
         filename: lastFilename,
-      ),
-    });
+      );
+    }
+    final formData = FormData.fromMap(filesMap);
     return dio.post(
       ApiConfig.scanPassportPath,
       data: formData,
       options: Options(
-        sendTimeout: const Duration(seconds: 60),
-        receiveTimeout: const Duration(seconds: 60),
+        contentType: null,
+        receiveTimeout: const Duration(seconds: 90),
+        validateStatus: (status) => status != null && status < 500,
       ),
     );
   }

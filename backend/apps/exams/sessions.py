@@ -59,37 +59,8 @@ def _validate_session_form(form):
 
 @sessions_bp.route('/')
 def list_sessions():
-    query = ExamSession.query.join(BranchExam).join(Branch).join(ExamType)
-
-    branch_id = request.args.get('branch_id', '').strip()
-    exam_type_id = request.args.get('exam_type_id', '').strip()
-    language = request.args.get('language', '').strip()
-    exam_date = request.args.get('exam_date', '').strip()
-    status = request.args.get('status', '').strip()
-
-    if branch_id:
-        query = query.filter(Branch.id == int(branch_id))
-    if exam_type_id:
-        query = query.filter(ExamType.id == int(exam_type_id))
-    if language:
-        query = query.filter(ExamType.language == language)
-    if exam_date:
-        parsed = _parse_date(exam_date)
-        if parsed:
-            query = query.filter(ExamSession.exam_date == parsed)
-    if status:
-        query = query.filter(ExamSession.status == status)
-
-    sessions = query.order_by(ExamSession.exam_date.desc(), ExamSession.id.desc()).all()
-    branches = Branch.query.filter_by(status='Active').order_by(Branch.name).all()
-    exam_types = ExamType.query.filter_by(status='Active').order_by(ExamType.name).all()
-    languages = [row[0] for row in db.session.query(ExamType.language).distinct().all() if row[0]]
-    branch_exams = BranchExam.query.filter_by(status='Active').join(Branch).join(ExamType).all()
-
-    return render_template('exam_sessions.html', sessions=sessions, branches=branches,
-                            exam_types=exam_types, languages=languages, branch_exams=branch_exams,
-                            branch_id=branch_id, exam_type_id=exam_type_id, language=language,
-                            exam_date=exam_date, status=status)
+    flash('The Exam Sessions module has been deprecated. Manage candidates and exam schedules directly in Candidates.', 'info')
+    return redirect(url_for('candidates.list_candidates'))
 
 
 @sessions_bp.route('/save', methods=['POST'])
@@ -127,9 +98,8 @@ def save_session():
 
 @sessions_bp.route('/<int:session_id>')
 def session_detail(session_id):
-    session_obj = ExamSession.query.get_or_404(session_id)
-    all_candidates = Candidate.query.order_by(Candidate.name).all()
-    return render_template('session_detail.html', s=session_obj, all_candidates=all_candidates)
+    flash('The Exam Sessions module has been deprecated.', 'info')
+    return redirect(url_for('candidates.list_candidates'))
 
 
 @sessions_bp.route('/<int:session_id>/mark-completed', methods=['POST'])

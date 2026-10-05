@@ -73,6 +73,9 @@
             {% if search or status_filter or result_filter or test_type_filter or branch_filter or exam_date_filter or attempt_filter %}
             <a href="{{ url_for('candidates.list_candidates') }}" style="padding:9px 18px;border-radius:20px;background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0;font-weight:700;cursor:pointer;font-size:0.85rem;text-decoration:none;">Clear</a>
             {% endif %}
+            <a href="{{ url_for('exams_dashboard.reports') }}" style="padding:9px 18px;border-radius:20px;background:#eef2ff;color:#4f46e5;border:1.5px solid #c7d2fe;font-weight:700;cursor:pointer;font-size:0.85rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                <i class="fas fa-file-invoice"></i> Candidate Report
+            </a>
             <button type="button" onclick="showForm()" style="padding:9px 22px;border-radius:20px;background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.85rem;box-shadow:0 2px 8px rgba(79,70,229,0.3);">
                 <i class="fas fa-plus"></i> Add Candidate
             </button>
@@ -321,10 +324,6 @@
                     <input type="text" name="name" id="c_name" required placeholder="Enter candidate name" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;font-weight:700;box-sizing:border-box;">
                 </div>
                 <div>
-                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Register Number *</label>
-                    <input type="text" name="register_number" id="c_register_number" required placeholder="e.g. 910022105036" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
-                </div>
-                <div>
                     <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Email</label>
                     <input type="email" name="email" id="c_email" placeholder="candidate@example.com" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
                 </div>
@@ -334,7 +333,7 @@
                 </div>
                 <div>
                     <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Branch / Exam Center *</label>
-                    <select name="branch_id" id="c_branch_id" onchange="refreshExamTypeOptions(); refreshSessionOptions();" required style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                    <select name="branch_id" id="c_branch_id" onchange="refreshExamTypeOptions();" required style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
                         <option value="">Select Branch</option>
                         {% for b in branches %}
                         <option value="{{ b.id }}">{{ b.name }}</option>
@@ -343,7 +342,7 @@
                 </div>
                 <div>
                     <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Exam Type *</label>
-                    <select name="exam_type_id" id="c_exam_type_id" onchange="refreshSessionOptions()" required style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                    <select name="exam_type_id" id="c_exam_type_id" required style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
                         <option value="">Select Branch first</option>
                     </select>
                 </div>
@@ -357,14 +356,16 @@
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Session</label>
-                    <select name="session_id" id="c_session_id" onchange="toggleExamDateField()" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
-                        <option value="">Select Branch and Exam Type first</option>
-                    </select>
-                </div>
-                <div>
                     <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Exam Date *</label>
                     <input type="date" name="exam_date" id="c_exam_date" required style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Status</label>
+                    <select name="status" id="c_status" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;">
+                        <option value="Registered" selected>Registered</option>
+                        <option value="Not Completed">Not Completed</option>
+                        <option value="Rescheduled">Rescheduled</option>
+                    </select>
                 </div>
                 <div style="grid-column:1/-1;">
                     <label style="display:block;font-size:0.8rem;font-weight:700;color:#475569;margin-bottom:4px;">Remarks / Reason Note (Optional)</label>
@@ -454,10 +455,12 @@ function refreshExamTypeOptions(selectedExamTypeId){
         return String(m.branch_id) === String(branchId);
     }).map(function(m){ return String(m.exam_type_id); });
 
-    var available = EXAM_TYPES.filter(function(t){ return allowedIds.indexOf(String(t.id)) !== -1; });
+    var available = allowedIds.length > 0
+        ? EXAM_TYPES.filter(function(t){ return allowedIds.indexOf(String(t.id)) !== -1; })
+        : EXAM_TYPES;
 
     if (!available.length){
-        select.innerHTML = '<option value="">No exam types mapped to this branch</option>';
+        select.innerHTML = '<option value="">No exam types available</option>';
         return;
     }
 
@@ -471,49 +474,9 @@ function refreshExamTypeOptions(selectedExamTypeId){
     });
 }
 
-function refreshSessionOptions(selectedSessionId){
-    var branchId = document.getElementById('c_branch_id').value;
-    var examTypeId = document.getElementById('c_exam_type_id').value;
-    var select = document.getElementById('c_session_id');
-    select.innerHTML = '';
-
-    if (!branchId || !examTypeId){
-        select.innerHTML = '<option value="">Select Branch and Exam Type first</option>';
-        toggleExamDateField();
-        return;
-    }
-
-    var matching = SESSIONS.filter(function(s){
-        return String(s.branch_id) === String(branchId) && String(s.exam_type_id) === String(examTypeId);
-    });
-
-    select.innerHTML = '<option value="">No specific session (enter date manually)</option>';
-    matching.forEach(function(s){
-        var opt = document.createElement('option');
-        opt.value = s.id;
-        opt.textContent = s.label;
-        if (selectedSessionId && String(selectedSessionId) === String(s.id)) opt.selected = true;
-        select.appendChild(opt);
-    });
-    toggleExamDateField();
-}
-
-function toggleExamDateField(){
-    var sessionId = document.getElementById('c_session_id').value;
-    var dateInput = document.getElementById('c_exam_date');
-    var selected = SESSIONS.filter(function(s){ return String(s.id) === String(sessionId); })[0];
-    if (selected){
-        dateInput.value = selected.exam_date;
-        dateInput.readOnly = true;
-    } else {
-        dateInput.readOnly = false;
-    }
-}
-
 function showForm(){
     document.getElementById('mainCandidateForm').reset();
     document.getElementById('c_id').value = '';
-    document.getElementById('c_exam_date').readOnly = false;
     // Set default exam date to today
     var today = new Date().toISOString().split('T')[0];
     document.getElementById('c_exam_date').value = today;
@@ -525,7 +488,6 @@ function showForm(){
     statusBox.style.display = 'none';
 
     refreshExamTypeOptions();
-    refreshSessionOptions();
     hideAllPanels();
     document.getElementById('candidateForm').style.display = 'block';
     window.scrollTo({top: 0, behavior: 'smooth'});

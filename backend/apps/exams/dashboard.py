@@ -1,43 +1,32 @@
+import csv
+import io
 from collections import OrderedDict
-from datetime import date
-from flask import Blueprint, render_template, session
-from apps.models import ExamType, ExamSession, Candidate, ExamAttempt, SessionCandidate, BranchExam, Branch
+from datetime import date, datetime
+from flask import Blueprint, render_template, session, request, Response, redirect, url_for
+from apps.models import db, ExamType, Candidate, ExamAttempt, Branch, ExamTeam
 
 exams_dashboard_bp = Blueprint('exams_dashboard', __name__, url_prefix='/exams')
 
 
-def _active_seats_taken(exam_session):
-    """Seats on this session currently held by non-cancelled candidates."""
-    return sum(
-        1 for sc in exam_session.session_candidates
-        if sc.candidate and sc.candidate.status != 'Cancelled'
-    )
-
-
-def _months_back(anchor, count):
-    """Return `count` (year, month) tuples ending at `anchor`, oldest first, dependency-free."""
-    months = []
-    y, m = anchor.year, anchor.month
-    for _ in range(count):
-        months.append((y, m))
-        m -= 1
-        if m == 0:
-            m = 12
-            y -= 1
-    return list(reversed(months))
+def normalize_candidate_status(raw_status):
+    """Safely map old/new candidate statuses for display and counts without corrupting data."""
+    if not raw_status:
+        return 'Registered'
+    s = str(raw_status).strip()
+    if s == 'Absent':
+        return 'Not Completed'
+    if s == 'Scheduled':
+        return 'Registered'
+    if s in ('Registered', 'Not Completed', 'Rescheduled', 'Completed'):
+        return s
+    return s
 
 
 @exams_dashboard_bp.route('/')
 def dashboard():
     active_branch_id = session.get('active_branch_id')
 
-    # --- Attempt-driven stats ---------------------------------------------
-    # Every dashboard count below (and the calendar further down) reads from
-    # ExamAttempt - the permanent, per-attempt record of exam activity - so
-    # a status change made anywhere in the Exam Management module is
-    # reflected here instantly, retests are counted independently of the
-    # attempt(s) that came before them, and nothing is derived by merely
-    # comparing today's date to a scheduled date.
+    # Attempt-driven stats
     attempt_query = ExamAttempt.query
     if active_branch_id:
         attempt_query = attempt_query.filter(ExamAttempt.branch_id == int(active_branch_id))
@@ -45,64 +34,26 @@ def dashboard():
 
     scheduled_count = sum(1 for a in attempts if a.status == 'Scheduled')
     completed_count = sum(1 for a in attempts if a.status == 'Completed')
-    cancelled_count = sum(1 for a in attempts if a.status == 'Cancelled')
     no_show_count = sum(1 for a in attempts if a.status == 'No Show')
-    rescheduled_count = sum(1 for a in attempts if a.was_rescheduled)
-    retake_count = sum(1 for a in attempts if a.attempt_number > 1)
+    rescheduled_count = sum(1 for a in attempts if a.was_rescheduled or a.status == 'Rescheduled')
 
     if active_branch_id:
-        # A candidate "belongs" to a branch (for this branch filter) if any
-        # of their attempts were taken at that branch.
         candidate_ids = {a.candidate_id for a in attempts}
         total_candidates = len(candidate_ids)
     else:
         total_candidates = Candidate.query.count()
 
-    # --- Session-driven stats (actual configured sessions, not candidate counts) ---
-    session_query = ExamSession.query
-    if active_branch_id:
-        session_query = session_query.join(BranchExam).filter(BranchExam.branch_id == int(active_branch_id))
-    sessions = session_query.all()
-
+    # Only remaining valid stats cards (Cancelled, Total Sessions, Completed Candidates, Available Seats removed)
     stats = {
         'total_exams': ExamType.query.count(),
         'scheduled': scheduled_count,
         'completed': completed_count,
         'rescheduled': rescheduled_count,
-        'cancelled': cancelled_count,
         'no_show': no_show_count,
-        'retakes': retake_count,
-        'total_sessions': len(sessions),
         'total_candidates': total_candidates,
-        'available_seats': sum(
-            max(0, (s.seat_capacity or 0) - _active_seats_taken(s))
-            for s in sessions if s.status != 'Cancelled'
-        ),
-        # Explicitly-completed attempts only (BRD #22/#23) - never inferred
-        # from a scheduled date being in the past.
-        'completed_candidates': completed_count,
     }
 
-    # Upcoming sessions (unrelated to the Exam Activity Calendar below,
-    # which is attempt-driven; kept exactly as before).
-    upcoming_query = ExamSession.query.filter(ExamSession.status.in_(['Scheduled', 'Rescheduled']))
-    if active_branch_id:
-        upcoming_query = upcoming_query.join(BranchExam).filter(BranchExam.branch_id == int(active_branch_id))
-    upcoming = upcoming_query.order_by(ExamSession.exam_date.asc()).limit(8).all()
-
-    # --- Exam Activity Calendar data ---------------------------------------
-    # Each attempt contributes to the calendar on one or two dates:
-    #   - Scheduled  -> counted on its (current) scheduled_date
-    #   - Completed  -> counted on its actual_exam_date (falls back to
-    #                   scheduled_date if somehow missing)
-    #   - Cancelled  -> counted on its scheduled_date
-    #   - No Show    -> counted on its scheduled_date
-    #   - Rescheduled -> in addition to the above, if the attempt has ever
-    #                    been moved (original_scheduled_date != current
-    #                    scheduled_date) the *original* date keeps a
-    #                    permanent "Rescheduled" marker, so that history is
-    #                    never lost even though the attempt is now active
-    #                    again on its new date.
+    # Exam Activity Calendar data
     calendar_attempts = []
     for a in attempts:
         calendar_attempts.append({
@@ -128,34 +79,183 @@ def dashboard():
     return render_template(
         'exam_dashboard.html',
         stats=stats,
-        upcoming=upcoming,
         calendar_attempts=calendar_attempts,
         today_str=date.today().strftime('%Y-%m-%d'),
     )
 
 
+def _get_filtered_report_data():
+    """Shared query and filter execution for Candidate Report view and CSV export."""
+    branch_filter = (request.args.get('branch_id') or '').strip()
+    filter_type = (request.args.get('filter_type') or 'All').strip()
+    date_filter = (request.args.get('date') or '').strip()
+    month_filter = (request.args.get('month') or '').strip()
+    start_date = (request.args.get('start_date') or '').strip()
+    end_date = (request.args.get('end_date') or '').strip()
+    exam_type_filter = (request.args.get('exam_type_id') or '').strip()
+    team_filter = (request.args.get('team_id') or '').strip()
+    status_filter = (request.args.get('status') or '').strip()
+    search = (request.args.get('q') or '').strip()
+
+    active_branch_id = session.get('active_branch_id')
+
+    # Base candidate query with outer joins so candidates without team or exam type are never excluded
+    query = Candidate.query.outerjoin(Branch, Candidate.branch_id == Branch.id) \
+                           .outerjoin(ExamType, Candidate.exam_type_id == ExamType.id) \
+                           .outerjoin(ExamTeam, Candidate.team_id == ExamTeam.id)
+
+    if branch_filter:
+        query = query.filter(Candidate.branch_id == int(branch_filter))
+    elif active_branch_id:
+        query = query.filter(Candidate.branch_id == int(active_branch_id))
+
+    if exam_type_filter:
+        query = query.filter(Candidate.exam_type_id == int(exam_type_filter))
+
+    if team_filter == 'unassigned':
+        query = query.filter(db.or_(Candidate.team_id == None, Candidate.team_id == 0))
+    elif team_filter:
+        query = query.filter(Candidate.team_id == int(team_filter))
+
+    if search:
+        like = f"%{search}%"
+        query = query.filter(db.or_(
+            Candidate.name.ilike(like),
+            Candidate.email.ilike(like),
+            Candidate.phone.ilike(like),
+            Candidate.reason_note.ilike(like),
+            Candidate.register_number.ilike(like),
+        ))
+
+    candidates = query.order_by(Candidate.exam_date.desc(), Candidate.id.desc()).all()
+
+    # In-memory Date Filtering (safe against null / irregular dates)
+    today_str = date.today().strftime('%Y-%m-%d')
+    date_filtered = []
+    for c in candidates:
+        cand_date = (c.exam_date or '').strip()
+        if filter_type == 'Today':
+            if cand_date != today_str:
+                continue
+        elif filter_type == 'Date' and date_filter:
+            if cand_date != date_filter:
+                continue
+        elif filter_type == 'Month' and month_filter:
+            if not cand_date.startswith(month_filter):
+                continue
+        elif filter_type == 'Range' and start_date and end_date:
+            if not (start_date <= cand_date <= end_date):
+                continue
+        date_filtered.append(c)
+
+    # Status Filtering
+    if status_filter and status_filter != 'All':
+        final_candidates = [
+            c for c in date_filtered
+            if normalize_candidate_status(c.status).lower() == status_filter.lower()
+        ]
+    else:
+        final_candidates = date_filtered
+
+    # Dynamically calculate ALL counts strictly from the filtered dataset
+    total_candidates = len(final_candidates)
+    completed_count = sum(1 for c in final_candidates if normalize_candidate_status(c.status) == 'Completed')
+    registered_count = sum(1 for c in final_candidates if normalize_candidate_status(c.status) == 'Registered')
+    not_completed_count = sum(1 for c in final_candidates if normalize_candidate_status(c.status) == 'Not Completed')
+    rescheduled_count = sum(1 for c in final_candidates if normalize_candidate_status(c.status) == 'Rescheduled')
+
+    # Team-wise counts strictly computed from the filtered dataset
+    team_counts = OrderedDict()
+    for c in final_candidates:
+        team_name = c.team.name if c.team else 'Unassigned'
+        team_counts[team_name] = team_counts.get(team_name, 0) + 1
+
+    return {
+        'candidates': final_candidates,
+        'total_candidates': total_candidates,
+        'completed_count': completed_count,
+        'registered_count': registered_count,
+        'not_completed_count': not_completed_count,
+        'rescheduled_count': rescheduled_count,
+        'team_counts': team_counts,
+        'branch_filter': branch_filter,
+        'filter_type': filter_type,
+        'date_filter': date_filter,
+        'month_filter': month_filter,
+        'start_date': start_date,
+        'end_date': end_date,
+        'exam_type_filter': exam_type_filter,
+        'team_filter': team_filter,
+        'status_filter': status_filter,
+        'search': search,
+    }
+
+
 @exams_dashboard_bp.route('/reports')
 def reports():
-    # Build the last 6 months (oldest -> newest) as buckets for the cancellation trend.
-    today = date.today().replace(day=1)
-    months = _months_back(today, 6)
-    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    buckets = OrderedDict()
-    for (y, m) in months:
-        buckets[(y, m)] = {'label': f"{month_names[m - 1]} {y}", 'count': 0}
+    data = _get_filtered_report_data()
 
-    cancelled_sessions = ExamSession.query.filter(ExamSession.status == 'Cancelled',
-                                                    ExamSession.cancelled_at.isnot(None)).all()
-    for s in cancelled_sessions:
-        key = (s.cancelled_at.year, s.cancelled_at.month)
-        if key in buckets:
-            buckets[key]['count'] += 1
+    branches = Branch.query.order_by(Branch.name.asc()).all()
+    exam_types = ExamType.query.order_by(ExamType.name.asc()).all()
+    teams = ExamTeam.query.filter_by(status='Active').order_by(ExamTeam.name.asc()).all()
 
-    trend = list(buckets.values())
-    max_count = max((row['count'] for row in trend), default=0) or 1
+    return render_template(
+        'exam_reports.html',
+        candidates=data['candidates'],
+        total_candidates=data['total_candidates'],
+        completed_count=data['completed_count'],
+        registered_count=data['registered_count'],
+        not_completed_count=data['not_completed_count'],
+        rescheduled_count=data['rescheduled_count'],
+        team_counts=data['team_counts'],
+        branches=branches,
+        exam_types=exam_types,
+        teams=teams,
+        branch_filter=data['branch_filter'],
+        filter_type=data['filter_type'],
+        date_filter=data['date_filter'],
+        month_filter=data['month_filter'],
+        start_date=data['start_date'],
+        end_date=data['end_date'],
+        exam_type_filter=data['exam_type_filter'],
+        team_filter=data['team_filter'],
+        status_filter=data['status_filter'],
+        search=data['search'],
+        today_str=date.today().strftime('%Y-%m-%d'),
+        current_month_str=date.today().strftime('%Y-%m'),
+        normalize_status=normalize_candidate_status,
+    )
 
-    total_sessions = ExamSession.query.count()
-    total_cancelled = ExamSession.query.filter_by(status='Cancelled').count()
 
-    return render_template('exam_reports.html', trend=trend, max_count=max_count,
-                            total_sessions=total_sessions, total_cancelled=total_cancelled)
+@exams_dashboard_bp.route('/reports/export-csv')
+def export_reports_csv():
+    data = _get_filtered_report_data()
+    candidates = data['candidates']
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'S.No', 'Date', 'Candidate Name', 'Team', 'Exam Type',
+        'Branch', 'Status', 'Remarks', 'Email', 'Phone'
+    ])
+
+    for i, c in enumerate(candidates, 1):
+        writer.writerow([
+            i,
+            c.exam_date or '-',
+            c.name or '-',
+            c.team.name if c.team else 'Unassigned',
+            c.exam_type.name if c.exam_type else (c.test_type or '-'),
+            c.branch.name if c.branch else '-',
+            normalize_candidate_status(c.status),
+            c.reason_note or '-',
+            c.email or '-',
+            c.phone or '-',
+        ])
+
+    filename = f"candidate_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )

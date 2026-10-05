@@ -1,11 +1,130 @@
-{% extends 'base.html' %}{% block content %}<div class="module-header"><h2>Bulk Voucher Purchase</h2></div><div class="panel"><form method="POST" class="form-grid">
-<div class="form-row"><label>Supplier</label><input name="supplier" value="{{ form_data.get('supplier','') }}" placeholder="Voucher provider"></div>
-<div class="form-row"><label>Purchase Date *</label><input type="date" name="purchase_date" required value="{{ form_data.get('purchase_date','') }}"></div>
-<div class="form-row"><label>Branch</label><select name="branch_id"><option value="">Select branch</option>{% for b in branches %}<option value="{{ b.id }}">{{ b.branch_name }}</option>{% endfor %}</select></div>
-<div class="form-row"><label>Quantity *</label><input type="number" min="1" name="quantity" required value="{{ form_data.get('quantity','') }}"></div>
-<div class="form-row"><label>Purchase Cost / Voucher *</label><input type="number" step="0.01" min="0.01" name="cost_per_voucher" required value="{{ form_data.get('cost_per_voucher','') }}"></div>
-<div class="form-row"><label>Default Selling Price / Voucher</label><input type="number" step="0.01" min="0" name="selling_price" value="{{ form_data.get('selling_price','') }}"></div>
-<div class="form-row"><label>Payment Mode</label><select name="payment_mode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Card</option><option>Other</option></select></div>
-<div class="form-row full"><label>Voucher Codes (one per line)</label><textarea name="voucher_codes" rows="8" placeholder="Paste the 500 actual voucher codes here, one per line. If left blank, unique codes will be generated."></textarea></div>
-<div class="form-row"><label>Auto Code Prefix (only if codes are blank)</label><input name="code_prefix" value="VCH"></div><div class="form-row full"><label>Notes</label><textarea name="notes" rows="3"></textarea></div>
-<div class="button-row"><button class="btn-primary" type="submit">Save Purchase & Record Expense</button><a class="btn-secondary" href="{{ url_for('vouchers.dashboard') }}">Cancel</a></div></form></div>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<div class="module-header">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg, #2563eb, #1d4ed8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;">
+            <i class="fas fa-boxes-stacked"></i>
+        </div>
+        <div>
+            <h2 style="margin:0;font-size:1.45rem;font-weight:800;color:#0f172a;">Bulk Voucher Purchase</h2>
+            <p style="margin:2px 0 0;font-size:0.84rem;color:#64748b;">Add new voucher inventory from supplier and record linked expense</p>
+        </div>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('vouchers.dashboard', tab='batches') }}" style="text-decoration:none;">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="panel" style="max-width:800px;margin:0 auto;padding:28px;border-radius:20px;">
+    <form method="POST" class="form-grid">
+        <div class="form-row">
+            <label style="font-weight:700;">Exam Type *</label>
+            <select name="exam_type_id" required style="padding:11px 14px;border-radius:12px;">
+                <option value="">-- Select Exam Type --</option>
+                {% for et in exam_types %}
+                <option value="{{ et.id }}" {% if form_data.get('exam_type_id') == et.id|string %}selected{% endif %}>{{ et.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-row">
+                <label style="font-weight:700;">Quantity *</label>
+                <input type="number" min="1" name="quantity" id="purQty" required value="{{ form_data.get('quantity','') }}" placeholder="e.g. 50" oninput="calcPurTotal()" style="padding:11px 14px;border-radius:12px;">
+            </div>
+            <div class="form-row">
+                <label style="font-weight:700;">Purchase Cost / Voucher (₹) *</label>
+                <input type="number" step="0.01" min="0.01" name="cost_per_voucher" id="purCost" required value="{{ form_data.get('cost_per_voucher','') }}" placeholder="e.g. 500.00" oninput="calcPurTotal()" style="padding:11px 14px;border-radius:12px;">
+            </div>
+        </div>
+
+        <!-- Live Total Cost Banner -->
+        <div style="background:#f8fafc;border-radius:14px;padding:16px 20px;border:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
+            <div>
+                <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;">Calculated Total Cost</div>
+                <div style="font-size:1.45rem;font-weight:900;color:#2563eb;" id="purTotalDisplay">₹ 0.00</div>
+            </div>
+            <div style="font-size:0.8rem;color:#10b981;font-weight:700;display:flex;align-items:center;gap:6px;">
+                <i class="fas fa-check-circle"></i> Expense auto-recorded under "Exam Voucher Purchase"
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-row">
+                <label style="font-weight:700;">Default Selling Price (₹)</label>
+                <input type="number" step="0.01" min="0" name="selling_price" value="{{ form_data.get('selling_price','') }}" placeholder="e.g. 750.00" style="padding:11px 14px;border-radius:12px;">
+            </div>
+            <div class="form-row">
+                <label style="font-weight:700;">Purchase Date *</label>
+                <input type="date" name="purchase_date" required value="{{ form_data.get('purchase_date','') }}" id="purDateInput" style="padding:11px 14px;border-radius:12px;">
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-row">
+                <label style="font-weight:700;">Supplier / Vendor</label>
+                <input type="text" name="supplier" value="{{ form_data.get('supplier','') }}" placeholder="e.g. Pearson VUE / Certiport" style="padding:11px 14px;border-radius:12px;">
+            </div>
+            <div class="form-row">
+                <label style="font-weight:700;">Payment Mode</label>
+                <select name="payment_mode" style="padding:11px 14px;border-radius:12px;">
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Card">Card</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label style="font-weight:700;">Branch</label>
+            <select name="branch_id" style="padding:11px 14px;border-radius:12px;">
+                <option value="">All Branches</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}">{{ b.branch_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-row">
+            <label style="font-weight:700;">Custom Voucher Codes (One per line)</label>
+            <textarea name="voucher_codes" rows="4" placeholder="Optional: Paste actual voucher codes here. If blank, unique codes will be auto-generated." style="padding:11px 14px;border-radius:12px;font-family:monospace;"></textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-row">
+                <label style="font-weight:700;">Auto Code Prefix</label>
+                <input type="text" name="code_prefix" value="VCH" style="padding:11px 14px;border-radius:12px;">
+            </div>
+            <div class="form-row">
+                <label style="font-weight:700;">Internal Notes</label>
+                <input type="text" name="notes" placeholder="Batch comments..." style="padding:11px 14px;border-radius:12px;">
+            </div>
+        </div>
+
+        <div class="button-row" style="margin-top:20px;display:flex;gap:12px;">
+            <button class="btn-primary" type="submit" style="padding:12px 24px;border-radius:14px;background:linear-gradient(135deg, #2563eb, #1d4ed8);font-size:0.92rem;">
+                <i class="fas fa-check"></i> Save Purchase &amp; Record Expense
+            </button>
+            <a class="btn-secondary" href="{{ url_for('vouchers.dashboard', tab='batches') }}" style="padding:12px 24px;border-radius:14px;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function calcPurTotal() {
+    var qty = parseFloat(document.getElementById('purQty').value) || 0;
+    var cost = parseFloat(document.getElementById('purCost').value) || 0;
+    var total = qty * cost;
+    document.getElementById('purTotalDisplay').textContent = '₹ ' + total.toFixed(2);
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var dateInput = document.getElementById('purDateInput');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+    calcPurTotal();
+});
+</script>
+{% endblock %}

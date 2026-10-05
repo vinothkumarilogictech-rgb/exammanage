@@ -47,7 +47,7 @@
     /* Luxury Stats Grid */
     .exam-stats-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 18px;
         margin-bottom: 28px;
     }
@@ -278,12 +278,10 @@
 <div class="exam-links">
     <a class="exam-link-btn" href="{{ url_for('exam_types.list_exam_types') }}"><i class="fas fa-book"></i> Exam Types</a>
     <a class="exam-link-btn" href="{{ url_for('branch_exams.list_branch_exams') }}"><i class="fas fa-code-branch"></i> Branch ↔ Exam Mapping</a>
-    <a class="exam-link-btn" href="{{ url_for('sessions.list_sessions') }}"><i class="fas fa-calendar-alt"></i> Exam Sessions</a>
     <a class="exam-link-btn" href="{{ url_for('candidates.list_candidates') }}"><i class="fas fa-user-graduate"></i> Candidates</a>
     <a class="exam-link-btn" href="{{ url_for('teams.list_teams') }}"><i class="fas fa-users-cog"></i> Exam Teams</a>
     <a class="exam-link-btn" href="{{ url_for('candidates.list_candidates', exam_date=today_str) }}"><i class="fas fa-calendar-day"></i> Today Exams</a>
-    <a class="exam-link-btn" href="{{ url_for('sessions.list_sessions') }}"><i class="fas fa-calendar-check"></i> Upcoming Exams</a>
-    <a class="exam-link-btn" href="{{ url_for('exams_dashboard.reports') }}"><i class="fas fa-chart-pie"></i> Reports</a>
+    <a class="exam-link-btn" href="{{ url_for('exams_dashboard.reports') }}"><i class="fas fa-file-invoice"></i> Candidate Reports</a>
     <a class="exam-link-btn" href="{{ url_for('audit_logs.list_audit_logs') }}"><i class="fas fa-clipboard-check"></i> Audit Logs</a>
 </div>
 
@@ -304,7 +302,7 @@
             <div class="stat-icon-badge"><i class="fas fa-calendar-check"></i></div>
         </div>
         <div class="stat-card-value">{{ stats.scheduled }}</div>
-        <div class="stat-card-subtext">Upcoming exam sessions</div>
+        <div class="stat-card-subtext">Upcoming scheduled exams</div>
     </div>
 
     <div class="luxury-stat-card theme-green">
@@ -313,7 +311,7 @@
             <div class="stat-icon-badge"><i class="fas fa-check-circle"></i></div>
         </div>
         <div class="stat-card-value">{{ stats.completed }}</div>
-        <div class="stat-card-subtext">Conducted exam sessions</div>
+        <div class="stat-card-subtext">Completed exam attempts</div>
     </div>
 
     <div class="luxury-stat-card theme-amber">
@@ -322,25 +320,7 @@
             <div class="stat-icon-badge"><i class="fas fa-sync-alt"></i></div>
         </div>
         <div class="stat-card-value">{{ stats.rescheduled }}</div>
-        <div class="stat-card-subtext">Schedule revised sessions</div>
-    </div>
-
-    <div class="luxury-stat-card theme-red">
-        <div class="stat-card-header">
-            <span class="stat-card-title">Cancelled</span>
-            <div class="stat-icon-badge"><i class="fas fa-ban"></i></div>
-        </div>
-        <div class="stat-card-value">{{ stats.cancelled }}</div>
-        <div class="stat-card-subtext">Called off sessions</div>
-    </div>
-
-    <div class="luxury-stat-card theme-purple">
-        <div class="stat-card-header">
-            <span class="stat-card-title">Total Sessions</span>
-            <div class="stat-icon-badge"><i class="fas fa-layer-group"></i></div>
-        </div>
-        <div class="stat-card-value">{{ stats.total_sessions }}</div>
-        <div class="stat-card-subtext">Across active branches</div>
+        <div class="stat-card-subtext">Schedule revised candidates</div>
     </div>
 
     <div class="luxury-stat-card theme-teal">
@@ -352,24 +332,6 @@
         <div class="stat-card-subtext">Registered candidates</div>
     </div>
 
-    <div class="luxury-stat-card theme-green">
-        <div class="stat-card-header">
-            <span class="stat-card-title">Available Seats</span>
-            <div class="stat-icon-badge"><i class="fas fa-chair"></i></div>
-        </div>
-        <div class="stat-card-value">{{ stats.available_seats }}</div>
-        <div class="stat-card-subtext">Open seats in active sessions</div>
-    </div>
-
-    <div class="luxury-stat-card theme-teal">
-        <div class="stat-card-header">
-            <span class="stat-card-title">Completed Candidates</span>
-            <div class="stat-icon-badge"><i class="fas fa-user-check"></i></div>
-        </div>
-        <div class="stat-card-value">{{ stats.completed_candidates }}</div>
-        <div class="stat-card-subtext">Candidates with Completed status</div>
-    </div>
-
     <div class="luxury-stat-card theme-amber">
         <div class="stat-card-header">
             <span class="stat-card-title">No Show</span>
@@ -378,8 +340,6 @@
         <div class="stat-card-value">{{ stats.no_show }}</div>
         <div class="stat-card-subtext">Scheduled but did not attend</div>
     </div>
-
-
 </div>
 
 <!-- Candidate Management Access -->

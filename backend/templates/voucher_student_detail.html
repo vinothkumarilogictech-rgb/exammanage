@@ -1,1 +1,147 @@
-{% extends 'base.html' %}{% block content %}<div class="module-header"><h2>{{ student.name }} — Voucher History</h2></div><div class="premium-stats-grid voucher-grid"><div class="luxury-card bg-blue"><span class="card-title">Total Vouchers</span><div class="card-value">{{ vouchers|length }}</div></div><div class="luxury-card bg-green"><span class="card-title">Total Amount</span><div class="card-value">₹{{ '%.0f'|format(total_amount) }}</div></div><div class="luxury-card bg-purple"><span class="card-title">Total Profit</span><div class="card-value">₹{{ '%.0f'|format(total_profit) }}</div></div></div><div class="panel"><div class="table-responsive"><table class="data-table"><thead><tr><th>Voucher</th><th>Exam</th><th>Amount</th><th>Profit</th><th>Status</th><th>Issued</th></tr></thead><tbody>{% for v in vouchers %}<tr><td><a href="{{ url_for('vouchers.detail',voucher_id=v.id) }}">{{ v.voucher_code }}</a></td><td>{{ v.exam_type.name if v.exam_type else '-' }}</td><td>₹{{ '%.2f'|format(v.selling_price) }}</td><td>₹{{ '%.2f'|format(v.profit) }}</td><td>{{ v.status }}</td><td>{{ v.issued_at.strftime('%d-%b-%Y') if v.issued_at else '-' }}</td></tr>{% else %}<tr><td colspan="6" style="text-align:center">No vouchers.</td></tr>{% endfor %}</tbody></table></div></div>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<div class="module-header">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg, #6c1fb0, #9a22c7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;">
+            <i class="fas fa-user-graduate"></i>
+        </div>
+        <div>
+            <h2 style="margin:0;font-size:1.45rem;font-weight:800;color:#0f172a;">
+                {{ student.full_name if student.full_name is defined else student.name }} — Voucher History
+            </h2>
+            <p style="margin:2px 0 0;font-size:0.84rem;color:#64748b;">
+                {% if student.mobile %}<i class="fas fa-phone-alt"></i> {{ student.mobile }}{% endif %}
+                {% if student.email %} • <i class="fas fa-envelope"></i> {{ student.email }}{% endif %}
+            </p>
+        </div>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('vouchers.dashboard', tab='students') }}" style="text-decoration:none;">
+        <i class="fas fa-arrow-left"></i> Back to Students
+    </a>
+</div>
+
+{% set count = (sales|length) if sales is defined else (vouchers|length) %}
+
+<div class="v-kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;margin-bottom:22px;">
+    <div class="card" style="border-radius:16px;padding:20px;border-left:4px solid #2563eb;">
+        <h3 style="font-size:0.75rem;text-transform:uppercase;color:#64748b;font-weight:700;">Total Vouchers</h3>
+        <div class="value" style="font-size:1.8rem;font-weight:900;">{{ count }}</div>
+    </div>
+    <div class="card" style="border-radius:16px;padding:20px;border-left:4px solid #10b981;">
+        <h3 style="font-size:0.75rem;text-transform:uppercase;color:#64748b;font-weight:700;">Total Spent</h3>
+        <div class="value" style="font-size:1.8rem;font-weight:900;color:#10b981;">₹ {{ '%.2f'|format(total_amount) }}</div>
+    </div>
+    <div class="card" style="border-radius:16px;padding:20px;border-left:4px solid #6c1fb0;">
+        <h3 style="font-size:0.75rem;text-transform:uppercase;color:#64748b;font-weight:700;">Realized Profit</h3>
+        <div class="value" style="font-size:1.8rem;font-weight:900;color:#6c1fb0;">₹ {{ '%.2f'|format(total_profit) }}</div>
+    </div>
+</div>
+
+<div class="panel" style="border-radius:20px;padding:24px;">
+    <h3 style="margin-bottom:16px;"><i class="fas fa-list-check" style="color:#6c1fb0;margin-right:8px;"></i> Vouchers Portfolio &amp; Usage</h3>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Voucher Code</th>
+                    <th>Exam Type</th>
+                    <th>Sold Date</th>
+                    <th>Final Amount</th>
+                    <th>Paid Amount</th>
+                    <th>Pending Balance</th>
+                    <th>Payment Status</th>
+                    <th>Usage Status</th>
+                    <th style="text-align:right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if sales is defined %}
+                    {% for s in sales %}
+                    <tr>
+                        <td style="font-family:monospace;font-weight:800;color:#0f172a;">
+                            <a href="{{ url_for('vouchers.detail', voucher_id=s.voucher.id) if s.voucher else '#' }}" style="color:#6c1fb0;text-decoration:none;">
+                                {{ s.voucher.voucher_code if s.voucher else '-' }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="chip-exam">{{ s.voucher.exam_type.name if s.voucher and s.voucher.exam_type else '-' }}</span>
+                        </td>
+                        <td style="font-size:0.82rem;color:#475569;">
+                            {{ s.sold_at.strftime('%d-%b-%Y %H:%M') if s.sold_at else '-' }}
+                        </td>
+                        <td style="font-weight:800;color:#0f172a;">₹ {{ '%.2f'|format(s.final_amount) }}</td>
+                        <td style="font-weight:700;color:#15803d;">₹ {{ '%.2f'|format(s.paid_amount) }}</td>
+                        <td>
+                            {% if s.balance_amount > 0 %}
+                            <span style="font-weight:800;color:#b91c1c;">₹ {{ '%.2f'|format(s.balance_amount) }}</span>
+                            {% else %}
+                            <span style="color:#15803d;font-weight:600;">₹ 0.00</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-pill {% if s.payment_status == 'Paid' %}status-active{% elif s.payment_status == 'Partial' %}status-rescheduled{% else %}status-cancelled{% endif %}">
+                                {{ s.payment_status }} ({{ s.payment_mode or 'Cash' }})
+                            </span>
+                        </td>
+                        <td>
+                            {% if s.voucher and s.voucher.status == 'Used' %}
+                            <span class="status-pill status-active"><i class="fas fa-check"></i> Exam Used</span>
+                            {% else %}
+                            <span class="status-pill status-scheduled">Active</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right;">
+                            {% if s.voucher %}
+                            <a href="{{ url_for('vouchers.detail', voucher_id=s.voucher.id) }}" class="btn-secondary" style="padding:6px 12px;border-radius:10px;text-decoration:none;font-size:0.8rem;">
+                                Details
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align:center;padding:24px;color:#94a3b8;">No voucher sales found for this student.</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    {% for v in vouchers %}
+                    <tr>
+                        <td style="font-family:monospace;font-weight:800;color:#0f172a;">
+                            <a href="{{ url_for('vouchers.detail', voucher_id=v.id) }}" style="color:#6c1fb0;text-decoration:none;">
+                                {{ v.voucher_code }}
+                            </a>
+                        </td>
+                        <td><span class="chip-exam">{{ v.exam_type.name if v.exam_type else '-' }}</span></td>
+                        <td style="font-size:0.82rem;color:#475569;">
+                            {{ v.issued_at.strftime('%d-%b-%Y %H:%M') if v.issued_at else '-' }}
+                        </td>
+                        <td style="font-weight:800;">₹ {{ '%.2f'|format(v.selling_price) }}</td>
+                        <td style="font-weight:700;color:#15803d;">₹ {{ '%.2f'|format(v.selling_price) if v.payment_status == 'Paid' else '0.00' }}</td>
+                        <td>-</td>
+                        <td>
+                            <span class="status-pill {% if v.payment_status == 'Paid' %}status-active{% else %}status-cancelled{% endif %}">
+                                {{ v.payment_status }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-pill {% if v.status == 'Used' %}status-active{% else %}status-scheduled{% endif %}">
+                                {{ v.status }}
+                            </span>
+                        </td>
+                        <td style="text-align:right;">
+                            <a href="{{ url_for('vouchers.detail', voucher_id=v.id) }}" class="btn-secondary" style="padding:6px 12px;border-radius:10px;text-decoration:none;font-size:0.8rem;">
+                                Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align:center;padding:24px;color:#94a3b8;">No vouchers found for this student.</td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

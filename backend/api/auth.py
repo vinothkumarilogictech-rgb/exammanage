@@ -79,6 +79,8 @@ def _employee_allowed_path(path):
 def api_token_required(fn):
     @wraps(fn)
     def wrapped(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            return ('', 204)
         header = request.headers.get('Authorization', '')
         if not header.startswith('Bearer '):
             return {'success': False, 'message': 'Authentication required.'}, 401
