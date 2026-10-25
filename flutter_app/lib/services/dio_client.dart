@@ -146,13 +146,24 @@ class DioClient {
     },
   );
 
-  Future<Response> candidates({String? q, int? branchId, int? teamId}) =>
+  Future<Response> candidates({
+    String? q,
+    int? branchId,
+    int? teamId,
+    String? startDate,
+    String? endDate,
+    String? status,
+  }) =>
       dio.get(
         ApiConfig.candidatesPath,
         queryParameters: {
           if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
           if (branchId != null) 'branch_id': branchId,
           if (teamId != null) 'team_id': teamId,
+          if (startDate != null && startDate.isNotEmpty) 'start_date': startDate,
+          if (endDate != null && endDate.isNotEmpty) 'end_date': endDate,
+          if (status != null && status.isNotEmpty && status != 'All')
+            'status': status,
         },
       );
 
@@ -179,8 +190,21 @@ class DioClient {
       dio.put('${ApiConfig.teamsPath}$id/', data: data);
   Future<Response> deleteTeam(int id) =>
       dio.delete('${ApiConfig.teamsPath}$id/');
-  Future<Response> teamReport(int id) =>
-      dio.get('${ApiConfig.teamsPath}$id/report/');
+  Future<Response> teamReport(
+    int id, {
+    String? startDate,
+    String? endDate,
+    String? status,
+  }) =>
+      dio.get(
+        '${ApiConfig.teamsPath}$id/report/',
+        queryParameters: {
+          if (startDate != null && startDate.isNotEmpty) 'start_date': startDate,
+          if (endDate != null && endDate.isNotEmpty) 'end_date': endDate,
+          if (status != null && status.isNotEmpty && status != 'All')
+            'status': status,
+        },
+      );
   Future<Response> examDashboard({int? branchId}) => dio.get(
     ApiConfig.examDashboardPath,
     queryParameters: {if (branchId != null) 'branch_id': branchId},

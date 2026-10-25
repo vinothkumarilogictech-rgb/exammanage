@@ -11,7 +11,7 @@ class ApiConfig {
   ///
   static const String _dartDefineUrl = String.fromEnvironment('API_SERVER_URL');
 
-  static String get baseUrl => 'https://exam.ilogicigroup.com';
+  static String get baseUrl => 'http://127.0.0.1:5001';
 
   static const String apiBasePath = '/api/v1';
 

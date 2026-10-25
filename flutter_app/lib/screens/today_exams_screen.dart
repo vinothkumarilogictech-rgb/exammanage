@@ -274,6 +274,7 @@ class _TodayExamsScreenState extends State<TodayExamsScreen> {
 
   Future<void> _showEditCandidateDialog(Candidate candidate) async {
     final globalBranchId = _branchContext.selectedBranchId;
+    final currentBranchId = candidate.branchId ?? globalBranchId;
     if (_branchesList.isEmpty || _examTypesList.isEmpty) {
       await _loadLookups();
     }
@@ -283,15 +284,21 @@ class _TodayExamsScreenState extends State<TodayExamsScreen> {
 
     List<ExamTeam> teams = [];
     try {
-      final tr = await api.teams(status: 'Active', branchId: globalBranchId);
+      final tr = await api.teams(status: 'Active', branchId: currentBranchId);
       teams = (tr.data['data'] as List? ?? [])
           .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
           .toList();
     } catch (_) {}
 
-    int? selectedBranchId = candidate.branchId ?? globalBranchId;
-    int? selectedExamTypeId = candidate.examTypeId;
-    int? selectedTeamId = candidate.teamId;
+    int? selectedBranchId = currentBranchId;
+    int? selectedExamTypeId =
+        (candidate.examTypeId == null || candidate.examTypeId == 0)
+            ? null
+            : candidate.examTypeId;
+    int? selectedTeamId =
+        (candidate.teamId == null || candidate.teamId == 0 || candidate.teamId == -1)
+            ? null
+            : candidate.teamId;
     String selectedStatus = candidate.status.toLowerCase() == 'absent'
         ? 'Not Completed'
         : (candidate.status.isEmpty ? 'Registered' : candidate.status);
@@ -301,221 +308,447 @@ class _TodayExamsScreenState extends State<TodayExamsScreen> {
     final phoneCtrl = TextEditingController(text: candidate.phone);
     final remarksCtrl = TextEditingController(text: candidate.remarks);
     final dateCtrl = TextEditingController(text: candidate.date);
+    bool saving = false;
 
     if (!mounted) return;
+
+    List<DropdownMenuItem<int>> buildBranchItems() {
+      final items = <DropdownMenuItem<int>>[];
+      final seen = <int>{};
+      for (final b in branches) {
+        final id = int.tryParse('${b['id']}');
+        if (id != null && seen.add(id)) {
+          items.add(DropdownMenuItem<int>(
+            value: id,
+            child: Text(
+              '${b['branch_name'] ?? b['name'] ?? 'Branch #$id'}',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ));
+        }
+      }
+      if (selectedBranchId != null && seen.add(selectedBranchId!)) {
+        items.add(DropdownMenuItem<int>(
+          value: selectedBranchId!,
+          child: Text(
+            candidate.branch.isNotEmpty
+                ? candidate.branch
+                : 'Branch #$selectedBranchId',
+            overflow: TextOverflow.ellipsis,
+          ),
+        ));
+      }
+      return items;
+    }
+
+    List<DropdownMenuItem<int>> buildExamTypeItems() {
+      final items = <DropdownMenuItem<int>>[];
+      final seen = <int>{};
+      for (final e in examTypes) {
+        final id = int.tryParse('${e['id']}');
+        if (id != null && seen.add(id)) {
+          items.add(DropdownMenuItem<int>(
+            value: id,
+            child: Text(
+              '${e['name'] ?? 'Exam #$id'}',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ));
+        }
+      }
+      if (selectedExamTypeId != null && seen.add(selectedExamTypeId!)) {
+        items.add(DropdownMenuItem<int>(
+          value: selectedExamTypeId!,
+          child: Text(
+            candidate.examType.isNotEmpty
+                ? candidate.examType
+                : 'Exam #$selectedExamTypeId',
+            overflow: TextOverflow.ellipsis,
+          ),
+        ));
+      }
+      return items;
+    }
+
+    List<DropdownMenuItem<int>> buildTeamItems() {
+      final items = <DropdownMenuItem<int>>[];
+      final seen = <int>{};
+
+      seen.add(-1);
+      items.add(const DropdownMenuItem<int>(
+        value: -1,
+        child: Text(
+          'Not Assigned',
+          style: TextStyle(
+            color: Color(0xFF9CA3AF),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ));
+
+      final filteredTeams = teams.where((t) =>
+          t.examTypeId == null ||
+          selectedExamTypeId == null ||
+          t.examTypeId == selectedExamTypeId);
+
+      for (final t in filteredTeams) {
+        if (seen.add(t.id)) {
+          items.add(DropdownMenuItem<int>(
+            value: t.id,
+            child: Text(
+              t.name,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ));
+        }
+      }
+
+      if (selectedTeamId != null && selectedTeamId! > 0 && seen.add(selectedTeamId!)) {
+        final existingTeam =
+            teams.where((t) => t.id == selectedTeamId).firstOrNull;
+        final teamLabel = existingTeam?.name ??
+            (candidate.teamName.isNotEmpty
+                ? candidate.teamName
+                : 'Assigned Team (ID #$selectedTeamId)');
+        items.add(DropdownMenuItem<int>(
+          value: selectedTeamId!,
+          child: Text(
+            teamLabel,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ));
+      }
+
+      return items;
+    }
 
     final updated = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceAlt,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Edit Candidate',
-                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Candidate Name *',
-                      prefixIcon: Icon(Icons.person_outline_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: emailCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.email_outlined),
-                          ),
+        builder: (ctx, setSheetState) {
+          final branchItems = buildBranchItems();
+          final effectiveBranchId =
+              (selectedBranchId != null && branchItems.any((it) => it.value == selectedBranchId))
+                  ? selectedBranchId
+                  : null;
+
+          final examTypeItems = buildExamTypeItems();
+          final effectiveExamTypeId =
+              (selectedExamTypeId != null && examTypeItems.any((it) => it.value == selectedExamTypeId))
+                  ? selectedExamTypeId
+                  : null;
+
+          final teamItems = buildTeamItems();
+          final effectiveTeamId =
+              (selectedTeamId != null && teamItems.any((it) => it.value == selectedTeamId))
+                  ? selectedTeamId!
+                  : -1;
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceAlt,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: phoneCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Phone',
-                            prefixIcon: Icon(Icons.phone_outlined),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Edit Candidate',
+                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Candidate Name *',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: emailCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.email_outlined),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    value: selectedBranchId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Branch',
-                      prefixIcon: Icon(Icons.domain_rounded),
-                    ),
-                    items: branches
-                        .map((b) => DropdownMenuItem<int>(
-                              value: b['id'],
-                              child: Text('${b['branch_name'] ?? ''}'),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setSheetState(() => selectedBranchId = v),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    value: selectedExamTypeId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Exam Type',
-                      prefixIcon: Icon(Icons.menu_book_rounded),
-                    ),
-                    items: examTypes
-                        .map((e) => DropdownMenuItem<int>(
-                              value: e['id'],
-                              child: Text('${e['name'] ?? ''}'),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setSheetState(() {
-                      selectedExamTypeId = v;
-                      selectedTeamId = null;
-                    }),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    value: selectedTeamId ?? -1,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Team',
-                      prefixIcon: Icon(Icons.groups_rounded),
-                    ),
-                    items: [
-                      const DropdownMenuItem<int>(
-                        value: -1,
-                        child: Text(
-                          'Not Assigned',
-                          style: TextStyle(
-                            color: Color(0xFF9CA3AF),
-                            fontStyle: FontStyle.italic,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: phoneCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone',
+                              prefixIcon: Icon(Icons.phone_outlined),
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      initialValue: effectiveBranchId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Branch *',
+                        prefixIcon: Icon(Icons.domain_rounded),
                       ),
-                      ...teams
-                          .where((t) =>
-                              t.examTypeId == null ||
-                              selectedExamTypeId == null ||
-                              t.examTypeId == selectedExamTypeId)
-                          .map((t) => DropdownMenuItem<int>(
-                                value: t.id,
-                                child: Text(t.name),
-                              )),
-                    ],
-                    onChanged: (v) => setSheetState(
-                      () => selectedTeamId = (v == null || v == -1) ? null : v,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: dateCtrl,
-                    readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Exam Date',
-                      prefixIcon: Icon(Icons.calendar_today_rounded),
-                    ),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        initialDate: DateTime.tryParse(dateCtrl.text) ?? DateTime.now(),
-                        firstDate: DateTime(1900),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setSheetState(() {
-                          dateCtrl.text =
-                              '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: remarksCtrl,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Remarks',
-                      prefixIcon: Icon(Icons.notes_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: FilledButton(
-                      onPressed: () async {
-                        if (nameCtrl.text.trim().isEmpty) return;
+                      items: branchItems,
+                      onChanged: (v) async {
+                        if (v == null) return;
+                        setSheetState(() => selectedBranchId = v);
                         try {
-                          await api.updateCandidate(candidate.id, {
-                            'name': nameCtrl.text.trim(),
-                            'email': emailCtrl.text.trim(),
-                            'phone': phoneCtrl.text.trim(),
-                            'branch_id': selectedBranchId,
-                            'exam_type_id': selectedExamTypeId,
-                            'team_id': selectedTeamId,
-                            'status': selectedStatus,
-                            'exam_date': dateCtrl.text.trim(),
-                            'remarks': remarksCtrl.text.trim(),
-                          });
-                          if (ctx.mounted) Navigator.pop(ctx, true);
-                        } catch (e) {
-                          if (ctx.mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text('Error updating: $e')),
-                            );
+                          final tr = await api.teams(status: 'Active', branchId: v);
+                          final newTeams = (tr.data['data'] as List? ?? [])
+                              .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
+                              .toList();
+                          setSheetState(() => teams = newTeams);
+                        } catch (_) {}
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      initialValue: effectiveExamTypeId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Exam Type *',
+                        prefixIcon: Icon(Icons.menu_book_rounded),
+                      ),
+                      items: examTypeItems,
+                      onChanged: (v) => setSheetState(() {
+                        selectedExamTypeId = v;
+                        if (selectedTeamId != null) {
+                          final cur = teams.where((t) => t.id == selectedTeamId).firstOrNull;
+                          if (cur != null && cur.examTypeId != null && v != null && cur.examTypeId != v) {
+                            selectedTeamId = null;
                           }
                         }
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      initialValue: effectiveTeamId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Team (Optional)',
+                        prefixIcon: Icon(Icons.groups_rounded),
                       ),
-                      child: const Text(
-                        'Save Changes',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                      items: teamItems,
+                      onChanged: (v) => setSheetState(
+                        () => selectedTeamId = (v == null || v == -1) ? null : v,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: dateCtrl,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Exam Date *',
+                        prefixIcon: Icon(Icons.calendar_today_rounded),
+                      ),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: DateTime.tryParse(dateCtrl.text) ?? DateTime.now(),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setSheetState(() {
+                            dateCtrl.text =
+                                '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: remarksCtrl,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Remarks',
+                        prefixIcon: Icon(Icons.notes_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Candidate Status',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        'Registered',
+                        'Not Completed',
+                        'Rescheduled',
+                        'Completed',
+                      ].map((st) {
+                        final isSel = selectedStatus == st;
+                        return ChoiceChip(
+                          label: Text(
+                            st,
+                            style: TextStyle(
+                              color: isSel ? Colors.white : const Color(0xFF374151),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                          selected: isSel,
+                          selectedColor: AppColors.primary,
+                          backgroundColor: const Color(0xFFF3F4F6),
+                          onSelected: (val) {
+                            if (val) setSheetState(() => selectedStatus = st);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: FilledButton(
+                        onPressed: saving
+                            ? null
+                            : () async {
+                                final name = nameCtrl.text.trim();
+                                if (name.isEmpty) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Candidate name is required'),
+                                      backgroundColor: AppColors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                if (selectedBranchId == null) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please select a branch'),
+                                      backgroundColor: AppColors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                if (selectedExamTypeId == null) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please select an exam type'),
+                                      backgroundColor: AppColors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                if (dateCtrl.text.trim().isEmpty) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please select an exam date'),
+                                      backgroundColor: AppColors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                setSheetState(() => saving = true);
+                                try {
+                                  final res = await api.updateCandidate(candidate.id, {
+                                    'name': name,
+                                    'email': emailCtrl.text.trim(),
+                                    'phone': phoneCtrl.text.trim(),
+                                    'branch_id': selectedBranchId,
+                                    'exam_type_id': selectedExamTypeId,
+                                    'team_id': selectedTeamId,
+                                    'status': selectedStatus,
+                                    'exam_date': dateCtrl.text.trim(),
+                                    'remarks': remarksCtrl.text.trim(),
+                                  });
+                                  if (res.statusCode != null && res.statusCode! >= 400) {
+                                    final msg = res.data is Map && res.data['message'] != null
+                                        ? res.data['message']
+                                        : 'Failed to update candidate (${res.statusCode})';
+                                    throw Exception(msg);
+                                  }
+                                  if (ctx.mounted) Navigator.pop(ctx, true);
+                                } catch (e) {
+                                  if (ctx.mounted) {
+                                    setSheetState(() => saving = false);
+                                    String msg = e.toString();
+                                    if (e is DioException &&
+                                        e.response?.data is Map &&
+                                        e.response?.data['message'] != null) {
+                                      msg = e.response!.data['message'].toString();
+                                    } else if (msg.startsWith('Exception: ')) {
+                                      msg = msg.substring(11);
+                                    }
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error updating: $msg'),
+                                        backgroundColor: AppColors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: saving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Save Changes',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
+
+    nameCtrl.dispose();
+    emailCtrl.dispose();
+    phoneCtrl.dispose();
+    remarksCtrl.dispose();
+    dateCtrl.dispose();
 
     if (updated == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -106,13 +106,21 @@ class ExamSession {
 
 class ExamTeam {
   final int id;
-  final String name, location, phone, examTypeName, status;
-  final int? examTypeId;
+  final String name, location, phone, examTypeName, branchName, status;
+  final int? examTypeId, branchId;
   final int candidateCount;
 
   ExamTeam({
-    required this.id, required this.name, required this.location, required this.phone,
-    required this.examTypeName, required this.status, this.examTypeId, required this.candidateCount,
+    required this.id,
+    required this.name,
+    required this.location,
+    required this.phone,
+    required this.examTypeName,
+    this.branchName = '',
+    required this.status,
+    this.examTypeId,
+    this.branchId,
+    required this.candidateCount,
   });
 
   factory ExamTeam.fromMap(Map<String, dynamic> m) => ExamTeam(
@@ -121,8 +129,14 @@ class ExamTeam {
     location: '${m['location'] ?? ''}',
     phone: '${m['phone'] ?? ''}',
     examTypeName: '${m['exam_type_name'] ?? ''}',
+    branchName: '${m['branch_name'] ?? ''}',
     status: '${m['status'] ?? 'Active'}',
-    examTypeId: m['exam_type_id'] is int ? m['exam_type_id'] : int.tryParse('${m['exam_type_id']}'),
+    examTypeId: m['exam_type_id'] is int
+        ? m['exam_type_id']
+        : int.tryParse('${m['exam_type_id']}'),
+    branchId: m['branch_id'] is int
+        ? m['branch_id']
+        : int.tryParse('${m['branch_id']}'),
     candidateCount: int.tryParse('${m['candidate_count'] ?? 0}') ?? 0,
   );
 }

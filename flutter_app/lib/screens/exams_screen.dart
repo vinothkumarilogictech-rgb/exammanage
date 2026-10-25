@@ -80,6 +80,35 @@ class _ExamsScreenState extends State<ExamsScreen>
   List<Map<String, dynamic>> _branchesList = [];
   List<Map<String, dynamic>> _examTypesList = [];
 
+  // Team module filter state
+  int? _teamFilterId; // null = All Teams, -1 = Unassigned, or specific team id
+  DateTime? _teamFilterStartDate;
+  DateTime? _teamFilterEndDate;
+  String _teamFilterStatus = 'All'; // All, Registered, Not Completed, Rescheduled, Completed
+
+  bool get _isTeamFilterActive =>
+      _teamFilterId != null ||
+      _teamFilterStartDate != null ||
+      _teamFilterEndDate != null ||
+      _teamFilterStatus != 'All';
+
+  int get _activeTeamFilterCount {
+    int count = 0;
+    if (_teamFilterId != null) count++;
+    if (_teamFilterStartDate != null || _teamFilterEndDate != null) count++;
+    if (_teamFilterStatus != 'All') count++;
+    return count;
+  }
+
+  void _clearTeamFilters() {
+    setState(() {
+      _teamFilterId = null;
+      _teamFilterStartDate = null;
+      _teamFilterEndDate = null;
+      _teamFilterStatus = 'All';
+    });
+  }
+
   void reload() {
     examTypes = loadExamTypes();
     sessions = loadSessions();
@@ -118,6 +147,7 @@ class _ExamsScreenState extends State<ExamsScreen>
   }
 
   Future<List<ExamTeam>> loadTeams() async {
+    await _branchContext.ensureLoaded();
     final r = await api.teams(
       status: 'Active',
       branchId: _branchContext.selectedBranchId,
@@ -440,32 +470,43 @@ class _ExamsScreenState extends State<ExamsScreen>
     required String hint,
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
-  }) => Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFFF9FAFB),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFE5E7EB)),
-    ),
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-    child: DropdownButtonHideUnderline(
-      child: DropdownButton<T>(
-        isExpanded: true,
-        value: value,
-        hint: Text(
-          hint,
-          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-        ),
-        dropdownColor: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: Color(0xFF6B7280),
-        ),
-        items: items,
-        onChanged: onChanged,
+  }) {
+    final uniqueItems = <DropdownMenuItem<T>>[];
+    final seen = <T?>{};
+    for (final it in items) {
+      if (seen.add(it.value)) {
+        uniqueItems.add(it);
+      }
+    }
+    final T? effectiveValue = (value != null && seen.contains(value)) ? value : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
-    ),
-  );
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          isExpanded: true,
+          value: effectiveValue,
+          hint: Text(
+            hint,
+            style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+          ),
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Color(0xFF6B7280),
+          ),
+          items: uniqueItems,
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
 
   Widget _formSectionCard({
     required String title,
@@ -1485,240 +1526,520 @@ class _ExamsScreenState extends State<ExamsScreen>
     );
   }
 
-  Future<Map<String, dynamic>?> _loadTeamReport(ExamTeam team) async {
-    try {
-      final r = await api.teamReport(team.id);
-      return Map<String, dynamic>.from(r.data['data'] ?? {});
-    } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Unable to load report: $e')));
-      return null;
-    }
-  }
-
   String _csvEscape(dynamic value) =>
       '"${'${value ?? ''}'.replaceAll('"', '""')}"';
 
-  Future<void> _exportTeamExcel(ExamTeam team, {bool all = false}) async {
-    List<Map<String, dynamic>> rows = [];
-    if (all) {
-      for (final t in await teams)
-        rows.add({
-          'Team Name': t.name,
-          'Location': t.location,
-          'Phone': t.phone,
-          'Exam': t.examTypeName,
-          'Candidates': t.candidateCount,
-          'Status': t.status,
-        });
-    } else {
-      final report = await _loadTeamReport(team);
-      if (report == null) return;
-      for (final item in (report['candidates'] as List? ?? const [])) {
-        final c = Map<String, dynamic>.from(item);
-        rows.add({
-          'Team Name': team.name,
-          'Location': team.location,
-          'Phone': team.phone,
-          'Exam': c['exam_type_name'] ?? team.examTypeName,
-          'Candidate': c['name'],
-          'Branch': c['branch_name'],
-          'Exam Date': c['exam_date'],
-          'Status': c['status'],
-        });
+  List<Candidate> _filterCandidateRecords(
+    List<Candidate> allCandidates, {
+    int? teamIdOverride,
+  }) {
+    final effectiveTeamFilter = teamIdOverride ?? _teamFilterId;
+    return allCandidates.where((c) {
+      // 1. Team filter
+      if (effectiveTeamFilter != null) {
+        if (effectiveTeamFilter == -1) {
+          // Unassigned candidates
+          if (c.teamId != null && c.teamId! > 0) return false;
+        } else {
+          // Specific team
+          if (c.teamId != effectiveTeamFilter) return false;
+        }
       }
-    }
-    final headers = all
-        ? ['Team Name', 'Location', 'Phone', 'Exam', 'Candidates', 'Status']
-        : [
-            'Team Name',
-            'Location',
-            'Phone',
-            'Exam',
-            'Candidate',
-            'Branch',
-            'Exam Date',
-            'Status',
-          ];
-    final buffer = StringBuffer()..writeln(headers.map(_csvEscape).join(','));
-    for (final row in rows)
-      buffer.writeln(headers.map((h) => _csvEscape(row[h])).join(','));
-    final safe = (all ? 'all_teams' : team.name).replaceAll(
-      RegExp(r'\W+'),
-      '_',
-    );
-    await Printing.sharePdf(
-      bytes: Uint8List.fromList(buffer.toString().codeUnits),
-      filename: '${safe}_team_report.csv',
-    );
+
+      // 2. Date range filter (exam date)
+      if (_teamFilterStartDate != null || _teamFilterEndDate != null) {
+        if (c.date.trim().isEmpty) return false;
+        final rawDate = c.date.trim().split('T').first;
+        final parts = rawDate.split(RegExp(r'[-/]'));
+        DateTime? examDate;
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            // YYYY-MM-DD
+            examDate = DateTime.tryParse(rawDate);
+          } else if (parts[2].length == 4) {
+            // DD-MM-YYYY
+            final day = int.tryParse(parts[0]) ?? 1;
+            final month = int.tryParse(parts[1]) ?? 1;
+            final year = int.tryParse(parts[2]) ?? 2026;
+            examDate = DateTime(year, month, day);
+          }
+        } else {
+          examDate = DateTime.tryParse(rawDate);
+        }
+
+        if (examDate == null) return false;
+
+        if (_teamFilterStartDate != null) {
+          final start = DateTime(
+            _teamFilterStartDate!.year,
+            _teamFilterStartDate!.month,
+            _teamFilterStartDate!.day,
+          );
+          if (examDate.isBefore(start)) return false;
+        }
+        if (_teamFilterEndDate != null) {
+          final end = DateTime(
+            _teamFilterEndDate!.year,
+            _teamFilterEndDate!.month,
+            _teamFilterEndDate!.day,
+            23,
+            59,
+            59,
+          );
+          if (examDate.isAfter(end)) return false;
+        }
+      }
+
+      // 3. Status filter
+      if (_teamFilterStatus != 'All') {
+        final cStatus = c.status.toLowerCase().trim() == 'absent'
+            ? 'not completed'
+            : c.status.toLowerCase().trim();
+        final targetStatus = _teamFilterStatus.toLowerCase().trim();
+        if (cStatus != targetStatus) return false;
+      }
+
+      return true;
+    }).toList();
   }
 
-  Future<void> _exportTeamPdf(ExamTeam team, {bool all = false}) async {
-    final logo = await loadBrandLogo();
-    final document = pw.Document();
-    final report = all ? null : await _loadTeamReport(team);
-    if (!all && report == null) return;
-    final teamRows = all ? await teams : <ExamTeam>[];
-    final candidates = all
-        ? const []
-        : (report!['candidates'] as List? ?? const []);
-    document.addPage(
-      pw.MultiPage(
-        pageFormat: pdf.PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(28),
-        build: (context) => [
-          pdfReportHeader(
-            logo: logo,
-            title: all ? 'Exam Team Report' : team.name,
-            subtitle: all ? null : 'Team Report',
-            docDate:
-                'Generated: ${DateTime.now().toString().split('.').first}',
-          ),
-          pw.SizedBox(height: 16),
-          if (!all) ...[
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                color: PdfBrand.tint,
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+  Future<void> _showTeamFilterBottomSheet(List<ExamTeam> teamsList) async {
+    int? tempTeamId = _teamFilterId;
+    DateTime? tempStartDate = _teamFilterStartDate;
+    DateTime? tempEndDate = _teamFilterEndDate;
+    String tempStatus = _teamFilterStatus;
+    String? dateError;
+
+    String formatDate(DateTime? d) {
+      if (d == null) return '';
+      return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  pw.Text(
-                    'Team Details',
-                    style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 13,
-                      color: PdfBrand.primaryDark,
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1D5DB),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  pw.SizedBox(height: 6),
-                  pw.Text('Team: ${team.name}', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
-                  pw.Text(
-                    'Location: ${team.location.isEmpty ? '-' : team.location}',
-                    style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEDE9FE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.filter_alt_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Filter Exam & Team Records',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            tempTeamId = null;
+                            tempStartDate = null;
+                            tempEndDate = null;
+                            tempStatus = 'All';
+                            dateError = null;
+                          });
+                        },
+                        child: const Text('Reset'),
+                      ),
+                    ],
                   ),
-                  pw.Text('Phone: ${team.phone.isEmpty ? '-' : team.phone}', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
-                  pw.Text(
-                    'Exam: ${team.examTypeName.isEmpty ? '-' : team.examTypeName}',
-                    style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark),
+                  const SizedBox(height: 16),
+
+                  // 1. Team Selector
+                  _label('Team'),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<int?>(
+                    value: tempTeamId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.groups_rounded, size: 20),
+                    ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('All Teams'),
+                      ),
+                      const DropdownMenuItem<int?>(
+                        value: -1,
+                        child: Text('Unassigned (No Team)'),
+                      ),
+                      ...teamsList.map(
+                        (t) => DropdownMenuItem<int?>(
+                          value: t.id,
+                          child: Text(
+                            t.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (v) => setSheetState(() => tempTeamId = v),
                   ),
-                  pw.Text(
-                    'Branch: ${(() {
-                      final names = candidates
-                          .map((c) => '${Map<String, dynamic>.from(c)['branch_name'] ?? ''}')
-                          .where((b) => b.isNotEmpty)
-                          .toSet()
-                          .join(', ');
-                      return names.isEmpty ? '-' : names;
-                    })()}',
-                    style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark),
+
+                  const SizedBox(height: 16),
+
+                  // 2. Date Range
+                  _label('Exam Date Range'),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: ctx,
+                              initialDate: tempStartDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) {
+                              setSheetState(() {
+                                tempStartDate = picked;
+                                if (tempEndDate != null &&
+                                    tempEndDate!.isBefore(tempStartDate!)) {
+                                  dateError =
+                                      'End date must not be earlier than start date';
+                                } else {
+                                  dateError = null;
+                                }
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 16,
+                                  color: Color(0xFF6B7280),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    tempStartDate == null
+                                        ? 'Start Date'
+                                        : formatDate(tempStartDate),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: tempStartDate == null
+                                          ? FontWeight.w500
+                                          : FontWeight.w700,
+                                      color: tempStartDate == null
+                                          ? const Color(0xFF9CA3AF)
+                                          : const Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                ),
+                                if (tempStartDate != null)
+                                  GestureDetector(
+                                    onTap: () => setSheetState(() {
+                                      tempStartDate = null;
+                                      dateError = null;
+                                    }),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Color(0xFF9CA3AF),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: ctx,
+                              initialDate: tempEndDate ?? tempStartDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) {
+                              setSheetState(() {
+                                tempEndDate = picked;
+                                if (tempStartDate != null &&
+                                    tempEndDate!.isBefore(tempStartDate!)) {
+                                  dateError =
+                                      'End date must not be earlier than start date';
+                                } else {
+                                  dateError = null;
+                                }
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 16,
+                                  color: Color(0xFF6B7280),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    tempEndDate == null
+                                        ? 'End Date'
+                                        : formatDate(tempEndDate),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: tempEndDate == null
+                                          ? FontWeight.w500
+                                          : FontWeight.w700,
+                                      color: tempEndDate == null
+                                          ? const Color(0xFF9CA3AF)
+                                          : const Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                ),
+                                if (tempEndDate != null)
+                                  GestureDetector(
+                                    onTap: () => setSheetState(() {
+                                      tempEndDate = null;
+                                      dateError = null;
+                                    }),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Color(0xFF9CA3AF),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  pw.Text('Candidates: ${candidates.length}', style: const pw.TextStyle(fontSize: 10.5, color: PdfBrand.textDark)),
+                  if (dateError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        dateError!,
+                        style: const TextStyle(
+                          color: AppColors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // 3. Status Selector
+                  _label('Status'),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        'All',
+                        'Registered',
+                        'Not Completed',
+                        'Rescheduled',
+                        'Completed',
+                      ].map((status) {
+                        final isSel = tempStatus == status;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(status),
+                            selected: isSel,
+                            selectedColor: const Color(0xFFEDE9FE),
+                            labelStyle: TextStyle(
+                              color: isSel
+                                  ? AppColors.primary
+                                  : const Color(0xFF4B5563),
+                              fontWeight:
+                                  isSel ? FontWeight.w800 : FontWeight.w600,
+                              fontSize: 12.5,
+                            ),
+                            side: BorderSide(
+                              color: isSel
+                                  ? AppColors.primary
+                                  : const Color(0xFFE5E7EB),
+                            ),
+                            onSelected: (_) {
+                              setSheetState(() => tempStatus = status);
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // 4. Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            _clearTeamFilters();
+                            Navigator.pop(ctx);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: const BorderSide(color: Color(0xFFD1D5DB)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text('Clear Filters'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            if (tempStartDate != null &&
+                                tempEndDate != null &&
+                                tempEndDate!.isBefore(tempStartDate!)) {
+                              setSheetState(() {
+                                dateError =
+                                    'End date must not be earlier than start date';
+                              });
+                              return;
+                            }
+                            setState(() {
+                              _teamFilterId = tempTeamId;
+                              _teamFilterStartDate = tempStartDate;
+                              _teamFilterEndDate = tempEndDate;
+                              _teamFilterStatus = tempStatus;
+                            });
+                            Navigator.pop(ctx);
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Apply Filters',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            pw.SizedBox(height: 16),
-            pw.Text(
-              'Assigned Candidates',
-              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfBrand.textDark),
-            ),
-            pw.SizedBox(height: 8),
-            pw.TableHelper.fromTextArray(
-              headers: ['S.No', 'Date', 'Candidate', 'Exam', 'Status'],
-              data: candidates.asMap().entries.map((entry) {
-                final i = entry.key;
-                final c = Map<String, dynamic>.from(entry.value);
-                return [
-                  '${i + 1}',
-                  '${c['exam_date'] ?? '-'}',
-                  '${c['name'] ?? '-'}',
-                  '${c['exam_type_name'] ?? '-'}',
-                  '${c['status'] ?? '-'}',
-                ];
-              }).toList(),
-              columnWidths: const {
-                0: pw.FlexColumnWidth(0.6),
-                1: pw.FlexColumnWidth(1.3),
-                2: pw.FlexColumnWidth(1.8),
-                3: pw.FlexColumnWidth(1.3),
-                4: pw.FlexColumnWidth(1.2),
-              },
-              headerStyle: pdfTableHeaderStyle(fontSize: 9),
-              headerDecoration: pdfTableHeaderDecoration,
-              headerAlignment: pw.Alignment.centerLeft,
-              headerPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 5),
-              cellAlignment: pw.Alignment.centerLeft,
-              cellAlignments: const {0: pw.Alignment.center},
-              cellStyle: const pw.TextStyle(fontSize: 8.5, color: PdfBrand.textDark),
-              cellPadding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-              oddRowDecoration: pdfTableOddRowDecoration,
-            ),
-          ] else ...[
-            pw.Text(
-              'All Teams',
-              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfBrand.textDark),
-            ),
-            pw.SizedBox(height: 8),
-            pw.TableHelper.fromTextArray(
-              headers: [
-                'Team',
-                'Location',
-                'Phone',
-                'Exam',
-                'Candidates',
-                'Status',
-              ],
-              data: teamRows
-                  .map(
-                    (t) => [
-                      t.name,
-                      t.location.isEmpty ? '-' : t.location,
-                      t.phone.isEmpty ? '-' : t.phone,
-                      t.examTypeName.isEmpty ? '-' : t.examTypeName,
-                      '${t.candidateCount}',
-                      t.status,
-                    ],
-                  )
-                  .toList(),
-              columnWidths: const {
-                0: pw.FlexColumnWidth(1.6),
-                1: pw.FlexColumnWidth(1.3),
-                2: pw.FlexColumnWidth(1.3),
-                3: pw.FlexColumnWidth(1.2),
-                4: pw.FlexColumnWidth(1.0),
-                5: pw.FlexColumnWidth(1.1),
-              },
-              headerStyle: pdfTableHeaderStyle(fontSize: 9.5),
-              headerDecoration: pdfTableHeaderDecoration,
-              headerAlignment: pw.Alignment.centerLeft,
-              headerPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 5),
-              cellAlignment: pw.Alignment.centerLeft,
-              cellAlignments: const {4: pw.Alignment.center},
-              cellStyle: const pw.TextStyle(fontSize: 9, color: PdfBrand.textDark),
-              cellPadding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-              oddRowDecoration: pdfTableOddRowDecoration,
-            ),
-          ],
-        ],
+          );
+        },
       ),
-    );
-    final safe = (all ? 'all_teams' : team.name).replaceAll(
-      RegExp(r'\W+'),
-      '_',
-    );
-    await Printing.layoutPdf(
-      onLayout: (format) async => document.save(),
-      name: '${safe}_team_report_${DateTime.now().millisecondsSinceEpoch}.pdf',
     );
   }
 
-  Future<void> _showOverallReportActions() async {
-    final rows = await teams;
-    if (!mounted || rows.isEmpty) return;
+  Future<void> _showOverallReportActions() => _showTeamReportActions();
+
+  Future<void> _showTeamReportActions({ExamTeam? specificTeam}) async {
+    final teamList = await teams;
+    final allCandidates = await candidates;
+    final filtered = _filterCandidateRecords(
+      allCandidates,
+      teamIdOverride: specificTeam?.id,
+    );
+
+    if (!mounted) return;
+
+    final targetTeamName = specificTeam?.name ??
+        (_teamFilterId != null
+            ? (teamList.any((t) => t.id == _teamFilterId)
+                ? teamList.firstWhere((t) => t.id == _teamFilterId).name
+                : (_teamFilterId == -1
+                    ? 'Unassigned Candidates'
+                    : 'Team #$_teamFilterId'))
+            : 'All Teams');
+
+    String dateRangeSummary = 'All Dates';
+    if (_teamFilterStartDate != null && _teamFilterEndDate != null) {
+      dateRangeSummary =
+          '${_teamFilterStartDate!.year}-${_teamFilterStartDate!.month.toString().padLeft(2, '0')}-${_teamFilterStartDate!.day.toString().padLeft(2, '0')} to ${_teamFilterEndDate!.year}-${_teamFilterEndDate!.month.toString().padLeft(2, '0')}-${_teamFilterEndDate!.day.toString().padLeft(2, '0')}';
+    } else if (_teamFilterStartDate != null) {
+      dateRangeSummary =
+          'From ${_teamFilterStartDate!.year}-${_teamFilterStartDate!.month.toString().padLeft(2, '0')}-${_teamFilterStartDate!.day.toString().padLeft(2, '0')}';
+    } else if (_teamFilterEndDate != null) {
+      dateRangeSummary =
+          'Up to ${_teamFilterEndDate!.year}-${_teamFilterEndDate!.month.toString().padLeft(2, '0')}-${_teamFilterEndDate!.day.toString().padLeft(2, '0')}';
+    }
+
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -1730,74 +2051,16 @@ class _ExamsScreenState extends State<ExamsScreen>
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'All Team Report',
-                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${rows.length} teams',
-                style: const TextStyle(color: Color(0xFF6B7280)),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: const Icon(
-                  Icons.picture_as_pdf_rounded,
-                  color: Color(0xFFDC2626),
-                ),
-                title: const Text('Download PDF'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _exportTeamPdf(rows.first, all: true);
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.table_chart_rounded,
-                  color: Color(0xFF059669),
-                ),
-                title: const Text('Export Excel'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _exportTeamExcel(rows.first, all: true);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showTeamReportActions(ExamTeam team) async {
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
               const SizedBox(height: 18),
@@ -1820,16 +2083,23 @@ class _ExamsScreenState extends State<ExamsScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Team Report',
-                          style: TextStyle(
-                            fontSize: 19,
+                        Text(
+                          specificTeam != null
+                              ? '${specificTeam.name} Report'
+                              : 'Team Report',
+                          style: const TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                         Text(
-                          team.name,
-                          style: const TextStyle(color: Color(0xFF6B7280)),
+                          'Scope: $targetTeamName • Dates: $dateRangeSummary • Status: $_teamFilterStatus (${filtered.length} records)',
+                          style: const TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -1843,10 +2113,15 @@ class _ExamsScreenState extends State<ExamsScreen>
                   color: Color(0xFFDC2626),
                 ),
                 title: const Text('Download PDF'),
-                subtitle: const Text('This team and its assigned candidates'),
+                subtitle: Text('Export ${filtered.length} matching records'),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await _exportTeamPdf(team);
+                  await _exportFilteredTeamPdf(
+                    teamName: targetTeamName,
+                    candidates: filtered,
+                    allTeams: teamList,
+                    dateRangeText: dateRangeSummary,
+                  );
                 },
               ),
               ListTile(
@@ -1854,15 +2129,459 @@ class _ExamsScreenState extends State<ExamsScreen>
                   Icons.table_chart_rounded,
                   color: Color(0xFF059669),
                 ),
-                title: const Text('Export Excel'),
-                subtitle: const Text('This team and its assigned candidates'),
+                title: const Text('Export Excel (CSV)'),
+                subtitle: Text('Export ${filtered.length} matching records'),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await _exportTeamExcel(team);
+                  await _exportFilteredTeamExcel(
+                    teamName: targetTeamName,
+                    candidates: filtered,
+                  );
                 },
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportFilteredTeamPdf({
+    required String teamName,
+    required List<Candidate> candidates,
+    required List<ExamTeam> allTeams,
+    required String dateRangeText,
+  }) async {
+    if (candidates.isEmpty) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Empty Report'),
+            content: const Text(
+              'No records match the selected filters to generate a report. '
+              'Please adjust your filter selections and try again.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final logo = await loadBrandLogo();
+      final document = pw.Document();
+
+      // Compute status breakdown
+      int regCount = 0;
+      int notCompCount = 0;
+      int reschedCount = 0;
+      int compCount = 0;
+      for (final c in candidates) {
+        final st = c.status.toLowerCase().trim();
+        if (st == 'registered') {
+          regCount++;
+        } else if (st == 'not completed' || st == 'absent') {
+          notCompCount++;
+        } else if (st == 'rescheduled') {
+          reschedCount++;
+        } else if (st == 'completed') {
+          compCount++;
+        }
+      }
+
+      // Compute team breakdown
+      final Map<String, List<Candidate>> teamMap = {};
+      for (final c in candidates) {
+        final tName = c.teamName.isNotEmpty ? c.teamName : 'Unassigned';
+        teamMap.putIfAbsent(tName, () => []).add(c);
+      }
+
+      final now = DateTime.now();
+      final genDate =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+      document.addPage(
+        pw.MultiPage(
+          pageFormat: pdf.PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(24),
+          build: (ctx) => [
+            pdfReportHeader(
+              logo: logo,
+              title: 'Team-Based Exam Report',
+              subtitle: 'Team: $teamName',
+              docDate: 'Generated: $genDate',
+            ),
+            pw.SizedBox(height: 12),
+
+            // Filter Summary Box
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                color: PdfBrand.tint,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'Report & Filter Summary',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 11.5,
+                      color: PdfBrand.primaryDark,
+                    ),
+                  ),
+                  pw.SizedBox(height: 5),
+                  pw.Row(
+                    children: [
+                      pw.Expanded(
+                        child: pw.Text(
+                          'Team Scope: $teamName',
+                          style: const pw.TextStyle(
+                            fontSize: 9.5,
+                            color: PdfBrand.textDark,
+                          ),
+                        ),
+                      ),
+                      pw.Expanded(
+                        child: pw.Text(
+                          'Exam Date Range: $dateRangeText',
+                          style: const pw.TextStyle(
+                            fontSize: 9.5,
+                            color: PdfBrand.textDark,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 3),
+                  pw.Row(
+                    children: [
+                      pw.Expanded(
+                        child: pw.Text(
+                          'Status Filter: $_teamFilterStatus',
+                          style: const pw.TextStyle(
+                            fontSize: 9.5,
+                            color: PdfBrand.textDark,
+                          ),
+                        ),
+                      ),
+                      pw.Expanded(
+                        child: pw.Text(
+                          'Total Candidates: ${candidates.length}',
+                          style: pw.TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfBrand.textDark,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 14),
+
+            // Status Breakdown Summary
+            pw.Text(
+              'Status Breakdown',
+              style: pw.TextStyle(
+                fontSize: 11.5,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfBrand.textDark,
+              ),
+            ),
+            pw.SizedBox(height: 6),
+            pw.TableHelper.fromTextArray(
+              headers: [
+                'Registered',
+                'Not Completed',
+                'Rescheduled',
+                'Completed',
+                'Total Candidates'
+              ],
+              data: [
+                [
+                  '$regCount',
+                  '$notCompCount',
+                  '$reschedCount',
+                  '$compCount',
+                  '${candidates.length}'
+                ],
+              ],
+              columnWidths: const {
+                0: pw.FlexColumnWidth(1),
+                1: pw.FlexColumnWidth(1),
+                2: pw.FlexColumnWidth(1),
+                3: pw.FlexColumnWidth(1),
+                4: pw.FlexColumnWidth(1),
+              },
+              headerStyle: pdfTableHeaderStyle(fontSize: 8.5),
+              headerDecoration: pdfTableHeaderDecoration,
+              cellAlignment: pw.Alignment.center,
+              cellStyle: const pw.TextStyle(fontSize: 8.5, color: PdfBrand.textDark),
+              cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+            ),
+            pw.SizedBox(height: 14),
+
+            // Team-Wise Breakdown (if more than 1 group)
+            if (teamMap.length > 1) ...[
+              pw.Text(
+                'Team-Wise Breakdown',
+                style: pw.TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfBrand.textDark,
+                ),
+              ),
+              pw.SizedBox(height: 6),
+              pw.TableHelper.fromTextArray(
+                headers: [
+                  'Team Name',
+                  'Registered',
+                  'Not Completed',
+                  'Rescheduled',
+                  'Completed',
+                  'Total'
+                ],
+                data: teamMap.entries.map((e) {
+                  int reg = 0, notComp = 0, resched = 0, comp = 0;
+                  for (final c in e.value) {
+                    final st = c.status.toLowerCase().trim();
+                    if (st == 'registered') {
+                      reg++;
+                    } else if (st == 'not completed' || st == 'absent') {
+                      notComp++;
+                    } else if (st == 'rescheduled') {
+                      resched++;
+                    } else if (st == 'completed') {
+                      comp++;
+                    }
+                  }
+                  return [
+                    e.key,
+                    '$reg',
+                    '$notComp',
+                    '$resched',
+                    '$comp',
+                    '${e.value.length}'
+                  ];
+                }).toList(),
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(2),
+                  1: pw.FlexColumnWidth(1),
+                  2: pw.FlexColumnWidth(1),
+                  3: pw.FlexColumnWidth(1),
+                  4: pw.FlexColumnWidth(1),
+                  5: pw.FlexColumnWidth(1),
+                },
+                headerStyle: pdfTableHeaderStyle(fontSize: 8.5),
+                headerDecoration: pdfTableHeaderDecoration,
+                headerAlignment: pw.Alignment.centerLeft,
+                cellAlignment: pw.Alignment.center,
+                cellAlignments: const {0: pw.Alignment.centerLeft},
+                cellStyle: const pw.TextStyle(fontSize: 8, color: PdfBrand.textDark),
+                cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                oddRowDecoration: pdfTableOddRowDecoration,
+              ),
+              pw.SizedBox(height: 14),
+            ],
+
+            // Candidate Details Table
+            pw.Text(
+              'Filtered Candidate Records (${candidates.length})',
+              style: pw.TextStyle(
+                fontSize: 11.5,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfBrand.textDark,
+              ),
+            ),
+            pw.SizedBox(height: 6),
+            pw.TableHelper.fromTextArray(
+              headers: [
+                'S.No',
+                'Candidate',
+                'Reg #',
+                'Exam',
+                'Date',
+                'Team',
+                'Status',
+                'Remarks'
+              ],
+              data: candidates.asMap().entries.map((entry) {
+                final idx = entry.key + 1;
+                final c = entry.value;
+                return [
+                  '$idx',
+                  c.name,
+                  c.registerNumber.isNotEmpty ? c.registerNumber : '-',
+                  c.examType.isNotEmpty ? c.examType : '-',
+                  c.date.isNotEmpty ? c.date : '-',
+                  c.teamName.isNotEmpty ? c.teamName : 'Unassigned',
+                  c.status.isNotEmpty ? c.status : '-',
+                  c.remarks.isNotEmpty ? c.remarks : '-',
+                ];
+              }).toList(),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(0.5),
+                1: pw.FlexColumnWidth(1.8),
+                2: pw.FlexColumnWidth(1.2),
+                3: pw.FlexColumnWidth(1.1),
+                4: pw.FlexColumnWidth(1.1),
+                5: pw.FlexColumnWidth(1.4),
+                6: pw.FlexColumnWidth(1.2),
+                7: pw.FlexColumnWidth(1.4),
+              },
+              headerStyle: pdfTableHeaderStyle(fontSize: 8),
+              headerDecoration: pdfTableHeaderDecoration,
+              headerAlignment: pw.Alignment.centerLeft,
+              cellAlignment: pw.Alignment.centerLeft,
+              cellAlignments: const {0: pw.Alignment.center},
+              cellStyle: const pw.TextStyle(fontSize: 7.5, color: PdfBrand.textDark),
+              cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 3),
+              oddRowDecoration: pdfTableOddRowDecoration,
+            ),
+          ],
+        ),
+      );
+
+      final safe = teamName.replaceAll(RegExp(r'\W+'), '_');
+      await Printing.layoutPdf(
+        onLayout: (format) async => document.save(),
+        name: '${safe}_team_report_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate PDF: $e'),
+            backgroundColor: AppColors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportFilteredTeamExcel({
+    required String teamName,
+    required List<Candidate> candidates,
+  }) async {
+    if (candidates.isEmpty) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Empty Report'),
+            content: const Text(
+              'No records match the selected filters to export.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    final headers = [
+      'S.No',
+      'Candidate Name',
+      'Register Number',
+      'Exam Type',
+      'Exam Date',
+      'Team Name',
+      'Status',
+      'Remarks',
+      'Branch',
+    ];
+    final buffer = StringBuffer()..writeln(headers.map(_csvEscape).join(','));
+    for (int i = 0; i < candidates.length; i++) {
+      final c = candidates[i];
+      final row = {
+        'S.No': i + 1,
+        'Candidate Name': c.name,
+        'Register Number': c.registerNumber,
+        'Exam Type': c.examType,
+        'Exam Date': c.date,
+        'Team Name': c.teamName.isNotEmpty ? c.teamName : 'Unassigned',
+        'Status': c.status,
+        'Remarks': c.remarks,
+        'Branch': c.branch,
+      };
+      buffer.writeln(headers.map((h) => _csvEscape(row[h])).join(','));
+    }
+
+    final safe = teamName.replaceAll(RegExp(r'\W+'), '_');
+    await Printing.sharePdf(
+      bytes: Uint8List.fromList(buffer.toString().codeUnits),
+      filename:
+          '${safe}_team_report_${DateTime.now().millisecondsSinceEpoch}.csv',
+    );
+  }
+
+  Widget _buildFilterBadge(String label, {required VoidCallback onDelete}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFC4B5FD)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: onDelete,
+            child: const Icon(
+              Icons.close_rounded,
+              size: 14,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusMiniTag(
+    String label,
+    int count,
+    Color textColor,
+    Color bgColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '$count',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: textColor,
         ),
       ),
     );
@@ -2170,36 +2889,48 @@ class _ExamsScreenState extends State<ExamsScreen>
           // ======================================
           // TEAM TAB
           // ======================================
-          FutureBuilder<List<ExamTeam>>(
-            future: teams,
+          FutureBuilder<List<dynamic>>(
+            future: Future.wait([
+              teams,
+              candidates,
+            ]),
             builder: (c, s) {
-              if (s.connectionState != ConnectionState.done)
+              if (s.connectionState != ConnectionState.done) {
                 return const LoadingView();
-              if (s.hasError)
+              }
+              if (s.hasError) {
                 return ErrorView(message: '${s.error}', onRetry: reload);
-              final rows = s.requireData;
+              }
+              final teamRows = (s.requireData[0] as List).cast<ExamTeam>();
+              final candidateRows = (s.requireData[1] as List).cast<Candidate>();
+              final filteredCandidates = _filterCandidateRecords(candidateRows);
+
               return Column(
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
                     child: Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Exam Teams',
-                                style: TextStyle(
+                                _isTeamFilterActive
+                                    ? 'Filtered Records'
+                                    : 'Exam Teams',
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
                                   color: Color(0xFF1F2937),
                                 ),
                               ),
-                              SizedBox(height: 3),
+                              const SizedBox(height: 3),
                               Text(
-                                'Teams supporting your exams',
-                                style: TextStyle(
+                                _isTeamFilterActive
+                                    ? '${filteredCandidates.length} candidate record${filteredCandidates.length == 1 ? '' : 's'} matching filters'
+                                    : 'Teams supporting your exams',
+                                style: const TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF6B7280),
                                 ),
@@ -2207,8 +2938,77 @@ class _ExamsScreenState extends State<ExamsScreen>
                             ],
                           ),
                         ),
+                        // Filter button with active filter counter badge
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => _showTeamFilterBottomSheet(teamRows),
+                              icon: Icon(
+                                Icons.filter_list_rounded,
+                                size: 17,
+                                color: _isTeamFilterActive
+                                    ? AppColors.primary
+                                    : const Color(0xFF4B5563),
+                              ),
+                              label: Text(
+                                'Filter',
+                                style: TextStyle(
+                                  color: _isTeamFilterActive
+                                      ? AppColors.primary
+                                      : const Color(0xFF374151),
+                                  fontWeight: _isTeamFilterActive
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: _isTeamFilterActive
+                                    ? const Color(0xFFF3E8FF)
+                                    : Colors.white,
+                                side: BorderSide(
+                                  color: _isTeamFilterActive
+                                      ? AppColors.primary
+                                      : const Color(0xFFD1D5DB),
+                                  width: _isTeamFilterActive ? 1.5 : 1,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                            ),
+                            if (_activeTeamFilterCount > 0)
+                              Positioned(
+                                top: -3,
+                                right: -3,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 18,
+                                    minHeight: 18,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '$_activeTeamFilterCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                        // Reports button
                         OutlinedButton.icon(
-                          onPressed: rows.isEmpty
+                          onPressed: (teamRows.isEmpty && candidateRows.isEmpty)
                               ? null
                               : _showOverallReportActions,
                           icon: const Icon(Icons.download_rounded, size: 17),
@@ -2224,57 +3024,258 @@ class _ExamsScreenState extends State<ExamsScreen>
                       ],
                     ),
                   ),
-                  Expanded(
-                    child: rows.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
+
+                  // If filter is active, show filter chips and count summary
+                  if (_isTeamFilterActive)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
                               children: [
-                                Icon(
-                                  Icons.groups_outlined,
-                                  size: 60,
-                                  color: Colors.grey[300],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No teams added yet',
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontWeight: FontWeight.w700,
+                                if (_teamFilterId != null) ...[
+                                  _buildFilterBadge(
+                                    'Team: ${_teamFilterId == -1 ? 'Unassigned' : (teamRows.any((t) => t.id == _teamFilterId) ? teamRows.firstWhere((t) => t.id == _teamFilterId).name : 'Team #$_teamFilterId')}',
+                                    onDelete: () => setState(() => _teamFilterId = null),
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                FilledButton.icon(
-                                  onPressed: _showAddTeamDialog,
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Add'),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
+                                  const SizedBox(width: 6),
+                                ],
+                                if (_teamFilterStartDate != null || _teamFilterEndDate != null) ...[
+                                  _buildFilterBadge(
+                                    _teamFilterStartDate != null && _teamFilterEndDate != null
+                                        ? '${_teamFilterStartDate!.year}-${_teamFilterStartDate!.month.toString().padLeft(2, '0')}-${_teamFilterStartDate!.day.toString().padLeft(2, '0')} to ${_teamFilterEndDate!.year}-${_teamFilterEndDate!.month.toString().padLeft(2, '0')}-${_teamFilterEndDate!.day.toString().padLeft(2, '0')}'
+                                        : (_teamFilterStartDate != null
+                                            ? 'From ${_teamFilterStartDate!.year}-${_teamFilterStartDate!.month.toString().padLeft(2, '0')}-${_teamFilterStartDate!.day.toString().padLeft(2, '0')}'
+                                            : 'Up to ${_teamFilterEndDate!.year}-${_teamFilterEndDate!.month.toString().padLeft(2, '0')}-${_teamFilterEndDate!.day.toString().padLeft(2, '0')}'),
+                                    onDelete: () => setState(() {
+                                      _teamFilterStartDate = null;
+                                      _teamFilterEndDate = null;
+                                    }),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                if (_teamFilterStatus != 'All') ...[
+                                  _buildFilterBadge(
+                                    'Status: $_teamFilterStatus',
+                                    onDelete: () => setState(() => _teamFilterStatus = 'All'),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                InkWell(
+                                  onTap: _clearTeamFilters,
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEE2E2),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: const Color(0xFFFECACA)),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.clear_all_rounded, size: 14, color: Color(0xFFDC2626)),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Clear All',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFFDC2626),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                            itemCount: rows.length,
-                            itemBuilder: (c, i) => _TeamCard(
-                              team: rows[i],
-                              onReport: () => _showTeamReportActions(rows[i]),
-                              onEdit: () => _showEditTeamDialog(rows[i]),
-                              onDelete: () async {
-                                try {
-                                  await api.deleteTeam(rows[i].id);
-                                  reload();
-                                } catch (e) {
-                                  if (mounted)
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('$e')),
-                                    );
-                                }
-                              },
+                          ),
+                          const SizedBox(height: 8),
+                          // Status metrics summary bar
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Total: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4B5563))),
+                                    _buildStatusMiniTag('Total', filteredCandidates.length, const Color(0xFF1F2937), const Color(0xFFE5E7EB)),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Reg: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4B5563))),
+                                    _buildStatusMiniTag(
+                                      'Registered',
+                                      filteredCandidates.where((c) => c.status.toLowerCase().trim() == 'registered').length,
+                                      const Color(0xFF1D4ED8),
+                                      const Color(0xFFDBEAFE),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Not Comp: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4B5563))),
+                                    _buildStatusMiniTag(
+                                      'Not Completed',
+                                      filteredCandidates.where((c) => c.status.toLowerCase().trim() == 'not completed' || c.status.toLowerCase().trim() == 'absent').length,
+                                      const Color(0xFFC2410C),
+                                      const Color(0xFFFFEDD5),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Resched: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4B5563))),
+                                    _buildStatusMiniTag(
+                                      'Rescheduled',
+                                      filteredCandidates.where((c) => c.status.toLowerCase().trim() == 'rescheduled').length,
+                                      const Color(0xFF6D28D9),
+                                      const Color(0xFFEDE9FE),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Comp: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4B5563))),
+                                    _buildStatusMiniTag(
+                                      'Completed',
+                                      filteredCandidates.where((c) => c.status.toLowerCase().trim() == 'completed').length,
+                                      const Color(0xFF15803D),
+                                      const Color(0xFFDCFCE7),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+
+                  Expanded(
+                    child: _isTeamFilterActive
+                        ? (filteredCandidates.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.filter_alt_off_rounded,
+                                        size: 56,
+                                        color: Colors.grey[300],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      const Text(
+                                        'No candidate records match filters',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF374151),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Try adjusting team, date range, or status filters.',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          color: Colors.grey[500],
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      FilledButton.icon(
+                                        onPressed: _clearTeamFilters,
+                                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                                        label: const Text('Reset Filters'),
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: AppColors.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
+                                itemCount: filteredCandidates.length,
+                                itemBuilder: (c, i) => _CandidateCard(
+                                  candidate: filteredCandidates[i],
+                                  onStatusChanged: _updateCandidateStatus,
+                                  onOpenDetails: _openCandidateDetails,
+                                  onEditRemarks: _showCandidateRemarks,
+                                  onEditCandidate: _showEditCandidateDialog,
+                                  onDeleteCandidate: _deleteCandidate,
+                                ),
+                              ))
+                        : (teamRows.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.groups_outlined,
+                                      size: 60,
+                                      color: Colors.grey[300],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'No teams added yet',
+                                      style: TextStyle(
+                                        color: Colors.grey[500],
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    FilledButton.icon(
+                                      onPressed: _showAddTeamDialog,
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Add'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                                itemCount: teamRows.length,
+                                itemBuilder: (c, i) => _TeamCard(
+                                  team: teamRows[i],
+                                  onReport: () => _showTeamReportActions(specificTeam: teamRows[i]),
+                                  onEdit: () => _showEditTeamDialog(teamRows[i]),
+                                  onDelete: () async {
+                                    try {
+                                      await api.deleteTeam(teamRows[i].id);
+                                      reload();
+                                    } catch (e) {
+                                      if (mounted)
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('$e')),
+                                        );
+                                    }
+                                  },
+                                ),
+                              )),
                   ),
                 ],
               );
@@ -2299,7 +3300,8 @@ class _ExamsScreenState extends State<ExamsScreen>
 
   Future<void> _showEditCandidateDialog(Candidate candidate) async {
     final globalBranchId = _branchContext.selectedBranchId;
-    if (globalBranchId == null) {
+    final currentBranchId = candidate.branchId ?? globalBranchId;
+    if (currentBranchId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -2314,17 +3316,26 @@ class _ExamsScreenState extends State<ExamsScreen>
     await _loadLookups();
     final branches = List<Map<String, dynamic>>.from(_branchesList);
     final examTypes = List<Map<String, dynamic>>.from(_examTypesList);
-    final teamResponse = await api.teams(
-      status: 'Active',
-      branchId: _branchContext.selectedBranchId,
-    );
-    final teams = (teamResponse.data['data'] as List? ?? const [])
-        .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
-        .toList();
+    List<ExamTeam> teams = [];
+    try {
+      final teamResponse = await api.teams(
+        status: 'Active',
+        branchId: currentBranchId,
+      );
+      teams = (teamResponse.data['data'] as List? ?? const [])
+          .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {}
 
-    int selectedBranchId = candidate.branchId ?? globalBranchId;
-    int? selectedExamTypeId = candidate.examTypeId;
-    int? selectedTeamId = candidate.teamId;
+    int? selectedBranchId = currentBranchId;
+    int? selectedExamTypeId =
+        (candidate.examTypeId == null || candidate.examTypeId == 0)
+            ? null
+            : candidate.examTypeId;
+    int? selectedTeamId =
+        (candidate.teamId == null || candidate.teamId == 0 || candidate.teamId == -1)
+            ? null
+            : candidate.teamId;
     String selectedStatus = candidate.status.toLowerCase() == 'absent'
         ? 'Not Completed'
         : (candidate.status.isEmpty ? 'Registered' : candidate.status);
@@ -2343,6 +3354,201 @@ class _ExamsScreenState extends State<ExamsScreen>
               t.examTypeId == selectedExamTypeId,
         )
         .toList();
+
+    List<DropdownMenuItem<int>> buildBranchItems() {
+      final items = <DropdownMenuItem<int>>[];
+      final seen = <int>{};
+      for (final b in branches) {
+        final id = int.tryParse('${b['id']}');
+        if (id != null && seen.add(id)) {
+          items.add(
+            DropdownMenuItem<int>(
+              value: id,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.business_rounded,
+                    size: 18,
+                    color: Color(0xFF6B7280),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${b['branch_name'] ?? b['name'] ?? 'Branch #$id'}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+      if (selectedBranchId != null && seen.add(selectedBranchId!)) {
+        items.add(
+          DropdownMenuItem<int>(
+            value: selectedBranchId!,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.business_rounded,
+                  size: 18,
+                  color: Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    candidate.branch.isNotEmpty
+                        ? candidate.branch
+                        : 'Branch #$selectedBranchId',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return items;
+    }
+
+    List<DropdownMenuItem<int>> buildExamTypeItems() {
+      final items = <DropdownMenuItem<int>>[];
+      final seen = <int>{};
+      for (final e in examTypes) {
+        final id = int.tryParse('${e['id']}');
+        if (id != null && seen.add(id)) {
+          items.add(
+            DropdownMenuItem<int>(
+              value: id,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.school_rounded,
+                    size: 18,
+                    color: Color(0xFF6B7280),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${e['name'] ?? 'Exam #$id'}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+      if (selectedExamTypeId != null && seen.add(selectedExamTypeId!)) {
+        items.add(
+          DropdownMenuItem<int>(
+            value: selectedExamTypeId!,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.school_rounded,
+                  size: 18,
+                  color: Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    candidate.examType.isNotEmpty
+                        ? candidate.examType
+                        : 'Exam #$selectedExamTypeId',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return items;
+    }
+
+    List<DropdownMenuItem<int>> buildTeamItems() {
+      final items = <DropdownMenuItem<int>>[];
+      final seen = <int>{};
+
+      seen.add(-1);
+      items.add(
+        const DropdownMenuItem<int>(
+          value: -1,
+          child: Row(
+            children: [
+              Icon(
+                Icons.person_outline_rounded,
+                size: 18,
+                color: Color(0xFF6B7280),
+              ),
+              SizedBox(width: 8),
+              Expanded(child: Text('Not Assigned')),
+            ],
+          ),
+        ),
+      );
+
+      for (final t in teamsForSelectedExam()) {
+        if (seen.add(t.id)) {
+          items.add(
+            DropdownMenuItem<int>(
+              value: t.id,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.groups_rounded,
+                    size: 18,
+                    color: Color(0xFF6B7280),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      t.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+
+      if (selectedTeamId != null && selectedTeamId! > 0 && seen.add(selectedTeamId!)) {
+        final existingTeam =
+            teams.where((t) => t.id == selectedTeamId).firstOrNull;
+        final teamLabel = existingTeam?.name ??
+            (candidate.teamName.isNotEmpty
+                ? candidate.teamName
+                : 'Assigned Team (ID #$selectedTeamId)');
+        items.add(
+          DropdownMenuItem<int>(
+            value: selectedTeamId!,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.groups_rounded,
+                  size: 18,
+                  color: Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    teamLabel,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      return items;
+    }
 
     try {
       if (!mounted) return;
@@ -2483,89 +3689,68 @@ class _ExamsScreenState extends State<ExamsScreen>
                     icon: Icons.school_rounded,
                     color: AppColors.primary,
                     children: [
-                      _label('Branch'),
+                      _label('Branch *'),
                       const SizedBox(height: 6),
-                      _fixedBranchField(selectedBranchId, branches),
+                      _dropdown<int>(
+                        value: selectedBranchId,
+                        hint: 'Select branch',
+                        items: buildBranchItems(),
+                        onChanged: (val) async {
+                          if (val == null) return;
+                          setSheetState(() {
+                            selectedBranchId = val;
+                          });
+                          try {
+                            final res =
+                                await api.teams(status: 'Active', branchId: val);
+                            final newTeams = (res.data['data'] as List? ?? const [])
+                                .map((e) =>
+                                    ExamTeam.fromMap(Map<String, dynamic>.from(e)))
+                                .toList();
+                            setSheetState(() {
+                              teams = newTeams;
+                            });
+                          } catch (_) {}
+                        },
+                      ),
                       const SizedBox(height: 14),
-                      _label('Exam Type'),
+                      _label('Exam Type *'),
                       const SizedBox(height: 6),
                       _dropdown<int>(
                         value: selectedExamTypeId,
                         hint: 'Select exam type',
-                        items: examTypes
-                            .map(
-                              (e) => DropdownMenuItem<int>(
-                                value: e['id'],
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.school_rounded,
-                                      size: 18,
-                                      color: Color(0xFF6B7280),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text('${e['name'] ?? ''}'),
-                                  ],
-                                ),
-                              ),
-                            )
-                            .toList(),
+                        items: buildExamTypeItems(),
                         onChanged: (val) => setSheetState(() {
                           selectedExamTypeId = val;
-                          selectedTeamId = null;
+                          if (selectedTeamId != null) {
+                            final cur = teams
+                                .where((t) => t.id == selectedTeamId)
+                                .firstOrNull;
+                            if (cur != null &&
+                                cur.examTypeId != null &&
+                                val != null &&
+                                cur.examTypeId != val) {
+                              selectedTeamId = null;
+                            }
+                          }
                         }),
                       ),
                       const SizedBox(height: 14),
-                      _label('Team'),
+                      _label('Team (Optional)'),
                       const SizedBox(height: 6),
                       _dropdown<int>(
-                        value: selectedTeamId ?? -1,
+                        value: (selectedTeamId != null && selectedTeamId! > 0)
+                            ? selectedTeamId
+                            : -1,
                         hint: 'Select team (optional)',
-                        items: [
-                          const DropdownMenuItem<int>(
-                            value: -1,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.person_outline_rounded,
-                                  size: 18,
-                                  color: Color(0xFF6B7280),
-                                ),
-                                SizedBox(width: 8),
-                                Expanded(child: Text('Not Assigned')),
-                              ],
-                            ),
-                          ),
-                          ...teamsForSelectedExam().map(
-                            (t) => DropdownMenuItem<int>(
-                              value: t.id,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.groups_rounded,
-                                    size: 18,
-                                    color: Color(0xFF6B7280),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      t.name,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                        items: buildTeamItems(),
                         onChanged: (val) => setSheetState(
-                          () => selectedTeamId = val == null || val == -1
-                              ? null
-                              : val,
+                          () => selectedTeamId =
+                              (val == null || val == -1) ? null : val,
                         ),
                       ),
                       const SizedBox(height: 14),
-                      _label('Exam Date'),
+                      _label('Exam Date *'),
                       const SizedBox(height: 6),
                       TextField(
                         controller: dateCtrl,
@@ -2601,9 +3786,10 @@ class _ExamsScreenState extends State<ExamsScreen>
                             firstDate: DateTime(1900),
                             lastDate: DateTime(2100),
                           );
-                          if (picked != null)
+                          if (picked != null) {
                             dateCtrl.text =
                                 '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                          }
                         },
                       ),
                     ],
@@ -2687,10 +3873,21 @@ class _ExamsScreenState extends State<ExamsScreen>
                       onPressed: saving
                           ? null
                           : () async {
-                              if (nameCtrl.text.trim().isEmpty) {
+                              final name = nameCtrl.text.trim();
+                              if (name.isEmpty) {
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   const SnackBar(
                                     content: Text('Candidate name is required'),
+                                    backgroundColor: AppColors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              if (selectedBranchId == null) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please select a branch'),
+                                    backgroundColor: AppColors.red,
                                   ),
                                 );
                                 return;
@@ -2699,6 +3896,7 @@ class _ExamsScreenState extends State<ExamsScreen>
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   const SnackBar(
                                     content: Text('Please select an exam type'),
+                                    backgroundColor: AppColors.red,
                                   ),
                                 );
                                 return;
@@ -2707,14 +3905,15 @@ class _ExamsScreenState extends State<ExamsScreen>
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   const SnackBar(
                                     content: Text('Please select an exam date'),
+                                    backgroundColor: AppColors.red,
                                   ),
                                 );
                                 return;
                               }
                               setSheetState(() => saving = true);
                               try {
-                                await api.updateCandidate(candidate.id, {
-                                  'name': nameCtrl.text.trim(),
+                                final res = await api.updateCandidate(candidate.id, {
+                                  'name': name,
                                   'email': emailCtrl.text.trim(),
                                   'phone': phoneCtrl.text.trim(),
                                   'branch_id': selectedBranchId,
@@ -2724,8 +3923,16 @@ class _ExamsScreenState extends State<ExamsScreen>
                                   'exam_date': dateCtrl.text.trim(),
                                   'remarks': remarksCtrl.text.trim(),
                                 });
+                                if (res.statusCode != null &&
+                                    res.statusCode! >= 400) {
+                                  final msg = res.data is Map &&
+                                          res.data['message'] != null
+                                      ? res.data['message']
+                                      : 'Failed to update candidate (${res.statusCode})';
+                                  throw Exception(msg);
+                                }
                                 if (!ctx.mounted) return;
-                                Navigator.pop(ctx);
+                                Navigator.pop(ctx, true);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
@@ -2734,15 +3941,25 @@ class _ExamsScreenState extends State<ExamsScreen>
                                     backgroundColor: AppColors.green,
                                   ),
                                 );
-                                WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) reload(); });
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) reload();
+                                });
                               } catch (e) {
                                 if (ctx.mounted) {
                                   setSheetState(() => saving = false);
+                                  String msg = e.toString();
+                                  if (e is DioException &&
+                                      e.response?.data is Map &&
+                                      e.response?.data['message'] != null) {
+                                    msg = e.response!.data['message'].toString();
+                                  } else if (msg.startsWith('Exception: ')) {
+                                    msg = msg.substring(11);
+                                  }
                                   ScaffoldMessenger.of(ctx).showSnackBar(
                                     SnackBar(
-                                      content: Text(
-                                        'Unable to update candidate: $e',
-                                      ),
+                                      content:
+                                          Text('Unable to update candidate: $msg'),
+                                      backgroundColor: AppColors.red,
                                     ),
                                   );
                                 }

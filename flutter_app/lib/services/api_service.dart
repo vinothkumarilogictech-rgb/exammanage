@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'dio_client.dart';
 
 /// High-level API facade. Screens should prefer this service instead of

@@ -455,7 +455,7 @@ def exam_teams():
     if g.api_identity.get('role') == 'Employee' and bid is None:
         return fail('Employees can only access their assigned branch.', 403)
     if bid:
-        q = q.filter(ExamTeam.branch_id == bid)
+        q = q.filter(or_(ExamTeam.branch_id == bid, ExamTeam.branch_id.is_(None)))
     if exam_type_id:
         q = q.filter(ExamTeam.exam_type_id == exam_type_id)
     if status and status != 'All':
@@ -472,16 +472,21 @@ def exam_team_create():
     name = (d.get('name') or '').strip()
     if not name:
         return fail('Team name is required.', 422)
-    try:
-        bid = int(d.get('branch_id'))
-    except (TypeError, ValueError):
-        return fail('branch_id is required.', 422)
-    branch = Branch.query.get(bid)
-    if not branch or branch.status != 'Active':
-        return fail('Active branch not found.', 404)
-    own_branch_id = _employee_branch_id()
-    if own_branch_id is not None and bid != own_branch_id:
-        return fail('Employees can only create teams for their assigned branch.', 403)
+    bid = d.get('branch_id')
+    if bid in (None, '', -1, '-1'):
+        bid = _employee_branch_id()
+    else:
+        try:
+            bid = int(bid)
+        except (TypeError, ValueError):
+            return fail('branch_id must be numeric.', 422)
+    if bid is not None:
+        branch = Branch.query.get(bid)
+        if not branch or branch.status != 'Active':
+            return fail('Active branch not found.', 404)
+        own_branch_id = _employee_branch_id()
+        if own_branch_id is not None and bid != own_branch_id:
+            return fail('Employees can only create teams for their assigned branch.', 403)
     exam_type_id = d.get('exam_type_id')
     if exam_type_id and not ExamType.query.get(int(exam_type_id)):
         return fail('Exam type not found.', 404)
@@ -543,7 +548,20 @@ def exam_team_delete(team_id):
 @api_token_required
 def exam_team_report(team_id):
     t = ExamTeam.query.get_or_404(team_id)
-    rows = Candidate.query.filter(Candidate.team_id == team_id).order_by(Candidate.exam_date.desc(), Candidate.name.asc()).all()
+    q = Candidate.query.filter(Candidate.team_id == team_id)
+    date_from = request.args.get('start_date') or request.args.get('date_from')
+    date_to = request.args.get('end_date') or request.args.get('date_to')
+    status = (request.args.get('status') or '').strip()
+    if date_from:
+        q = q.filter(Candidate.exam_date >= date_from)
+    if date_to:
+        q = q.filter(Candidate.exam_date <= date_to)
+    if status and status != 'All':
+        if status.lower() == 'not completed':
+            q = q.filter(or_(Candidate.status == 'Not Completed', Candidate.status == 'Absent'))
+        else:
+            q = q.filter(Candidate.status == status)
+    rows = q.order_by(Candidate.exam_date.desc(), Candidate.name.asc()).all()
     return ok({
         'team': team_dict(t),
         'candidates': [candidate_dict(c) for c in rows],
@@ -553,13 +571,43 @@ def exam_team_report(team_id):
 @api_bp.get('/exams/candidates/')
 @api_token_required
 def candidates():
-    q=Candidate.query; term=(request.args.get('q') or '').strip(); bid=_employee_branch_required(request.args.get('branch_id',type=int))
+    q = Candidate.query
+    term = (request.args.get('q') or '').strip()
+    bid = _employee_branch_required(request.args.get('branch_id', type=int))
     if g.api_identity.get('role') == 'Employee' and bid is None:
         return fail('Employees can only access their assigned branch.', 403)
-    if term: q=q.filter(or_(Candidate.name.ilike(f'%{term}%'),Candidate.email.ilike(f'%{term}%'),Candidate.register_number.ilike(f'%{term}%'),Candidate.passport_number.ilike(f'%{term}%'),Candidate.passport_full_name.ilike(f'%{term}%')))
-    if bid: q=q.filter(Candidate.branch_id==bid)
-    team_id=request.args.get('team_id',type=int)
-    if team_id: q=q.filter(Candidate.team_id==team_id)
+    if term:
+        q = q.filter(or_(
+            Candidate.name.ilike(f'%{term}%'),
+            Candidate.email.ilike(f'%{term}%'),
+            Candidate.register_number.ilike(f'%{term}%'),
+            Candidate.passport_number.ilike(f'%{term}%'),
+            Candidate.passport_full_name.ilike(f'%{term}%')
+        ))
+    if bid:
+        q = q.filter(Candidate.branch_id == bid)
+    team_id_raw = request.args.get('team_id')
+    if team_id_raw is not None and team_id_raw != '':
+        try:
+            tid = int(team_id_raw)
+            if tid == -1:
+                q = q.filter(Candidate.team_id.is_(None))
+            elif tid > 0:
+                q = q.filter(Candidate.team_id == tid)
+        except (ValueError, TypeError):
+            pass
+    date_from = request.args.get('start_date') or request.args.get('date_from')
+    if date_from:
+        q = q.filter(Candidate.exam_date >= date_from)
+    date_to = request.args.get('end_date') or request.args.get('date_to')
+    if date_to:
+        q = q.filter(Candidate.exam_date <= date_to)
+    status = (request.args.get('status') or '').strip()
+    if status and status != 'All':
+        if status.lower() == 'not completed':
+            q = q.filter(or_(Candidate.status == 'Not Completed', Candidate.status == 'Absent'))
+        else:
+            q = q.filter(Candidate.status == status)
     return ok([candidate_dict(x) for x in q.order_by(Candidate.created_at.desc()).all()])
 
 @api_bp.get('/exams/candidates/<int:candidate_id>/')
@@ -613,7 +661,7 @@ def candidate_create():
         branch_id=d.get('branch_id'),
         exam_type_id=d.get('exam_type_id'),
         team_id=d.get('team_id'),
-        exam_date=d.get('exam_date'),
+        exam_date=(d.get('exam_date') or d.get('date') or '').strip() or None,
         status=d.get('status') or 'Registered',
         reason_note=(d.get('remarks') or d.get('reason_note') or '').strip() or None,
         # Passport & Address fields
@@ -657,6 +705,7 @@ def candidate_create():
             attempt_status = {
                 'Completed': 'Completed',
                 'Absent': 'No Show',
+                'Not Completed': 'No Show',
                 'Rescheduled': 'Scheduled',
                 'Registered': 'Scheduled',
             }.get(c.status or 'Registered', 'Scheduled')
@@ -766,8 +815,8 @@ def candidate_update(candidate_id):
         if et:
             c.test_type = et.name
 
-    if 'exam_date' in d:
-        exam_date = str(d.get('exam_date') or '').strip()
+    if 'exam_date' in d or 'date' in d:
+        exam_date = str(d.get('exam_date') or d.get('date') or '').strip()
         if exam_date:
             c.exam_date = exam_date
 

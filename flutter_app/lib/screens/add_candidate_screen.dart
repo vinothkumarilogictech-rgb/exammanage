@@ -76,6 +76,8 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
   List<Map<String, dynamic>> examTypesList = [];
   List<ExamTeam> teamsList = [];
   bool loadingLookups = true;
+  bool loadingTeams = false;
+  String? teamsError;
   bool isSaving = false;
 
   // Existing Candidate Check
@@ -119,6 +121,35 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
     super.dispose();
   }
 
+  Future<void> _loadTeams() async {
+    if (!mounted) return;
+    setState(() {
+      loadingTeams = true;
+      teamsError = null;
+    });
+    try {
+      final res = await api.teams(status: 'Active', branchId: selectedBranchId);
+      final tmData = (res.data['data'] as List? ?? [])
+          .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        teamsList = tmData;
+        loadingTeams = false;
+        if (selectedTeamId != null &&
+            !teamsList.any((t) => t.id == selectedTeamId)) {
+          selectedTeamId = null;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        loadingTeams = false;
+        teamsError = 'Failed to load teams: $e';
+      });
+    }
+  }
+
   Future<void> _loadData() async {
     final branchCtx = context.read<BranchContext>();
     await branchCtx.ensureLoaded();
@@ -126,9 +157,8 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
     try {
       final brFuture = api.branches();
       final etFuture = api.examTypes();
-      final tmFuture = api.teams(status: 'Active');
 
-      final results = await Future.wait([brFuture, etFuture, tmFuture]);
+      final results = await Future.wait([brFuture, etFuture]);
 
       final brData = (results[0].data['data'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e))
@@ -136,16 +166,12 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
       final etData = (results[1].data['data'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
-      final tmData = (results[2].data['data'] as List? ?? [])
-          .map((e) => ExamTeam.fromMap(Map<String, dynamic>.from(e)))
-          .toList();
 
       if (!mounted) return;
 
       setState(() {
         branchesList = brData;
         examTypesList = etData;
-        teamsList = tmData;
 
         // Set initial branch from prop or context or first available
         selectedBranchId = widget.initialBranchId ??
@@ -158,6 +184,9 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
 
         loadingLookups = false;
       });
+
+      // Load teams for selected branch
+      await _loadTeams();
     } catch (e) {
       if (mounted) {
         setState(() => loadingLookups = false);
@@ -234,10 +263,213 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
 
   List<ExamTeam> _filteredTeams() {
     return teamsList.where((t) {
-      return t.examTypeId == null ||
+      final matchesBranch = t.branchId == null ||
+          selectedBranchId == null ||
+          t.branchId == selectedBranchId;
+      final matchesExam = t.examTypeId == null ||
           selectedExamTypeId == null ||
           t.examTypeId == selectedExamTypeId;
+      return matchesBranch && matchesExam;
     }).toList();
+  }
+
+  Future<void> _showCreateTeamDialog() async {
+    final nameCtrl = TextEditingController();
+    final locationCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    int? dialogExamTypeId = selectedExamTypeId;
+    bool savingTeam = false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            16,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD1D5DB),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: brandLinearGradient(),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.groups_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Create Team',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _buildLabel('Team Name *'),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. CELPIP Partner Team',
+                    prefixIcon: Icon(Icons.groups_rounded, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _buildLabel('Location'),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: locationCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Team location / service area',
+                    prefixIcon: Icon(Icons.location_on_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _buildLabel('Phone Number'),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    hintText: 'Team contact number',
+                    prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _buildLabel('Exam Type'),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<int>(
+                  value: dialogExamTypeId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.school_outlined, size: 20),
+                  ),
+                  hint: const Text('Select exam type'),
+                  items: [
+                    const DropdownMenuItem<int>(
+                      value: null,
+                      child: Text('Any exam'),
+                    ),
+                    ...examTypesList.map((e) {
+                      final id = int.tryParse('${e['id']}');
+                      return DropdownMenuItem<int>(
+                        value: id,
+                        child: Text('${e['name'] ?? ''}'),
+                      );
+                    }),
+                  ],
+                  onChanged: (v) => setSheetState(() => dialogExamTypeId = v),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: savingTeam
+                        ? null
+                        : () async {
+                            final name = nameCtrl.text.trim();
+                            if (name.isEmpty) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Team name is required'),
+                                ),
+                              );
+                              return;
+                            }
+                            setSheetState(() => savingTeam = true);
+                            try {
+                              final resp = await api.createTeam({
+                                'name': name,
+                                'location': locationCtrl.text.trim(),
+                                'phone': phoneCtrl.text.trim(),
+                                'branch_id': selectedBranchId,
+                                'exam_type_id': dialogExamTypeId,
+                                'status': 'Active',
+                              });
+                              final newTeamData = resp.data['data'] as Map<String, dynamic>?;
+                              final newId = newTeamData != null ? int.tryParse('${newTeamData['id']}') : null;
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              await _loadTeams();
+                              if (mounted) {
+                                setState(() {
+                                  if (newId != null) {
+                                    selectedTeamId = newId;
+                                  }
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Team "$name" created successfully!'),
+                                    backgroundColor: AppColors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setSheetState(() => savingTeam = false);
+                              if (ctx.mounted) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text('Error creating team: $e')),
+                                );
+                              }
+                            }
+                          },
+                    icon: savingTeam
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.add_rounded),
+                    label: Text(savingTeam ? 'Creating...' : 'Create Team'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // ============================================================
@@ -484,7 +716,9 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
         'phone': phoneCtrl.text.trim(),
         'branch_id': selectedBranchId,
         'exam_type_id': selectedExamTypeId,
-        'team_id': selectedTeamId,
+        'team_id': (selectedTeamId == null || selectedTeamId == -1)
+            ? null
+            : selectedTeamId,
         'status': selectedStatus,
         'exam_date': dateCtrl.text.trim(),
         'remarks': remarksCtrl.text.trim(),
@@ -757,77 +991,219 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
                       // Exam Type
                       _buildLabel('Exam Type'),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<int>(
-                        value: selectedExamTypeId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(
-                            Icons.menu_book_rounded,
-                            size: 20,
-                          ),
-                        ),
-                        hint: const Text('Select exam type'),
-                        items: examTypesList.map((e) {
-                          return DropdownMenuItem<int>(
-                            value: e['id'],
-                            child: Text(
-                              '${e['name'] ?? ''}',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                      () {
+                        final uniqueExamTypes = <DropdownMenuItem<int>>[];
+                        final seenExamIds = <int>{};
+                        for (final e in examTypesList) {
+                          final id = int.tryParse('${e['id']}');
+                          if (id != null && seenExamIds.add(id)) {
+                            uniqueExamTypes.add(
+                              DropdownMenuItem<int>(
+                                value: id,
+                                child: Text(
+                                  '${e['name'] ?? ''}',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                        final effectiveExamId = (selectedExamTypeId != null &&
+                                seenExamIds.contains(selectedExamTypeId))
+                            ? selectedExamTypeId
+                            : null;
+                        return DropdownButtonFormField<int>(
+                          value: effectiveExamId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(
+                              Icons.menu_book_rounded,
+                              size: 20,
                             ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            selectedExamTypeId = val;
-                            selectedTeamId = null;
-                          });
-                        },
-                      ),
+                          ),
+                          hint: const Text('Select exam type'),
+                          items: uniqueExamTypes,
+                          onChanged: (val) {
+                            setState(() {
+                              selectedExamTypeId = val;
+                              selectedTeamId = null;
+                            });
+                          },
+                        );
+                      }(),
 
                       const SizedBox(height: 14),
 
                       // Team
-                      _buildLabel('Team (Optional)'),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<int>(
-                        value: selectedTeamId ?? -1,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(
-                            Icons.groups_rounded,
-                            size: 20,
-                          ),
-                        ),
-                        hint: const Text('Select team (optional)'),
-                        items: [
-                          const DropdownMenuItem<int>(
-                            value: -1,
-                            child: Text(
-                              'Not Assigned',
-                              style: TextStyle(
-                                color: Color(0xFF9CA3AF),
-                                fontStyle: FontStyle.italic,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildLabel('Team (Optional)'),
+                          TextButton.icon(
+                            onPressed: _showCreateTeamDialog,
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('Add Team'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 0,
                               ),
                             ),
                           ),
-                          ...filteredTeams.map((t) {
-                            return DropdownMenuItem<int>(
-                              value: t.id,
-                              child: Text(
-                                t.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                            );
-                          }),
                         ],
-                        onChanged: (val) {
-                          setState(() {
-                            selectedTeamId = (val == null || val == -1) ? null : val;
-                          });
-                        },
                       ),
+                      const SizedBox(height: 6),
+                      if (loadingTeams)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: LinearProgressIndicator(
+                            color: AppColors.primary,
+                            backgroundColor: Color(0xFFEDE9FE),
+                          ),
+                        )
+                      else if (teamsError != null)
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppColors.red,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  teamsError!,
+                                  style: const TextStyle(
+                                    color: Color(0xFF991B1B),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: _loadTeams,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      else ...[
+                        () {
+                          final uniqueTeamItems = <DropdownMenuItem<int>>[];
+                          final seenTeamIds = <int>{};
+                          seenTeamIds.add(-1);
+                          uniqueTeamItems.add(
+                            DropdownMenuItem<int>(
+                              value: -1,
+                              child: Text(
+                                filteredTeams.isEmpty
+                                    ? 'Not Assigned (No teams available)'
+                                    : 'Not Assigned',
+                                style: const TextStyle(
+                                  color: Color(0xFF9CA3AF),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          );
+                          for (final t in filteredTeams) {
+                            if (seenTeamIds.add(t.id)) {
+                              uniqueTeamItems.add(
+                                DropdownMenuItem<int>(
+                                  value: t.id,
+                                  child: Text(
+                                    t.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                          final effectiveTeamId = (selectedTeamId != null &&
+                                  seenTeamIds.contains(selectedTeamId))
+                              ? selectedTeamId!
+                              : -1;
+                          return DropdownButtonFormField<int>(
+                            value: effectiveTeamId,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(
+                                Icons.groups_rounded,
+                                size: 20,
+                              ),
+                            ),
+                            hint: const Text('Select team (optional)'),
+                            items: uniqueTeamItems,
+                            onChanged: (val) {
+                              setState(() {
+                                selectedTeamId =
+                                    (val == null || val == -1) ? null : val;
+                              });
+                            },
+                          );
+                        }(),
+                        if (filteredTeams.isEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 16,
+                                  color: Color(0xFF6B7280),
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    'No teams available for this exam. You can add one now.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF4B5563),
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _showCreateTeamDialog,
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    '+ Create Team',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
 
                       const SizedBox(height: 14),
 
@@ -918,6 +1294,13 @@ class _AddCandidateScreenState extends State<AddCandidateScreen> {
                               icon: Icons.event_repeat_rounded,
                               activeColor: const Color(0xFF7C3AED),
                               activeBg: const Color(0xFFEDE9FE),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildStatusOption(
+                              label: 'Completed',
+                              icon: Icons.check_circle_rounded,
+                              activeColor: const Color(0xFF16A34A),
+                              activeBg: const Color(0xFFDCFCE7),
                             ),
                           ],
                         ),
